@@ -83,7 +83,6 @@ ol[data-list-type="ol"] {
 html { 
   font-size: 15px;
   width: 100%;
-  overflow-x: hidden;
   margin: 0;
   padding: 0;
 }
