@@ -124,3 +124,20 @@ export {
   serializeToHtmlFragment,
   serializeToHtmlWithClass,
 } from './utils/serialize-to-html';
+
+// ============================================================================
+// Tailwind Classes Utilities
+// ============================================================================
+export {
+  tailwindClasses,
+  popularClasses,
+  searchTailwindClasses,
+  getAllClasses,
+} from './tailwind-classes';
+
+export type { TailwindClassGroup } from './tailwind-classes';
+
+// ============================================================================
+// Demo Content
+// ============================================================================
+export { createDemoContent } from './demo-content';

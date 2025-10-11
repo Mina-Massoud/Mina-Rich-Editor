@@ -87,7 +87,7 @@ export function EditorToolbar({
   onEnhanceSpacesChange,
 }: EditorToolbarProps) {
   return (
-    <CardContent className="p-3 sticky z-50 w-full top-0 backdrop-blur-2xl border-b mx-auto transition-all duration-300 bg-background/50">
+    <CardContent className="p-3 sticky z-[100] w-full top-0 backdrop-blur-2xl border-b mx-auto transition-all duration-300 bg-background/30">
       <div className="flex items-center justify-between max-w-4xl px-6 mx-auto w-full gap-3">
         {/* Left Section - Text Formatting */}
         <div className="flex items-center gap-2 flex-wrap">

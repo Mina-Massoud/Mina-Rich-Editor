@@ -14,6 +14,8 @@ import { ImageBlock } from './ImageBlock';
 import { CommandMenu } from './CommandMenu';
 import { useEditor } from '../lib/context/EditorContext';
 import { findParentById } from '../lib/utils/tree-operations';
+import { GripVertical } from 'lucide-react';
+import { BlockContextMenu } from './BlockContextMenu';
 
 interface BlockProps {
   node: EditorNode;
@@ -31,6 +33,7 @@ interface BlockProps {
   onInsertImage?: (nodeId: string) => void; // Callback to insert image
   onCreateList?: (nodeId: string, listType: string) => void; // Callback to create a list container (ol or ul)
   onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler
+  onBlockDragStart?: (nodeId: string) => void; // Callback when block starts being dragged
 }
 
 export function Block({
@@ -49,10 +52,14 @@ export function Block({
   onInsertImage,
   onCreateList,
   onUploadImage,
+  onBlockDragStart,
 }: BlockProps) {
+
+  console.log('node', node)
   const localRef = useRef<HTMLElement>(null);
   const isComposingRef = useRef(false); // Track IME composition
   const shouldPreserveSelectionRef = useRef(false);
+  const [isHovering, setIsHovering] = useState(false);
   
   // Command menu state
   const [showCommandMenu, setShowCommandMenu] = useState(false);
@@ -144,6 +151,8 @@ export function Block({
   
   // Cast to TextNode for remaining cases
   const textNode = node as TextNode;
+
+  console.log('textNode', textNode)
   
   // BR elements render as empty space
   if (textNode.type === 'br') {
@@ -175,6 +184,8 @@ export function Block({
   // Check if node has multiple lines
   const hasLines = Array.isArray(textNode.lines) && textNode.lines.length > 0;
 
+  console.log('hasChildren', hasChildren)
+  console.log('hasLines', hasLines)
   // Helper function to escape HTML entities
   const escapeHTML = useCallback((text: string): string => {
     const div = document.createElement('div');
@@ -396,6 +407,7 @@ export function Block({
     const element = localRef.current;
     const newHTML = buildHTML();
     
+    console.log('newHTML', newHTML)
     // Only update if content actually changed
     if (element.innerHTML !== newHTML) {
  
@@ -486,6 +498,20 @@ export function Block({
   // Get editor context for direct state manipulation
   const [state, dispatch] = useEditor();
   const currentContainer = state.history[state.historyIndex];
+  
+  // Handle background color change from context menu
+  const handleBackgroundColorChange = useCallback((color: string) => {
+    dispatch({
+      type: 'UPDATE_ATTRIBUTES',
+      payload: {
+        id: textNode.id,
+        attributes: {
+          backgroundColor: color,
+        },
+        merge: true,
+      },
+    });
+  }, [dispatch, textNode.id]);
   
   // Handle keydown - intercept Shift+Enter for nested blocks
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -637,6 +663,29 @@ export function Block({
   const textColor = isHexColor ? customClassName : '';
   const className = isHexColor ? '' : customClassName;
   
+  // Get background color from attributes
+  const backgroundColor = textNode.attributes?.backgroundColor as string | undefined;
+
+  // Drag handlers for blocks
+  const handleBlockDragStart = useCallback((e: React.DragEvent) => {
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', textNode.id);
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      nodeId: textNode.id,
+      type: textNode.type,
+    }));
+    if (onBlockDragStart) {
+      onBlockDragStart(textNode.id);
+    }
+  }, [textNode.id, textNode.type, onBlockDragStart]);
+
+  const handleBlockDragEnd = useCallback((e: React.DragEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  console.log('textNode.id', textNode.id)
+  
   // Common props for all elements
   const commonProps = {
     key: textNode.id,
@@ -657,39 +706,67 @@ export function Block({
     `,
     style: { 
       marginLeft: `${depth * 0.5}rem`,
-      ...(textColor ? { color: textColor as string } : {})
+      ...(textColor ? { color: textColor as string } : {}),
+      ...(backgroundColor ? { backgroundColor: backgroundColor } : {})
     },
     spellCheck: false,
   };
 
   return (
     <>
-      {/* Wrapper div for positioning placeholder */}
-      <div className="relative">
-        <ElementType
-          {...commonProps}
-          key={textNode.id}
-          ref={(el: HTMLElement | null) => {
-            localRef.current = el;
-            nodeRef(el);
-          }}
-          onInput={readOnly ? undefined : (e) => handleInput(e as any)}
-          onKeyDown={readOnly ? undefined : (e) => handleKeyDown(e as any)}
-          onClick={(e) => handleClick(e as any)}
-          onCompositionStart={readOnly ? undefined : handleCompositionStart}
-          onCompositionEnd={readOnly ? undefined : handleCompositionEnd}
-        />
-        
-        {/* Placeholder text */}
-        {showPlaceholder && (
-          <div
-            className="absolute left-3 top-2 pointer-events-none text-muted-foreground/50 select-none"
-            style={{ marginLeft: `${depth * 0.5}rem` }}
-          >
-            Type / for commands...
-          </div>
-        )}
-      </div>
+      <BlockContextMenu
+        onBackgroundColorChange={handleBackgroundColorChange}
+        currentBackgroundColor={backgroundColor}
+      >
+        {/* Wrapper div for positioning placeholder and drag handle - extra left padding for hover area */}
+        <div 
+          className="relative group"
+          style={{ paddingLeft: readOnly ? '0' : '28px', marginLeft: readOnly ? '0' : '-28px' }}
+          onMouseEnter={() => !readOnly && setIsHovering(true)}
+          onMouseLeave={() => !readOnly && setIsHovering(false)}
+        >
+          {/* Drag Handle - visible on hover */}
+          {!readOnly && isHovering && onBlockDragStart && (
+            <div
+              draggable
+              onDragStart={handleBlockDragStart}
+              onDragEnd={handleBlockDragEnd}
+              className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors duration-200" strokeWidth={1.5} />
+            </div>
+          )}
+          
+          <ElementType
+            {...commonProps}
+            key={textNode.id}
+            ref={(el: HTMLElement | null) => {
+              localRef.current = el;
+              nodeRef(el);
+            }}
+            onInput={readOnly ? undefined : (e) => handleInput(e as any)}
+            onKeyDown={readOnly ? undefined : (e) => handleKeyDown(e as any)}
+            onClick={(e) => handleClick(e as any)}
+            onCompositionStart={readOnly ? undefined : handleCompositionStart}
+            onCompositionEnd={readOnly ? undefined : handleCompositionEnd}
+          />
+          
+          {/* Placeholder text */}
+          {showPlaceholder && (
+            <div
+              className="absolute top-2 pointer-events-none text-muted-foreground/50 select-none"
+              style={{ 
+                left: readOnly ? '0.75rem' : 'calc(28px + 0.75rem)',
+                marginLeft: `${depth * 0.5}rem` 
+              }}
+            >
+              Type / for commands...
+            </div>
+          )}
+        </div>
+      </BlockContextMenu>
       
       {/* Command Menu */}
       {!readOnly && (

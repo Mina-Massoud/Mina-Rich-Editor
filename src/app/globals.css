@@ -165,7 +165,7 @@ body:before {
   pointer-events: none;
   position: fixed;
   inset: 0;
-  opacity: .045;
+  opacity: .035;
   background-image: url(/noise.webp);
   background-size: 200px 200px;
 }
@@ -185,4 +185,8 @@ button:active {
 
 button:focus {
   outline: none;
+}
+
+span {
+  display: inline-block;
 }

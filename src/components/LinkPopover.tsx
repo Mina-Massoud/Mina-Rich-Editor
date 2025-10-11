@@ -134,7 +134,7 @@ export function LinkPopover() {
 
   return (
     <div
-      className="absolute z-50 pointer-events-auto"
+      className="fixed z-50 pointer-events-auto"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,

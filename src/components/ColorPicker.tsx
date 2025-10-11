@@ -22,16 +22,16 @@ interface ColorPickerComponentProps {
 }
 
 const presetColors = [
-  { name: 'Red', class: 'text-red-500', hex: '#ef4444' },
-  { name: 'Orange', class: 'text-orange-500', hex: '#f97316' },
-  { name: 'Yellow', class: 'text-yellow-500', hex: '#eab308' },
-  { name: 'Green', class: 'text-green-500', hex: '#22c55e' },
-  { name: 'Blue', class: 'text-blue-500', hex: '#3b82f6' },
-  { name: 'Indigo', class: 'text-indigo-500', hex: '#6366f1' },
-  { name: 'Purple', class: 'text-purple-500', hex: '#a855f7' },
-  { name: 'Pink', class: 'text-pink-500', hex: '#ec4899' },
-  { name: 'Teal', class: 'text-teal-500', hex: '#14b8a6' },
-  { name: 'Cyan', class: 'text-cyan-500', hex: '#06b6d4' },
+  { name: 'Red', hex: '#ef4444' },
+  { name: 'Orange', hex: '#f97316' },
+  { name: 'Yellow', hex: '#eab308' },
+  { name: 'Green', hex: '#22c55e' },
+  { name: 'Blue', hex: '#3b82f6' },
+  { name: 'Indigo', hex: '#6366f1' },
+  { name: 'Purple', hex: '#a855f7' },
+  { name: 'Pink', hex: '#ec4899' },
+  { name: 'Teal', hex: '#14b8a6' },
+  { name: 'Cyan', hex: '#06b6d4' },
 ];
 
 export function ColorPickerComponent({
@@ -97,16 +97,15 @@ export function ColorPickerComponent({
             <div className="grid grid-cols-5 gap-2">
               {presetColors.map((color) => (
                 <button
-                  key={color.class}
-                  onClick={() => onColorSelect(color.class)}
+                  key={color.hex}
+                  onClick={() => onColorSelect(color.hex)}
                   className={`h-10 rounded-md border-2 transition-all hover:scale-110 ${
-                    color.class
-                  } ${
-                    selectedColor === color.class
+                    selectedColor === color.hex
                       ? 'border-foreground'
                       : 'border-border'
                   }`}
                   title={color.name}
+                  style={{ color: color.hex }}
                 >
                   <span className="font-bold text-2xl">A</span>
                 </button>

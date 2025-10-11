@@ -210,6 +210,10 @@ export function insertNode(
   newNode: EditorNode,
   position: InsertPosition
 ): EditorNode {
+  console.log("root", root);
+  console.log("targetId", targetId);
+  console.log("newNode", newNode);
+  console.log("position", position);
   // For 'prepend' and 'append', insert inside the target container
   if (position === 'prepend' || position === 'append') {
     return updateNodeById(root, targetId, (node) => {

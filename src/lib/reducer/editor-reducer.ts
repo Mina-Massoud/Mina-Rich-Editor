@@ -223,6 +223,40 @@ export function editorReducer(
       );
     }
 
+    case "SWAP_NODES": {
+      const { nodeId1, nodeId2 } = action.payload;
+      const currentContainer = state.history[state.historyIndex];
+      
+      // Find indices of both nodes
+      const index1 = currentContainer.children.findIndex(n => n.id === nodeId1);
+      const index2 = currentContainer.children.findIndex(n => n.id === nodeId2);
+      
+      // If either node not found, return current state
+      if (index1 === -1 || index2 === -1) {
+        return state;
+      }
+      
+      // Clone container and swap positions
+      const newChildren = [...currentContainer.children];
+      [newChildren[index1], newChildren[index2]] = [newChildren[index2], newChildren[index1]];
+      
+      const newContainer: ContainerNode = {
+        ...currentContainer,
+        children: newChildren,
+      };
+
+      return addToHistory(
+        {
+          ...state,
+          metadata: {
+            ...state.metadata,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+        newContainer
+      );
+    }
+
     case "DUPLICATE_NODE": {
       const { id, newId } = action.payload;
       const currentContainer = state.history[state.historyIndex];
@@ -580,11 +614,15 @@ export function editorReducer(
           }
 
           // Overlapping part - merge className (just combine classes now, no styles)
-          const existingClasses = (child.className || '').split(' ').filter(Boolean);
-          const newClasses = className.split(' ').filter(Boolean);
-          const mergedClasses = [...new Set([...existingClasses, ...newClasses])];
-          const mergedClassName = mergedClasses.join(' ').trim();
-          
+          const existingClasses = (child.className || "")
+            .split(" ")
+            .filter(Boolean);
+          const newClasses = className.split(" ").filter(Boolean);
+          const mergedClasses = [
+            ...new Set([...existingClasses, ...newClasses]),
+          ];
+          const mergedClassName = mergedClasses.join(" ").trim();
+
           newChildren.push({
             ...child,
             content: child.content!.substring(
@@ -686,7 +724,7 @@ export function editorReducer(
             ...child.styles,
             [property]: value,
           };
-          
+
           newChildren.push({
             ...child,
             content: child.content!.substring(
@@ -1024,15 +1062,8 @@ export function createInitialState(
   container?: Partial<ContainerNode>
 ): EditorState {
   // If container is provided, use it; otherwise create with at least one empty block
-  const defaultChildren = container?.children !== undefined 
-    ? container.children 
-    : [{
-        id: "p-" + Date.now(),
-        type: "p" as const,
-        content: "",
-        attributes: {},
-      }];
-
+  const defaultChildren =
+    container?.children !== undefined ? container.children : [];
   const initialContainer: ContainerNode = {
     id: "root",
     type: "container",
@@ -1040,11 +1071,19 @@ export function createInitialState(
     ...container,
   };
 
+  // Clone the container first, then get the activeNodeId from the cloned version
+  const clonedContainer = deepCloneContainer(initialContainer);
+
+  console.log("clonedContainer", clonedContainer);
+
   return {
     version: "1.0.0",
-    history: [deepCloneContainer(initialContainer)],
+    history: [clonedContainer],
     historyIndex: 0,
-    activeNodeId: initialContainer.children.length > 0 ? initialContainer.children[0].id : null,
+    activeNodeId:
+      clonedContainer.children.length > 0
+        ? clonedContainer.children[0].id
+        : null,
     hasSelection: false,
     selectionKey: 0,
     currentSelection: null,

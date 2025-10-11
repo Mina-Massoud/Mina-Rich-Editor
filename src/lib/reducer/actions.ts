@@ -149,6 +149,28 @@ export interface MoveNodeAction {
 }
 
 /**
+ * Swaps the positions of two nodes in the tree.
+ * 
+ * @example
+ * ```typescript
+ * dispatch({
+ *   type: 'SWAP_NODES',
+ *   payload: {
+ *     nodeId1: 'p-1',
+ *     nodeId2: 'p-3'
+ *   }
+ * });
+ * ```
+ */
+export interface SwapNodesAction {
+  type: 'SWAP_NODES';
+  payload: {
+    nodeId1: string;
+    nodeId2: string;
+  };
+}
+
+/**
  * Duplicates a node and inserts it after the original.
  * 
  * @example
@@ -384,6 +406,7 @@ export type EditorAction =
   | DeleteNodeAction
   | InsertNodeAction
   | MoveNodeAction
+  | SwapNodesAction
   | DuplicateNodeAction
   | ReplaceContainerAction
   | ResetAction
@@ -467,6 +490,14 @@ export const EditorActions = {
   ): MoveNodeAction => ({
     type: 'MOVE_NODE',
     payload: { nodeId, targetId, position },
+  }),
+
+  /**
+   * Creates a SWAP_NODES action.
+   */
+  swapNodes: (nodeId1: string, nodeId2: string): SwapNodesAction => ({
+    type: 'SWAP_NODES',
+    payload: { nodeId1, nodeId2 },
   }),
 
   /**

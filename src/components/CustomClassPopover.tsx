@@ -8,17 +8,19 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, Search } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { ScrollArea } from './ui/scroll-area';
 import { useEditor, EditorActions } from '../lib';
 import { useToast } from '@/hooks/use-toast';
+import { tailwindClasses } from '../lib/tailwind-classes';
 
 export function CustomClassPopover() {
   const [state, dispatch] = useEditor();
   const { toast } = useToast();
-  const [customClassInput, setCustomClassInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   
@@ -29,6 +31,16 @@ export function CustomClassPopover() {
     end: number;
     text: string;
   } | null>(null);
+
+  // Filter classes based on search
+  const filteredClasses = searchQuery
+    ? tailwindClasses.map(group => ({
+        ...group,
+        classes: group.classes.filter(cls => 
+          cls.toLowerCase().includes(searchQuery.toLowerCase())
+        ),
+      })).filter(group => group.classes.length > 0)
+    : tailwindClasses;
 
   // Track selection and position the floating icon
   useEffect(() => {
@@ -62,34 +74,7 @@ export function CustomClassPopover() {
     }
   }, [state.currentSelection, state.selectionKey, isOpen]);
 
-  // Handle custom class application
-  const handleApplyCustomClass = () => {
-    // Use saved selection from ref instead of state
-    if (!savedSelectionRef.current || !customClassInput.trim()) return;
-
-    // Temporarily restore the selection in state for the action
-    dispatch(EditorActions.setCurrentSelection({
-      ...savedSelectionRef.current,
-      formats: { bold: false, italic: false, underline: false },
-    }));
-
-    // Apply the custom class
-    setTimeout(() => {
-      dispatch(EditorActions.applyCustomClass(customClassInput.trim()));
-      
-      toast({
-        title: 'Custom Class Applied',
-        description: `Applied class: ${customClassInput}`,
-      });
-
-      setCustomClassInput('');
-      setIsOpen(false);
-      setPosition(null);
-      savedSelectionRef.current = null;
-    }, 0);
-  };
-
-  // Handle quick style application
+  // Handle class application
   const handleQuickStyle = (className: string) => {
     // Use saved selection from ref instead of state
     if (!savedSelectionRef.current) return;
@@ -115,11 +100,12 @@ export function CustomClassPopover() {
     }, 0);
   };
 
+  console.log("position", position);
   if (!position) return null;
 
   return (
     <div
-      className="absolute z-50 pointer-events-auto"
+      className="fixed z-[10000] pointer-events-auto"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,
@@ -145,7 +131,7 @@ export function CustomClassPopover() {
           </button>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-80" 
+          className="w-[500px] max-h-[600px]" 
           align="start"
           onOpenAutoFocus={(e) => {
             // Prevent the popover from stealing focus and losing selection
@@ -153,59 +139,47 @@ export function CustomClassPopover() {
           }}
         >
           <div className="space-y-3">
-            <div>
-              <h4 className="font-medium text-sm mb-1">Add Custom Class</h4>
-              <p className="text-xs text-muted-foreground">
-                Type any custom class or style to apply
-              </p>
-            </div>
-            <div className="flex gap-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="e.g., text-red-500, bg-blue-100"
-                value={customClassInput}
-                onChange={(e) => setCustomClassInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleApplyCustomClass();
-                  }
-                }}
-                className="flex-1"
+              autoFocus
+                placeholder="Search classes... (e.g., 'text', 'bg', 'flex')"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               />
-              <Button
-                onClick={handleApplyCustomClass}
-                disabled={!customClassInput.trim()}
-                size="sm"
-              >
-                Save
-              </Button>
             </div>
-            <div className="space-y-2">
-              <p className="text-xs font-medium">Quick Styles:</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  'text-red-500',
-                  'text-blue-500',
-                  'text-green-500',
-                  'bg-yellow-100',
-                  'font-bold',
-                  'underline',
-                  'text-2xl',
-                  'opacity-50',
-                ].map((cls) => (
-                  <Button
-                    key={cls}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuickStyle(cls)}
-                    className="text-xs h-7"
-                  >
-                    {cls}
-                  </Button>
+            <ScrollArea className="h-[500px] pr-4">
+              <div className="space-y-4">
+                {filteredClasses.map((group) => (
+                  <div key={group.category}>
+                    <h4 className="text-xs font-semibold mb-2 text-muted-foreground">
+                      {group.category}
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {group.classes.map((cls) => (
+                        <Button
+                          key={cls}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleQuickStyle(cls)}
+                          className="text-xs h-6 px-2"
+                        >
+                          {cls}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
+                {filteredClasses.length === 0 && (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    No classes found matching &quot;{searchQuery}&quot;
+                  </div>
+                )}
               </div>
-            </div>
+            </ScrollArea>
           </div>
         </PopoverContent>
       </Popover>

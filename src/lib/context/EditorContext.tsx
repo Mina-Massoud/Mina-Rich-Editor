@@ -94,17 +94,17 @@ export function EditorProvider({
   onChange,
   debug = false,
 }: EditorProviderProps) {
-  // Create initial state
-  const initialEditorState = useMemo(() => {
-    if (initialState) {
-      return initialState;
-    }
-    if (initialContainer) {
-      return createInitialState(initialContainer);
-    }
-    return createInitialState();
-  }, [initialState, initialContainer]);
-
+  
+  // Use useRef to ensure initialEditorState is only computed once
+  // This prevents createInitialState from being called on every render
+  const initialEditorStateRef = React.useRef<EditorState | null>(null);
+  
+  if (initialEditorStateRef.current === null) {
+    initialEditorStateRef.current = initialState || createInitialState(initialContainer);
+  }
+  
+  const initialEditorState = initialEditorStateRef.current;
+  
   // Set up reducer with useReducer
   const [state, dispatch] = useReducer(
     editorReducer,

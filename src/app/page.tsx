@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { EditorProvider } from "@/lib";
 import { SimpleEditor } from "@/components/SimpleEditor";
+import { createDemoContent } from "@/lib/demo-content";
+import { ContainerNode } from "@/lib/types";
 
 export default function Home() {
   const [readOnly, setReadOnly] = useState(false);
+
+  // Create initial demo content - memoized to ensure stable IDs
+  // The empty dependency array ensures this is only created once per component mount
+  const initialContainer = useMemo<ContainerNode>(() => ({
+    id: 'root',
+    type: 'container',
+    children: createDemoContent(), // Uses default stable timestamp
+    attributes: {}
+  }), []);
 
   // Example custom upload handler
   // In a real app, this would upload to your backend/cloud storage
@@ -36,8 +47,8 @@ export default function Home() {
   };
 
   return (
-    <div>
-      <EditorProvider debug={true}>
+    <div className="flex flex-col flex-1">
+      <EditorProvider initialContainer={initialContainer} debug={true}>
         <SimpleEditor 
           readOnly={readOnly} 
           onUploadImage={handleImageUpload}
