@@ -2622,8 +2622,8 @@ export function SimpleEditor({
 
           {/* Editor Content */}
           <CardContent
-            className={`p-6 flex flex-col w-full flex-1 transition-all duration-300 max-w-4xl mx-auto ${
-              readOnly ? "py-14 md:py-20" : ""
+            className={`p-3 md:p-6 flex flex-col w-full flex-1 transition-all duration-300 max-w-4xl mx-auto ${
+              readOnly ? "py-10 md:py-14 lg:py-20" : ""
             }`}
           >
             <div ref={editorContentRef}>

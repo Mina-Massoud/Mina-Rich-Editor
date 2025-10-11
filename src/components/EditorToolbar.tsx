@@ -87,13 +87,13 @@ export function EditorToolbar({
   onEnhanceSpacesChange,
 }: EditorToolbarProps) {
   return (
-    <CardContent className="p-3 sticky z-[100] w-full top-0 backdrop-blur-2xl border-b mx-auto transition-all duration-300 bg-background/30">
-      <div className="flex items-center justify-between max-w-4xl lg:px-6 mx-auto w-full gap-3">
+    <CardContent className="p-2 md:p-3 sticky z-[100] w-full top-0 backdrop-blur-2xl border-b mx-auto transition-all duration-300 bg-background/30">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between max-w-4xl lg:px-6 mx-auto w-full gap-2 md:gap-3">
         {/* Left Section - Text Formatting */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
           {/* Type Selector */}
-          <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2 py-1">
-            <Type className="size-3.5 text-muted-foreground" />
+          <div className="flex items-center gap-1 md:gap-1.5 bg-muted/50 rounded-md px-1.5 md:px-2 py-1">
+            <Type className="size-3 md:size-3.5 text-muted-foreground hidden sm:block" />
             <Select
               value={
                 currentSelection?.elementType !== undefined &&
@@ -108,7 +108,7 @@ export function EditorToolbar({
                 currentNode.type === "img"
               }
             >
-              <SelectTrigger className="w-[140px] h-8 border-0 bg-transparent focus:ring-0">
+              <SelectTrigger className="w-[90px] sm:w-[120px] md:w-[140px] h-7 md:h-8 border-0 bg-transparent focus:ring-0 text-xs sm:text-sm">
                 <SelectValue placeholder="Select type">
                   {(() => {
                     const type =
@@ -197,7 +197,7 @@ export function EditorToolbar({
             </Select>
           </div>
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-5 md:h-6 hidden sm:block" />
 
           {/* Format Buttons */}
           <ToggleGroup
@@ -216,27 +216,27 @@ export function EditorToolbar({
               aria-label="Toggle bold"
               onClick={() => onFormat("bold")}
               disabled={!currentSelection}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
             >
-              <Bold className="size-3.5" />
+              <Bold className="size-3 md:size-3.5" />
             </ToggleGroupItem>
             <ToggleGroupItem
               value="italic"
               aria-label="Toggle italic"
               onClick={() => onFormat("italic")}
               disabled={!currentSelection}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
             >
-              <Italic className="size-3.5" />
+              <Italic className="size-3 md:size-3.5" />
             </ToggleGroupItem>
             <ToggleGroupItem
               value="underline"
               aria-label="Toggle underline"
               onClick={() => onFormat("underline")}
               disabled={!currentSelection}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
             >
-              <Underline className="size-3.5" />
+              <Underline className="size-3 md:size-3.5" />
             </ToggleGroupItem>
           </ToggleGroup>
 
@@ -247,7 +247,7 @@ export function EditorToolbar({
             selectedColor={selectedColor}
           />
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-5 md:h-6 hidden lg:block" />
 
           {/* Font Size Picker */}
           <FontSizePicker
@@ -257,10 +257,10 @@ export function EditorToolbar({
           />
         </div>
 
-        <Separator orientation="vertical" className="h-8 hidden md:block" />
+        <Separator orientation="vertical" className="h-8 hidden xl:block" />
 
         {/* Right Section - Insert Elements */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
           {/* Image Buttons Group */}
           <ButtonGroup>
             <Button
@@ -268,24 +268,24 @@ export function EditorToolbar({
               size="icon"
               onClick={onImageUploadClick}
               disabled={isUploading}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
               title="Add single image"
             >
-              <ImagePlus className="size-3.5" />
+              <ImagePlus className="size-3 md:size-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={onMultipleImagesUploadClick}
               disabled={isUploading}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
               title="Add multiple images"
             >
-              <LayoutGrid className="size-3.5" />
+              <LayoutGrid className="size-3 md:size-3.5" />
             </Button>
           </ButtonGroup>
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-5 md:h-6 hidden sm:block" />
 
           {/* List Button Group */}
           <ButtonGroup>
@@ -293,19 +293,19 @@ export function EditorToolbar({
               variant="ghost"
               size="icon"
               onClick={() => onCreateList("ul")}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
               title="Add unordered list"
             >
-              <List className="size-3.5" />
+              <List className="size-3 md:size-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onCreateList("ol")}
-              className="h-8 w-8"
+              className="h-7 w-7 md:h-8 md:w-8"
               title="Add ordered list"
             >
-              <ListOrdered className="size-3.5" />
+              <ListOrdered className="size-3 md:size-3.5" />
             </Button>
           </ButtonGroup>
 
@@ -314,13 +314,13 @@ export function EditorToolbar({
             variant="ghost"
             size="icon"
             onClick={onCreateLink}
-            className="h-8 w-8"
+            className="h-7 w-7 md:h-8 md:w-8"
             title="Add link"
           >
-            <LinkIcon className="size-3.5" />
+            <LinkIcon className="size-3 md:size-3.5" />
           </Button>
 
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-5 md:h-6 hidden sm:block" />
 
           {/* View Code Button */}
           <Dialog>
@@ -328,10 +328,10 @@ export function EditorToolbar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-7 w-7 md:h-8 md:w-8"
                 title="Export code"
               >
-                <Code className="size-3.5" />
+                <Code className="size-3 md:size-3.5" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-[90vw] min-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
