@@ -34,7 +34,7 @@ import {
   Type,
   ImagePlus,
   LayoutGrid,
-  Code,
+  Download,
   Copy,
   Check,
   Eye,
@@ -331,7 +331,7 @@ export function EditorToolbar({
                 className="h-7 w-7 md:h-8 md:w-8"
                 title="Export code"
               >
-                <Code className="size-3 md:size-3.5" />
+                <Download className="size-3 md:size-3.5" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-[90vw] min-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
