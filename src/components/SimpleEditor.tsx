@@ -371,957 +371,957 @@ export function SimpleEditor({
   // Get the current container from history
   const container = state.history[state.historyIndex];
 
-  // Initialize with comprehensive demo content if empty
-  useEffect(() => {
-    if (container.children.length === 0 && !readOnly) {
-      const timestamp = Date.now();
-
-      // Create a showcase document focused on custom classes and colors
-      const demoNodes: EditorNode[] = [
-        // Title
-        {
-          id: `h1-${timestamp}-1`,
-          type: "h1",
-          content: "✨ Next-Level Rich Text Editor",
-          attributes: {},
-        } as TextNode,
-
-        // Subtitle
-        {
-          id: `p-${timestamp}-2`,
-          type: "p",
-          children: [
-            { content: "The ", bold: false },
-            {
-              content: "first rich text editor",
-              bold: true,
-              className: "text-blue-500",
-            },
-            { content: " built entirely with ", bold: false },
-            { content: "Tailwind CSS", bold: true, className: "text-cyan-500" },
-            { content: " and ", bold: false },
-            { content: "shadcn/ui", bold: true, className: "text-purple-500" },
-            { content: ". Unleash your creativity with ", bold: false },
-            {
-              content: "custom classes",
-              underline: true,
-              className: "text-orange-500",
-            },
-            { content: " and ", bold: false },
-            {
-              content: "unlimited colors",
-              italic: true,
-              className: "text-pink-500",
-            },
-            { content: "!", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        // Custom Classes
-        {
-          id: `h2-${timestamp}-3`,
-          type: "h2",
-          content: "🎨 Custom Tailwind Classes",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-4`,
-          type: "p",
-          content: "Install the required dependencies:",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `code-${timestamp}-5`,
-          type: "code",
-          content: "npm install react react-dom typescript tailwindcss",
-          attributes: {},
-        } as TextNode,
-
-        // Quick Start
-        {
-          id: `h2-${timestamp}-6`,
-          type: "h2",
-          content: "🚀 Quick Start",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-7`,
-          type: "p",
-          content:
-            "Wrap your editor with the EditorProvider and add the SimpleEditor component:",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `code-${timestamp}-8`,
-          type: "code",
-          content: `import { EditorProvider } from '@/lib';
-import { SimpleEditor } from '@/components/SimpleEditor';
-
-export default function App() {
-  return (
-    <EditorProvider>
-      <SimpleEditor />
-    </EditorProvider>
-  );
-}`,
-          attributes: {},
-        } as TextNode,
-
-        // Read-only mode
-        {
-          id: `h3-${timestamp}-9`,
-          type: "h3",
-          content: "👁️ Read-Only Mode",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-10`,
-          type: "p",
-          children: [
-            {
-              content:
-                "Perfect for displaying content without editing. Just pass ",
-              bold: false,
-            },
-            { content: "readOnly={true}", elementType: "code" },
-            { content: " prop:", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `code-${timestamp}-11`,
-          type: "code",
-          content: "<SimpleEditor readOnly={true} />",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `blockquote-${timestamp}-12`,
-          type: "blockquote",
-          children: [
-            { content: "💡 Tip: ", bold: true },
-            { content: "Try toggling the ", italic: true },
-            { content: "View Only", italic: true, bold: true },
-            {
-              content: " checkbox in the top-right to see this in action!",
-              italic: true,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        // Text Formatting
-        {
-          id: `h2-${timestamp}-13`,
-          type: "h2",
-          content: "✨ Text Formatting",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-14`,
-          type: "p",
-          content: "Select any text and use the toolbar to apply formatting:",
-          attributes: {},
-        } as TextNode,
-
-        // Formatted paragraph
-        {
-          id: `p-${timestamp}-15`,
-          type: "p",
-          children: [
-            { content: "You can make text ", bold: false },
-            { content: "bold", bold: true },
-            { content: ", ", bold: false },
-            { content: "italic", italic: true },
-            { content: ", ", bold: false },
-            { content: "underlined", underline: true },
-            { content: ", or ", bold: false },
-            {
-              content: "combine them all",
-              bold: true,
-              italic: true,
-              underline: true,
-            },
-            {
-              content:
-                "! Mix and match formatting to create beautiful content.",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `code-${timestamp}-16`,
-          type: "code",
-          content: `// Formatting is stored in a structured format
-const textNode = {
-  id: 'p-1234',
-        type: 'p',
-  children: [
-    { 
-      content: 'Hello ', 
-      bold: false 
-    },
-    { 
-      content: 'World', 
-      bold: true,
-      italic: true,
-      underline: true
-    }
-  ],
-  attributes: {}
-};`,
-          attributes: {},
-        } as TextNode,
-
-        // Block Types
-        {
-          id: `h2-${timestamp}-17`,
-          type: "h2",
-          content: "📋 Block Types",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-18`,
-          type: "p",
-          content:
-            "The editor supports multiple block types. Use the type selector in the toolbar:",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `h1-${timestamp}-19`,
-          type: "h1",
-          content: "Heading 1 - Large title",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `h2-${timestamp}-20`,
-          type: "h2",
-          content: "Heading 2 - Section title",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `h3-${timestamp}-21`,
-          type: "h3",
-          content: "Heading 3 - Subsection",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-22`,
-          type: "p",
-          content: "Paragraph - Regular text content",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `blockquote-${timestamp}-23`,
-          type: "blockquote",
-          children: [
-            { content: "Blockquote - ", italic: true },
-            {
-              content:
-                'Perfect for quotes and callouts. "The best way to predict the future is to invent it." - Alan Kay',
-              italic: true,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `code-${timestamp}-24`,
-          type: "code",
-          content: `// Code Block - Multiline support with proper formatting
-function createEditor(options) {
-  return new MinaEditor({
-    readOnly: options.viewOnly,
-    theme: 'dark',
-    features: {
-      nestedBlocks: true,
-      inlineFormatting: true,
-      htmlExport: true
-    }
-  });
-}`,
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-25`,
-          type: "li",
-          content: "List Item 1 - Ordered list items",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-26`,
-          type: "li",
-          content: "List Item 2 - Auto-numbered",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-27`,
-          type: "li",
-          content: "List Item 3 - Can be formatted too!",
-          attributes: {},
-        } as TextNode,
-
-        // Inline Element Types
-        {
-          id: `h2-${timestamp}-28`,
-          type: "h2",
-          content: "🎨 Inline Element Types",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-29`,
-          type: "p",
-          content:
-            "Apply heading styles inline within paragraphs. Select text and choose from the element type dropdown:",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-30`,
-          type: "p",
-          children: [
-            { content: "This is ", bold: false },
-            { content: "H1 styled text", elementType: "h1" },
-            { content: " and ", bold: false },
-            { content: "H2 styled text", elementType: "h2" },
-            { content: " within a paragraph, with ", bold: false },
-            { content: "inline code", elementType: "code" },
-            { content: " support!", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `code-${timestamp}-31`,
-          type: "code",
-          content: `// Inline element types - style text within blocks
-const paragraph = {
-  id: 'p-5678',
-  type: 'p',  // Paragraph block
-  children: [
-    { 
-      content: 'Regular text ' 
-    },
-    { 
-      content: 'Large title', 
-      elementType: 'h1' 
-    },
-    { 
-      content: ' and ', 
-    },
-    { 
-      content: 'inline code', 
-      elementType: 'code',
-      bold: true 
-    }
-  ],
-  attributes: {}
-};`,
-          attributes: {},
-        } as TextNode,
-
-        // Nested blocks heading
-        {
-          id: `h2-${timestamp}-32`,
-          type: "h2",
-          content: "🪆 Nested Blocks",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-33`,
-          type: "p",
-          children: [
-            { content: "Press ", bold: false },
-            { content: "Shift+Enter", elementType: "code", bold: true },
-            {
-              content:
-                " to create nested blocks. Maximum nesting level is 1 (nested blocks cannot be nested further).",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        // Nested container
-        {
-          id: `container-${timestamp}-34`,
-          type: "container",
-          children: [
-            {
-              id: `p-${timestamp}-35`,
-              type: "p",
-              children: [
-                { content: "📦 This is a ", bold: false },
-                { content: "nested container", bold: true },
-                {
-                  content: "! It groups related content together.",
-                  bold: false,
-                },
-              ],
-              attributes: {},
-            } as TextNode,
-            {
-              id: `p-${timestamp}-36`,
-              type: "p",
-              content:
-                "Each nested block can have its own formatting and type.",
-              attributes: {},
-            } as TextNode,
-            {
-              id: `code-${timestamp}-37`,
-              type: "code",
-              content: `// Code blocks work in nested containers too!
-const nestedBlock = {
-  type: 'container',
-  children: [
-    { type: 'p', content: 'Paragraph' },
-    { type: 'code', content: 'const x = 1;' }
-  ]
-};
-
-console.log('Nested blocks are awesome!');`,
-              attributes: {},
-            } as TextNode,
-            {
-              id: `blockquote-${timestamp}-38`,
-              type: "blockquote",
-              content:
-                "And quotes too! Perfect for organizing complex content.",
-              attributes: {},
-            } as TextNode,
-          ],
-          attributes: {},
-        } as ContainerNode,
-
-        {
-          id: `code-${timestamp}-39`,
-          type: "code",
-          content: `// Nested blocks structure
-{
-  type: 'container',
-  children: [
-    { type: 'p', content: 'First nested block' },
-    { type: 'p', content: 'Second nested block' },
-    { type: 'code', content: 'Code in nested block' }
-  ]
-}`,
-          attributes: {},
-        } as TextNode,
-
-        // Keyboard Shortcuts
-        {
-          id: `h2-${timestamp}-40`,
-          type: "h2",
-          content: "⌨️ Keyboard Shortcuts",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-41`,
-          type: "li",
-          children: [
-            { content: "Enter", elementType: "code", bold: true },
-            { content: " - Create new block after current one", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-42`,
-          type: "li",
-          children: [
-            { content: "Shift + Enter", elementType: "code", bold: true },
-            {
-              content: " - Create nested block or add to existing nest",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-43`,
-          type: "li",
-          children: [
-            { content: "Ctrl/Cmd + A", elementType: "code", bold: true },
-            { content: " - Select all content (for copying)", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-44`,
-          type: "li",
-          children: [
-            { content: "Backspace/Delete", elementType: "code", bold: true },
-            { content: " - Delete current block (when empty)", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        // HTML Export
-        {
-          id: `h2-${timestamp}-45`,
-          type: "h2",
-          content: "📤 HTML Export",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-46`,
-          type: "p",
-          content:
-            "Export your content to beautiful HTML with Tailwind CSS classes:",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `code-${timestamp}-47`,
-          type: "code",
-          content: `import { serializeToHtml } from '@/lib/utils/serialize-to-html';
-
-// Get the editor state
-const html = serializeToHtml(editorState.container);
-
-// Returns formatted HTML with Tailwind classes
-// Ready for rendering in your app!`,
-          attributes: {},
-        } as TextNode,
-
-        // Key Features
-        {
-          id: `h2-${timestamp}-48`,
-          type: "h2",
-          content: "🎯 Key Features Summary",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-49`,
-          type: "li",
-          children: [
-            { content: "✅ Immutable State Management", bold: true },
-            {
-              content: " - Built with reducers for predictable updates",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-50`,
-          type: "li",
-          children: [
-            { content: "✅ TypeScript-First", bold: true },
-            {
-              content: " - Fully typed API with excellent IntelliSense",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-51`,
-          type: "li",
-          children: [
-            { content: "✅ Nested Blocks", bold: true },
-            { content: " - Organize content hierarchically", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-52`,
-          type: "li",
-          children: [
-            { content: "✅ Read-Only Mode", bold: true },
-            {
-              content: " - Perfect for displaying published content",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-53`,
-          type: "li",
-          children: [
-            { content: "✅ Dark Mode Support", bold: true },
-            { content: " - Beautiful themes out of the box", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-54`,
-          type: "li",
-          children: [
-            { content: "✅ HTML Export", bold: true },
-            { content: " - Serialize to production-ready HTML", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-55`,
-          type: "li",
-          children: [
-            { content: "✅ Image Support", bold: true },
-            { content: " - Upload and manage images inline", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-56`,
-          type: "li",
-          children: [
-            { content: "✅ Inline Formatting", bold: true },
-            { content: " - Apply styles to selected text ranges", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        // Final CTA
-        {
-          id: `h2-${timestamp}-57`,
-          type: "h2",
-          content: "🎨 Try It Out!",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-58`,
-          type: "p",
-          children: [
-            { content: "👉 ", bold: false },
-            { content: "Select any text", bold: true },
-            { content: " and use the toolbar above to format it", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-59`,
-          type: "p",
-          children: [
-            { content: "👉 Press ", bold: false },
-            { content: "Enter", elementType: "code" },
-            { content: " to create new blocks", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-60`,
-          type: "p",
-          children: [
-            { content: "👉 Press ", bold: false },
-            { content: "Shift+Enter", elementType: "code" },
-            { content: " for nested blocks", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-61`,
-          type: "p",
-          children: [
-            { content: "👉 Toggle ", bold: false },
-            { content: "View Only", bold: true },
-            {
-              content: " mode in the top-right to see the read-only version",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-62`,
-          type: "p",
-          children: [
-            { content: "👉 Switch to ", bold: false },
-            { content: "Dark Mode", bold: true },
-            { content: " using the theme toggle", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `blockquote-${timestamp}-63`,
-          type: "blockquote",
-          children: [
-            { content: "💡 Pro Tip: ", bold: true },
-            {
-              content:
-                "Use the debug panel below to see the JSON structure and copy HTML output. This is your living documentation - feel free to edit, experiment, and explore all features!",
-              italic: true,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        // About the Creator
-        {
-          id: `h2-${timestamp}-64`,
-          type: "h2",
-          content: "👨‍💻 About the Creator",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-65`,
-          type: "p",
-          children: [
-            { content: "Built by ", bold: false },
-            { content: "Mina Massoud", bold: true },
-            {
-              content: " - Frontend Developer based in Cairo, Egypt 🇪🇬",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `blockquote-${timestamp}-66`,
-          type: "blockquote",
-          children: [
-            { content: '"', bold: false },
-            {
-              content:
-                "Survived 4 years of school, mastered 3 years of frontend sorcery. Still debugging my life.",
-              italic: true,
-              bold: false,
-            },
-            { content: '"', bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-67`,
-          type: "p",
-          children: [
-            { content: "🌐 Portfolio: ", bold: false },
-            {
-              content: "https://mina-massoud.com/",
-              bold: true,
-              underline: true,
-              href: "https://mina-massoud.com/",
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-68`,
-          type: "p",
-          children: [
-            { content: "💼 LinkedIn: ", bold: false },
-            {
-              content: "linkedin.com/in/mina-melad/",
-              bold: true,
-              href: "https://linkedin.com/in/mina-melad/",
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-69`,
-          type: "p",
-          children: [
-            { content: "💻 GitHub: ", bold: false },
-            {
-              content: "github.com/Mina-Massoud",
-              bold: true,
-              href: "https://github.com/Mina-Massoud",
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        // Mina Scheduler Section
-        {
-          id: `h3-${timestamp}-70`,
-          type: "h3",
-          content: "📅 Discover Mina Scheduler",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-71`,
-          type: "p",
-          content:
-            "Check out another powerful library I've built - a customizable calendar component for React!",
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-72`,
-          type: "li",
-          children: [
-            { content: "⭐ 560+ Stars on GitHub", bold: true },
-            { content: " - Trusted by developers worldwide", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-73`,
-          type: "li",
-          children: [
-            { content: "🎨 Built with Next UI & shadcn/ui", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-74`,
-          type: "li",
-          children: [{ content: "📆 Day, Week, Month Views", bold: false }],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-75`,
-          type: "li",
-          children: [{ content: "🎯 Drag & Drop Events", bold: false }],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `li-${timestamp}-76`,
-          type: "li",
-          children: [
-            { content: "💾 State Management with Reducers", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-77`,
-          type: "p",
-          children: [
-            { content: "🔗 GitHub: ", bold: false },
-            {
-              content: "https://github.com/Mina-Massoud/mina-scheduler",
-              bold: true,
-              underline: true,
-              href: "https://github.com/Mina-Massoud/mina-scheduler",
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `p-${timestamp}-78`,
-          type: "p",
-          children: [
-            { content: "🌐 Live Demo: ", bold: false },
-            {
-              content: "https://mina-scheduler.vercel.app/",
-              bold: true,
-              underline: true,
-              href: "https://mina-scheduler.vercel.app/",
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `code-${timestamp}-79`,
-          type: "code",
-          content: `// Install Mina Scheduler
-npm install mina-scheduler
-
-// Use in your React app
-import { Scheduler } from 'mina-scheduler';
-
-function App() {
-  return <Scheduler events={events} />;
-}`,
-          attributes: {},
-        } as TextNode,
-
-        {
-          id: `blockquote-${timestamp}-80`,
-          type: "blockquote",
-          content:
-            "If you enjoy this Rich Editor, you'll love Mina Scheduler! Both libraries share the same philosophy: beautiful UI, clean code, and developer-friendly APIs.",
-          attributes: {},
-        } as TextNode,
-      ];
-
-      // Create new state with all demo nodes in a single dispatch
-      const newContainer: ContainerNode = {
-        ...container,
-        children: demoNodes,
-      };
-
-      const newState: EditorState = {
-        ...state,
-        history: [newContainer],
-        historyIndex: 0,
-        activeNodeId: demoNodes.length > 0 ? demoNodes[0].id : null,
-        metadata: {
-          ...state.metadata,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      };
-
-      // Dispatch single SET_STATE action with all content
-      dispatch(EditorActions.setState(newState));
-
-      console.log(
-        "📝 [Initial Content] Loaded demo content with",
-        demoNodes.length,
-        "nodes"
-      );
-      console.log("📝 [Initial Content] First node:", demoNodes[0]);
-    } else if (!state.activeNodeId && container.children.length > 0) {
-      // Find the first focusable node (skip container nodes)
-      const firstFocusableNode = container.children.find(
-        (child) => !isContainerNode(child)
-      );
-      if (firstFocusableNode) {
-        dispatch(EditorActions.setActiveNode(firstFocusableNode.id));
-      }
-    }
-  }, [
-    container.children.length,
-    state.activeNodeId,
-    dispatch,
-    container.id,
-    readOnly,
-  ]);
+//   // Initialize with comprehensive demo content if empty
+//   useEffect(() => {
+//     if (container.children.length === 0 && !readOnly) {
+//       const timestamp = Date.now();
+
+//       // Create a showcase document focused on custom classes and colors
+//       const demoNodes: EditorNode[] = [
+//         // Title
+//         {
+//           id: `h1-${timestamp}-1`,
+//           type: "h1",
+//           content: "✨ Next-Level Rich Text Editor",
+//           attributes: {},
+//         } as TextNode,
+
+//         // Subtitle
+//         {
+//           id: `p-${timestamp}-2`,
+//           type: "p",
+//           children: [
+//             { content: "The ", bold: false },
+//             {
+//               content: "first rich text editor",
+//               bold: true,
+//               className: "text-blue-500",
+//             },
+//             { content: " built entirely with ", bold: false },
+//             { content: "Tailwind CSS", bold: true, className: "text-cyan-500" },
+//             { content: " and ", bold: false },
+//             { content: "shadcn/ui", bold: true, className: "text-purple-500" },
+//             { content: ". Unleash your creativity with ", bold: false },
+//             {
+//               content: "custom classes",
+//               underline: true,
+//               className: "text-orange-500",
+//             },
+//             { content: " and ", bold: false },
+//             {
+//               content: "unlimited colors",
+//               italic: true,
+//               className: "text-pink-500",
+//             },
+//             { content: "!", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         // Custom Classes
+//         {
+//           id: `h2-${timestamp}-3`,
+//           type: "h2",
+//           content: "🎨 Custom Tailwind Classes",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-4`,
+//           type: "p",
+//           content: "Install the required dependencies:",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `code-${timestamp}-5`,
+//           type: "code",
+//           content: "npm install react react-dom typescript tailwindcss",
+//           attributes: {},
+//         } as TextNode,
+
+//         // Quick Start
+//         {
+//           id: `h2-${timestamp}-6`,
+//           type: "h2",
+//           content: "🚀 Quick Start",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-7`,
+//           type: "p",
+//           content:
+//             "Wrap your editor with the EditorProvider and add the SimpleEditor component:",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `code-${timestamp}-8`,
+//           type: "code",
+//           content: `import { EditorProvider } from '@/lib';
+// import { SimpleEditor } from '@/components/SimpleEditor';
+
+// export default function App() {
+//   return (
+//     <EditorProvider>
+//       <SimpleEditor />
+//     </EditorProvider>
+//   );
+// }`,
+//           attributes: {},
+//         } as TextNode,
+
+//         // Read-only mode
+//         {
+//           id: `h3-${timestamp}-9`,
+//           type: "h3",
+//           content: "👁️ Read-Only Mode",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-10`,
+//           type: "p",
+//           children: [
+//             {
+//               content:
+//                 "Perfect for displaying content without editing. Just pass ",
+//               bold: false,
+//             },
+//             { content: "readOnly={true}", elementType: "code" },
+//             { content: " prop:", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `code-${timestamp}-11`,
+//           type: "code",
+//           content: "<SimpleEditor readOnly={true} />",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `blockquote-${timestamp}-12`,
+//           type: "blockquote",
+//           children: [
+//             { content: "💡 Tip: ", bold: true },
+//             { content: "Try toggling the ", italic: true },
+//             { content: "View Only", italic: true, bold: true },
+//             {
+//               content: " checkbox in the top-right to see this in action!",
+//               italic: true,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         // Text Formatting
+//         {
+//           id: `h2-${timestamp}-13`,
+//           type: "h2",
+//           content: "✨ Text Formatting",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-14`,
+//           type: "p",
+//           content: "Select any text and use the toolbar to apply formatting:",
+//           attributes: {},
+//         } as TextNode,
+
+//         // Formatted paragraph
+//         {
+//           id: `p-${timestamp}-15`,
+//           type: "p",
+//           children: [
+//             { content: "You can make text ", bold: false },
+//             { content: "bold", bold: true },
+//             { content: ", ", bold: false },
+//             { content: "italic", italic: true },
+//             { content: ", ", bold: false },
+//             { content: "underlined", underline: true },
+//             { content: ", or ", bold: false },
+//             {
+//               content: "combine them all",
+//               bold: true,
+//               italic: true,
+//               underline: true,
+//             },
+//             {
+//               content:
+//                 "! Mix and match formatting to create beautiful content.",
+//               bold: false,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `code-${timestamp}-16`,
+//           type: "code",
+//           content: `// Formatting is stored in a structured format
+// const textNode = {
+//   id: 'p-1234',
+//         type: 'p',
+//   children: [
+//     { 
+//       content: 'Hello ', 
+//       bold: false 
+//     },
+//     { 
+//       content: 'World', 
+//       bold: true,
+//       italic: true,
+//       underline: true
+//     }
+//   ],
+//   attributes: {}
+// };`,
+//           attributes: {},
+//         } as TextNode,
+
+//         // Block Types
+//         {
+//           id: `h2-${timestamp}-17`,
+//           type: "h2",
+//           content: "📋 Block Types",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-18`,
+//           type: "p",
+//           content:
+//             "The editor supports multiple block types. Use the type selector in the toolbar:",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `h1-${timestamp}-19`,
+//           type: "h1",
+//           content: "Heading 1 - Large title",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `h2-${timestamp}-20`,
+//           type: "h2",
+//           content: "Heading 2 - Section title",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `h3-${timestamp}-21`,
+//           type: "h3",
+//           content: "Heading 3 - Subsection",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-22`,
+//           type: "p",
+//           content: "Paragraph - Regular text content",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `blockquote-${timestamp}-23`,
+//           type: "blockquote",
+//           children: [
+//             { content: "Blockquote - ", italic: true },
+//             {
+//               content:
+//                 'Perfect for quotes and callouts. "The best way to predict the future is to invent it." - Alan Kay',
+//               italic: true,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `code-${timestamp}-24`,
+//           type: "code",
+//           content: `// Code Block - Multiline support with proper formatting
+// function createEditor(options) {
+//   return new MinaEditor({
+//     readOnly: options.viewOnly,
+//     theme: 'dark',
+//     features: {
+//       nestedBlocks: true,
+//       inlineFormatting: true,
+//       htmlExport: true
+//     }
+//   });
+// }`,
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-25`,
+//           type: "li",
+//           content: "List Item 1 - Ordered list items",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-26`,
+//           type: "li",
+//           content: "List Item 2 - Auto-numbered",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-27`,
+//           type: "li",
+//           content: "List Item 3 - Can be formatted too!",
+//           attributes: {},
+//         } as TextNode,
+
+//         // Inline Element Types
+//         {
+//           id: `h2-${timestamp}-28`,
+//           type: "h2",
+//           content: "🎨 Inline Element Types",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-29`,
+//           type: "p",
+//           content:
+//             "Apply heading styles inline within paragraphs. Select text and choose from the element type dropdown:",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-30`,
+//           type: "p",
+//           children: [
+//             { content: "This is ", bold: false },
+//             { content: "H1 styled text", elementType: "h1" },
+//             { content: " and ", bold: false },
+//             { content: "H2 styled text", elementType: "h2" },
+//             { content: " within a paragraph, with ", bold: false },
+//             { content: "inline code", elementType: "code" },
+//             { content: " support!", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `code-${timestamp}-31`,
+//           type: "code",
+//           content: `// Inline element types - style text within blocks
+// const paragraph = {
+//   id: 'p-5678',
+//   type: 'p',  // Paragraph block
+//   children: [
+//     { 
+//       content: 'Regular text ' 
+//     },
+//     { 
+//       content: 'Large title', 
+//       elementType: 'h1' 
+//     },
+//     { 
+//       content: ' and ', 
+//     },
+//     { 
+//       content: 'inline code', 
+//       elementType: 'code',
+//       bold: true 
+//     }
+//   ],
+//   attributes: {}
+// };`,
+//           attributes: {},
+//         } as TextNode,
+
+//         // Nested blocks heading
+//         {
+//           id: `h2-${timestamp}-32`,
+//           type: "h2",
+//           content: "🪆 Nested Blocks",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-33`,
+//           type: "p",
+//           children: [
+//             { content: "Press ", bold: false },
+//             { content: "Shift+Enter", elementType: "code", bold: true },
+//             {
+//               content:
+//                 " to create nested blocks. Maximum nesting level is 1 (nested blocks cannot be nested further).",
+//               bold: false,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         // Nested container
+//         {
+//           id: `container-${timestamp}-34`,
+//           type: "container",
+//           children: [
+//             {
+//               id: `p-${timestamp}-35`,
+//               type: "p",
+//               children: [
+//                 { content: "📦 This is a ", bold: false },
+//                 { content: "nested container", bold: true },
+//                 {
+//                   content: "! It groups related content together.",
+//                   bold: false,
+//                 },
+//               ],
+//               attributes: {},
+//             } as TextNode,
+//             {
+//               id: `p-${timestamp}-36`,
+//               type: "p",
+//               content:
+//                 "Each nested block can have its own formatting and type.",
+//               attributes: {},
+//             } as TextNode,
+//             {
+//               id: `code-${timestamp}-37`,
+//               type: "code",
+//               content: `// Code blocks work in nested containers too!
+// const nestedBlock = {
+//   type: 'container',
+//   children: [
+//     { type: 'p', content: 'Paragraph' },
+//     { type: 'code', content: 'const x = 1;' }
+//   ]
+// };
+
+// console.log('Nested blocks are awesome!');`,
+//               attributes: {},
+//             } as TextNode,
+//             {
+//               id: `blockquote-${timestamp}-38`,
+//               type: "blockquote",
+//               content:
+//                 "And quotes too! Perfect for organizing complex content.",
+//               attributes: {},
+//             } as TextNode,
+//           ],
+//           attributes: {},
+//         } as ContainerNode,
+
+//         {
+//           id: `code-${timestamp}-39`,
+//           type: "code",
+//           content: `// Nested blocks structure
+// {
+//   type: 'container',
+//   children: [
+//     { type: 'p', content: 'First nested block' },
+//     { type: 'p', content: 'Second nested block' },
+//     { type: 'code', content: 'Code in nested block' }
+//   ]
+// }`,
+//           attributes: {},
+//         } as TextNode,
+
+//         // Keyboard Shortcuts
+//         {
+//           id: `h2-${timestamp}-40`,
+//           type: "h2",
+//           content: "⌨️ Keyboard Shortcuts",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-41`,
+//           type: "li",
+//           children: [
+//             { content: "Enter", elementType: "code", bold: true },
+//             { content: " - Create new block after current one", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-42`,
+//           type: "li",
+//           children: [
+//             { content: "Shift + Enter", elementType: "code", bold: true },
+//             {
+//               content: " - Create nested block or add to existing nest",
+//               bold: false,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-43`,
+//           type: "li",
+//           children: [
+//             { content: "Ctrl/Cmd + A", elementType: "code", bold: true },
+//             { content: " - Select all content (for copying)", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-44`,
+//           type: "li",
+//           children: [
+//             { content: "Backspace/Delete", elementType: "code", bold: true },
+//             { content: " - Delete current block (when empty)", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         // HTML Export
+//         {
+//           id: `h2-${timestamp}-45`,
+//           type: "h2",
+//           content: "📤 HTML Export",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-46`,
+//           type: "p",
+//           content:
+//             "Export your content to beautiful HTML with Tailwind CSS classes:",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `code-${timestamp}-47`,
+//           type: "code",
+//           content: `import { serializeToHtml } from '@/lib/utils/serialize-to-html';
+
+// // Get the editor state
+// const html = serializeToHtml(editorState.container);
+
+// // Returns formatted HTML with Tailwind classes
+// // Ready for rendering in your app!`,
+//           attributes: {},
+//         } as TextNode,
+
+//         // Key Features
+//         {
+//           id: `h2-${timestamp}-48`,
+//           type: "h2",
+//           content: "🎯 Key Features Summary",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-49`,
+//           type: "li",
+//           children: [
+//             { content: "✅ Immutable State Management", bold: true },
+//             {
+//               content: " - Built with reducers for predictable updates",
+//               bold: false,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-50`,
+//           type: "li",
+//           children: [
+//             { content: "✅ TypeScript-First", bold: true },
+//             {
+//               content: " - Fully typed API with excellent IntelliSense",
+//               bold: false,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-51`,
+//           type: "li",
+//           children: [
+//             { content: "✅ Nested Blocks", bold: true },
+//             { content: " - Organize content hierarchically", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-52`,
+//           type: "li",
+//           children: [
+//             { content: "✅ Read-Only Mode", bold: true },
+//             {
+//               content: " - Perfect for displaying published content",
+//               bold: false,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-53`,
+//           type: "li",
+//           children: [
+//             { content: "✅ Dark Mode Support", bold: true },
+//             { content: " - Beautiful themes out of the box", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-54`,
+//           type: "li",
+//           children: [
+//             { content: "✅ HTML Export", bold: true },
+//             { content: " - Serialize to production-ready HTML", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-55`,
+//           type: "li",
+//           children: [
+//             { content: "✅ Image Support", bold: true },
+//             { content: " - Upload and manage images inline", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-56`,
+//           type: "li",
+//           children: [
+//             { content: "✅ Inline Formatting", bold: true },
+//             { content: " - Apply styles to selected text ranges", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         // Final CTA
+//         {
+//           id: `h2-${timestamp}-57`,
+//           type: "h2",
+//           content: "🎨 Try It Out!",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-58`,
+//           type: "p",
+//           children: [
+//             { content: "👉 ", bold: false },
+//             { content: "Select any text", bold: true },
+//             { content: " and use the toolbar above to format it", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-59`,
+//           type: "p",
+//           children: [
+//             { content: "👉 Press ", bold: false },
+//             { content: "Enter", elementType: "code" },
+//             { content: " to create new blocks", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-60`,
+//           type: "p",
+//           children: [
+//             { content: "👉 Press ", bold: false },
+//             { content: "Shift+Enter", elementType: "code" },
+//             { content: " for nested blocks", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-61`,
+//           type: "p",
+//           children: [
+//             { content: "👉 Toggle ", bold: false },
+//             { content: "View Only", bold: true },
+//             {
+//               content: " mode in the top-right to see the read-only version",
+//               bold: false,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-62`,
+//           type: "p",
+//           children: [
+//             { content: "👉 Switch to ", bold: false },
+//             { content: "Dark Mode", bold: true },
+//             { content: " using the theme toggle", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `blockquote-${timestamp}-63`,
+//           type: "blockquote",
+//           children: [
+//             { content: "💡 Pro Tip: ", bold: true },
+//             {
+//               content:
+//                 "Use the debug panel below to see the JSON structure and copy HTML output. This is your living documentation - feel free to edit, experiment, and explore all features!",
+//               italic: true,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         // About the Creator
+//         {
+//           id: `h2-${timestamp}-64`,
+//           type: "h2",
+//           content: "👨‍💻 About the Creator",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-65`,
+//           type: "p",
+//           children: [
+//             { content: "Built by ", bold: false },
+//             { content: "Mina Massoud", bold: true },
+//             {
+//               content: " - Frontend Developer based in Cairo, Egypt 🇪🇬",
+//               bold: false,
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `blockquote-${timestamp}-66`,
+//           type: "blockquote",
+//           children: [
+//             { content: '"', bold: false },
+//             {
+//               content:
+//                 "Survived 4 years of school, mastered 3 years of frontend sorcery. Still debugging my life.",
+//               italic: true,
+//               bold: false,
+//             },
+//             { content: '"', bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-67`,
+//           type: "p",
+//           children: [
+//             { content: "🌐 Portfolio: ", bold: false },
+//             {
+//               content: "https://mina-massoud.com/",
+//               bold: true,
+//               underline: true,
+//               href: "https://mina-massoud.com/",
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-68`,
+//           type: "p",
+//           children: [
+//             { content: "💼 LinkedIn: ", bold: false },
+//             {
+//               content: "linkedin.com/in/mina-melad/",
+//               bold: true,
+//               href: "https://linkedin.com/in/mina-melad/",
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-69`,
+//           type: "p",
+//           children: [
+//             { content: "💻 GitHub: ", bold: false },
+//             {
+//               content: "github.com/Mina-Massoud",
+//               bold: true,
+//               href: "https://github.com/Mina-Massoud",
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         // Mina Scheduler Section
+//         {
+//           id: `h3-${timestamp}-70`,
+//           type: "h3",
+//           content: "📅 Discover Mina Scheduler",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-71`,
+//           type: "p",
+//           content:
+//             "Check out another powerful library I've built - a customizable calendar component for React!",
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-72`,
+//           type: "li",
+//           children: [
+//             { content: "⭐ 560+ Stars on GitHub", bold: true },
+//             { content: " - Trusted by developers worldwide", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-73`,
+//           type: "li",
+//           children: [
+//             { content: "🎨 Built with Next UI & shadcn/ui", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-74`,
+//           type: "li",
+//           children: [{ content: "📆 Day, Week, Month Views", bold: false }],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-75`,
+//           type: "li",
+//           children: [{ content: "🎯 Drag & Drop Events", bold: false }],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `li-${timestamp}-76`,
+//           type: "li",
+//           children: [
+//             { content: "💾 State Management with Reducers", bold: false },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-77`,
+//           type: "p",
+//           children: [
+//             { content: "🔗 GitHub: ", bold: false },
+//             {
+//               content: "https://github.com/Mina-Massoud/mina-scheduler",
+//               bold: true,
+//               underline: true,
+//               href: "https://github.com/Mina-Massoud/mina-scheduler",
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `p-${timestamp}-78`,
+//           type: "p",
+//           children: [
+//             { content: "🌐 Live Demo: ", bold: false },
+//             {
+//               content: "https://mina-scheduler.vercel.app/",
+//               bold: true,
+//               underline: true,
+//               href: "https://mina-scheduler.vercel.app/",
+//             },
+//           ],
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `code-${timestamp}-79`,
+//           type: "code",
+//           content: `// Install Mina Scheduler
+// npm install mina-scheduler
+
+// // Use in your React app
+// import { Scheduler } from 'mina-scheduler';
+
+// function App() {
+//   return <Scheduler events={events} />;
+// }`,
+//           attributes: {},
+//         } as TextNode,
+
+//         {
+//           id: `blockquote-${timestamp}-80`,
+//           type: "blockquote",
+//           content:
+//             "If you enjoy this Rich Editor, you'll love Mina Scheduler! Both libraries share the same philosophy: beautiful UI, clean code, and developer-friendly APIs.",
+//           attributes: {},
+//         } as TextNode,
+//       ];
+
+//       // Create new state with all demo nodes in a single dispatch
+//       const newContainer: ContainerNode = {
+//         ...container,
+//         children: demoNodes,
+//       };
+
+//       const newState: EditorState = {
+//         ...state,
+//         history: [newContainer],
+//         historyIndex: 0,
+//         activeNodeId: demoNodes.length > 0 ? demoNodes[0].id : null,
+//         metadata: {
+//           ...state.metadata,
+//           createdAt: new Date().toISOString(),
+//           updatedAt: new Date().toISOString(),
+//         },
+//       };
+
+//       // Dispatch single SET_STATE action with all content
+//       dispatch(EditorActions.setState(newState));
+
+//       console.log(
+//         "📝 [Initial Content] Loaded demo content with",
+//         demoNodes.length,
+//         "nodes"
+//       );
+//       console.log("📝 [Initial Content] First node:", demoNodes[0]);
+//     } else if (!state.activeNodeId && container.children.length > 0) {
+//       // Find the first focusable node (skip container nodes)
+//       const firstFocusableNode = container.children.find(
+//         (child) => !isContainerNode(child)
+//       );
+//       if (firstFocusableNode) {
+//         dispatch(EditorActions.setActiveNode(firstFocusableNode.id));
+//       }
+//     }
+//   }, [
+//     container.children.length,
+//     state.activeNodeId,
+//     dispatch,
+//     container.id,
+//     readOnly,
+//   ]);
 
   const currentNode = state.activeNodeId
     ? (container.children.find((n) => n.id === state.activeNodeId) as
