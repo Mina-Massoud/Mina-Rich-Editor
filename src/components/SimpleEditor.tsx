@@ -1,9 +1,9 @@
 /**
  * Mina Rich Editor - Simple Single Block Editor
- * 
+ *
  * A minimal editor demonstrating text formatting with our CRUD system.
  * Focus on: Select text → Click format button → Update via reducer
- * 
+ *
  * REFACTORED VERSION - Now uses shadcn/ui components for beautiful design
  */
 
@@ -26,6 +26,7 @@ import {
 } from "../lib";
 import { Block } from "./Block";
 import { AddBlockButton } from "./AddBlockButton";
+import { CustomClassPopover } from "./CustomClassPopover";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import {
   Select,
@@ -60,7 +61,11 @@ import {
   Copy,
   Check,
   Eye,
+  Palette,
+  List,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Input } from "./ui/input";
 import { uploadImage } from "../lib/utils/image-upload";
 import { useToast } from "@/hooks/use-toast";
 
@@ -112,12 +117,12 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
       const classList = Array.from(el.classList);
-      
+
       // Detect formatting from classes
       const bold = classList.includes("font-bold");
       const italic = classList.includes("italic");
       const underline = classList.includes("underline");
-      
+
       // Detect element type from classes
       let elementType:
         | "h1"
@@ -152,7 +157,7 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
       } else if (classList.includes("border-l-4")) {
         elementType = "blockquote";
       }
-      
+
       // Merge with inherited formatting
       const currentFormats = {
         bold: bold || inheritedFormats.bold,
@@ -160,7 +165,7 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
         underline: underline || inheritedFormats.underline,
         elementType: elementType || inheritedFormats.elementType,
       };
-      
+
       // If it's a span with formatting, walk its children with inherited formats
       if (el.tagName === "SPAN") {
         for (let i = 0; i < node.childNodes.length; i++) {
@@ -174,11 +179,11 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
       }
     }
   };
-  
+
   for (let i = 0; i < element.childNodes.length; i++) {
     walkNode(element.childNodes[i]);
   }
-  
+
   // Filter out empty content
   return children.filter((child) => child.content && child.content.length > 0);
 }
@@ -191,8 +196,8 @@ function detectFormatsInRange(
   start: number,
   end: number
 ): {
-  bold: boolean; 
-  italic: boolean; 
+  bold: boolean;
+  italic: boolean;
   underline: boolean;
   elementType?:
     | "h1"
@@ -211,7 +216,7 @@ function detectFormatsInRange(
     underline: false,
     elementType: null as any,
   };
-  
+
   // If node has no children, check node-level attributes
   if (!node.children || node.children.length === 0) {
     return {
@@ -221,7 +226,7 @@ function detectFormatsInRange(
       elementType: null,
     };
   }
-  
+
   // Node has children array - analyze the range
   let currentPos = 0;
   let hasAnyBold = false;
@@ -233,36 +238,36 @@ function detectFormatsInRange(
   let charsInRange = 0;
   let firstElementType: typeof formats.elementType = undefined;
   let allSameElementType = true;
-  
+
   for (const child of node.children) {
     const childLength = (child.content || "").length;
     const childStart = currentPos;
     const childEnd = currentPos + childLength;
-    
+
     // Check if this child overlaps with the selection
     const overlaps = childStart < end && childEnd > start;
-    
+
     if (overlaps) {
       charsInRange += Math.min(childEnd, end) - Math.max(childStart, start);
-      
+
       if (child.bold) {
         hasAnyBold = true;
       } else {
         allBold = false;
       }
-      
+
       if (child.italic) {
         hasAnyItalic = true;
       } else {
         allItalic = false;
       }
-      
+
       if (child.underline) {
         hasAnyUnderline = true;
       } else {
         allUnderline = false;
       }
-      
+
       // Check element type
       const childElementType = child.elementType || null;
       if (firstElementType === undefined) {
@@ -271,10 +276,10 @@ function detectFormatsInRange(
         allSameElementType = false;
       }
     }
-    
+
     currentPos = childEnd;
   }
-  
+
   // A format is "active" if ALL selected text has that format
   return {
     bold: charsInRange > 0 && allBold,
@@ -299,6 +304,7 @@ export function SimpleEditor({ readOnly = false }: SimpleEditorProps = {}) {
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const contentUpdateTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorContentRef = useRef<HTMLDivElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [copiedHtml, setCopiedHtml] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
@@ -308,16 +314,17 @@ export function SimpleEditor({ readOnly = false }: SimpleEditorProps = {}) {
     null
   );
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string>("");
 
   // Get the current container from history
   const container = state.history[state.historyIndex];
 
   console.log("state", state);
-  console.log("History:", { 
-    current: state.historyIndex, 
+  console.log("History:", {
+    current: state.historyIndex,
     total: state.history.length,
     canUndo: state.historyIndex > 0,
-    canRedo: state.historyIndex < state.history.length - 1
+    canRedo: state.historyIndex < state.history.length - 1,
   });
 
   // Initialize with comprehensive demo content if empty
@@ -694,7 +701,7 @@ const paragraph = {
             {
               content:
                 " to create nested blocks. Maximum nesting level is 1 (nested blocks cannot be nested further).",
-          bold: false,
+              bold: false,
             },
           ],
           attributes: {},
@@ -1037,7 +1044,10 @@ const html = serializeToHtml(editorState.container);
           children: [
             { content: "Built by ", bold: false },
             { content: "Mina Massoud", bold: true },
-            { content: " - Frontend Developer based in Cairo, Egypt 🇪🇬", bold: false },
+            {
+              content: " - Frontend Developer based in Cairo, Egypt 🇪🇬",
+              bold: false,
+            },
           ],
           attributes: {},
         } as TextNode,
@@ -1046,9 +1056,14 @@ const html = serializeToHtml(editorState.container);
           id: `blockquote-${timestamp}-66`,
           type: "blockquote",
           children: [
-            { content: "\"", bold: false },
-            { content: "Survived 4 years of school, mastered 3 years of frontend sorcery. Still debugging my life.", italic: true, bold: false },
-            { content: "\"", bold: false },
+            { content: '"', bold: false },
+            {
+              content:
+                "Survived 4 years of school, mastered 3 years of frontend sorcery. Still debugging my life.",
+              italic: true,
+              bold: false,
+            },
+            { content: '"', bold: false },
           ],
           attributes: {},
         } as TextNode,
@@ -1058,7 +1073,12 @@ const html = serializeToHtml(editorState.container);
           type: "p",
           children: [
             { content: "🌐 Portfolio: ", bold: false },
-            { content: "https://mina-massoud.com/", bold: true, underline: true, href: "https://mina-massoud.com/" },
+            {
+              content: "https://mina-massoud.com/",
+              bold: true,
+              underline: true,
+              href: "https://mina-massoud.com/",
+            },
           ],
           attributes: {},
         } as TextNode,
@@ -1068,7 +1088,11 @@ const html = serializeToHtml(editorState.container);
           type: "p",
           children: [
             { content: "💼 LinkedIn: ", bold: false },
-            { content: "linkedin.com/in/mina-melad/", bold: true, href: "https://linkedin.com/in/mina-melad/" },
+            {
+              content: "linkedin.com/in/mina-melad/",
+              bold: true,
+              href: "https://linkedin.com/in/mina-melad/",
+            },
           ],
           attributes: {},
         } as TextNode,
@@ -1078,7 +1102,11 @@ const html = serializeToHtml(editorState.container);
           type: "p",
           children: [
             { content: "💻 GitHub: ", bold: false },
-            { content: "github.com/Mina-Massoud", bold: true, href: "https://github.com/Mina-Massoud" },
+            {
+              content: "github.com/Mina-Massoud",
+              bold: true,
+              href: "https://github.com/Mina-Massoud",
+            },
           ],
           attributes: {},
         } as TextNode,
@@ -1094,7 +1122,8 @@ const html = serializeToHtml(editorState.container);
         {
           id: `p-${timestamp}-71`,
           type: "p",
-          content: "Check out another powerful library I've built - a customizable calendar component for React!",
+          content:
+            "Check out another powerful library I've built - a customizable calendar component for React!",
           attributes: {},
         } as TextNode,
 
@@ -1120,18 +1149,14 @@ const html = serializeToHtml(editorState.container);
         {
           id: `li-${timestamp}-74`,
           type: "li",
-          children: [
-            { content: "📆 Day, Week, Month Views", bold: false },
-          ],
+          children: [{ content: "📆 Day, Week, Month Views", bold: false }],
           attributes: {},
         } as TextNode,
 
         {
           id: `li-${timestamp}-75`,
           type: "li",
-          children: [
-            { content: "🎯 Drag & Drop Events", bold: false },
-          ],
+          children: [{ content: "🎯 Drag & Drop Events", bold: false }],
           attributes: {},
         } as TextNode,
 
@@ -1149,7 +1174,12 @@ const html = serializeToHtml(editorState.container);
           type: "p",
           children: [
             { content: "🔗 GitHub: ", bold: false },
-            { content: "https://github.com/Mina-Massoud/mina-scheduler", bold: true, underline: true, href: "https://github.com/Mina-Massoud/mina-scheduler" },
+            {
+              content: "https://github.com/Mina-Massoud/mina-scheduler",
+              bold: true,
+              underline: true,
+              href: "https://github.com/Mina-Massoud/mina-scheduler",
+            },
           ],
           attributes: {},
         } as TextNode,
@@ -1159,7 +1189,12 @@ const html = serializeToHtml(editorState.container);
           type: "p",
           children: [
             { content: "🌐 Live Demo: ", bold: false },
-            { content: "https://mina-scheduler.vercel.app/", bold: true, underline: true, href: "https://mina-scheduler.vercel.app/" },
+            {
+              content: "https://mina-scheduler.vercel.app/",
+              bold: true,
+              underline: true,
+              href: "https://mina-scheduler.vercel.app/",
+            },
           ],
           attributes: {},
         } as TextNode,
@@ -1182,7 +1217,8 @@ function App() {
         {
           id: `blockquote-${timestamp}-80`,
           type: "blockquote",
-          content: "If you enjoy this Rich Editor, you'll love Mina Scheduler! Both libraries share the same philosophy: beautiful UI, clean code, and developer-friendly APIs.",
+          content:
+            "If you enjoy this Rich Editor, you'll love Mina Scheduler! Both libraries share the same philosophy: beautiful UI, clean code, and developer-friendly APIs.",
           attributes: {},
         } as TextNode,
       ];
@@ -1197,9 +1233,7 @@ function App() {
         dispatch(EditorActions.setActiveNode(demoNodes[0].id));
       }
     } else if (!state.activeNodeId && container.children.length > 0) {
-      dispatch(
-        EditorActions.setActiveNode(container.children[0]?.id || null)
-      );
+      dispatch(EditorActions.setActiveNode(container.children[0]?.id || null));
     }
   }, [
     container.children.length,
@@ -1209,7 +1243,7 @@ function App() {
     readOnly,
   ]);
 
-  const currentNode = state.activeNodeId 
+  const currentNode = state.activeNodeId
     ? (container.children.find((n) => n.id === state.activeNodeId) as
         | TextNode
         | undefined)
@@ -1224,16 +1258,16 @@ function App() {
       !selection.isCollapsed &&
       selection.toString().length > 0;
     console.log("Selection hasText:", hasText, "text:", selection?.toString());
-    
+
     // Get the FRESH current node from state (not the stale one from render)
-    const freshCurrentNode = state.activeNodeId 
+    const freshCurrentNode = state.activeNodeId
       ? (container.children.find((n) => n.id === state.activeNodeId) as
           | TextNode
           | undefined)
       : (container.children[0] as TextNode | undefined);
-    
+
     console.log("🔄 Fresh current node:", freshCurrentNode);
-    
+
     if (hasText && freshCurrentNode && selection) {
       const element = nodeRefs.current.get(freshCurrentNode.id);
       if (element) {
@@ -1243,17 +1277,17 @@ function App() {
         preSelectionRange.setEnd(range.startContainer, range.startOffset);
         const start = preSelectionRange.toString().length;
         const end = start + range.toString().length;
-        
+
         console.log("📏 Selection range calculated:", {
           start,
           end,
           nodeId: freshCurrentNode.id,
         });
-        
+
         // Detect active formats in the selected range
         const detected = detectFormatsInRange(freshCurrentNode, start, end);
         console.log("🎨 Detected formats in range:", detected);
-        
+
         const selectionInfo: SelectionInfo = {
           text: selection.toString(),
           start,
@@ -1266,18 +1300,18 @@ function App() {
           },
           elementType: detected.elementType,
         };
-        
+
         // Only dispatch if selection actually changed
         const currentSel = state.currentSelection;
         const changed =
           !currentSel ||
-          currentSel.start !== start || 
-          currentSel.end !== end || 
+          currentSel.start !== start ||
+          currentSel.end !== end ||
           currentSel.nodeId !== freshCurrentNode.id ||
           currentSel.formats.bold !== detected.bold ||
           currentSel.formats.italic !== detected.italic ||
           currentSel.formats.underline !== detected.underline;
-        
+
         if (changed) {
           console.log(
             "🚀 Dispatching setCurrentSelection with:",
@@ -1335,42 +1369,42 @@ function App() {
       const result = findNodeInTree(nodeId, container);
       if (!result || !isTextNode(result.node)) return;
       const node = result.node as TextNode;
-      
+
       // Shift+Enter: For list items, add a new line within the SAME block
       // For other blocks, insert a line break within the block
       if (e.shiftKey) {
         e.preventDefault();
-        
+
         // For list items, add a new line to the lines array
         if (node.type === "li") {
           const element = nodeRefs.current.get(nodeId);
           if (!element) return;
-          
+
           // Get current text content from DOM
           const textContent = element.innerText || element.textContent || "";
-          
+
           // Parse the current content into lines
           const lines = textContent
             .split("\n")
             .map((line) => ({ content: line }));
-          
+
           // Add a new empty line
           lines.push({ content: "" });
-          
+
           // Update the node with the new lines structure
           dispatch(
             EditorActions.updateNode(nodeId, {
-            lines: lines,
-            content: undefined, // Clear old content field
-            children: undefined, // Clear old children field
+              lines: lines,
+              content: undefined, // Clear old content field
+              children: undefined, // Clear old children field
             })
           );
-          
+
           console.log("📝 CRUD Action: ADD_LINE to list item", {
             nodeId,
             totalLines: lines.length,
           });
-          
+
           // Focus and move cursor to the new line
           setTimeout(() => {
             if (element) {
@@ -1396,28 +1430,28 @@ function App() {
             range.collapse(true);
             selection.removeAllRanges();
             selection.addRange(range);
-            
+
             const element = nodeRefs.current.get(nodeId);
             if (element) {
               handleContentChange(nodeId, element);
             }
           }
         }
-        
+
         return;
       }
-      
+
       e.preventDefault();
 
       const currentTime = Date.now();
       const timeSinceLastEnter = currentTime - lastEnterTime.current;
-      
+
       // Get cursor position
       const selection = window.getSelection();
       const element = nodeRefs.current.get(nodeId);
-      
+
       if (!element || !selection) return;
-      
+
       // Calculate cursor position in text
       let cursorPosition = 0;
       if (selection.rangeCount > 0) {
@@ -1427,10 +1461,10 @@ function App() {
         preSelectionRange.setEnd(range.startContainer, range.startOffset);
         cursorPosition = preSelectionRange.toString().length;
       }
-      
+
       // Get the full text content
       const fullText = getNodeTextContent(node);
-      
+
       // Check if this is a list item (ol/li)
       if (node.type === "li") {
         // If the list item is empty, exit the list
@@ -1442,32 +1476,32 @@ function App() {
             content: "",
             attributes: {},
           };
-          
+
           dispatch(EditorActions.deleteNode(nodeId));
           dispatch(EditorActions.insertNode(newNode, nodeId, "after"));
           dispatch(EditorActions.setActiveNode(newNode.id));
-          
+
           setTimeout(() => {
             const newElement = nodeRefs.current.get(newNode.id);
             if (newElement) {
               newElement.focus();
             }
           }, 10);
-          
+
           return;
         }
-        
+
         // Create new list item after current one
         const beforeCursor = fullText.substring(0, cursorPosition);
         const afterCursor = fullText.substring(cursorPosition);
-        
+
         // Update current node with content before cursor
         dispatch(
           EditorActions.updateNode(nodeId, {
-          content: beforeCursor,
+            content: beforeCursor,
           })
         );
-        
+
         // Create new list item with content after cursor
         const newNode: TextNode = {
           id: "li-" + Date.now(),
@@ -1475,12 +1509,12 @@ function App() {
           content: afterCursor,
           attributes: {},
         };
-        
+
         dispatch(EditorActions.insertNode(newNode, nodeId, "after"));
         dispatch(EditorActions.setActiveNode(newNode.id));
-        
+
         lastEnterTime.current = currentTime;
-        
+
         setTimeout(() => {
           const newElement = nodeRefs.current.get(newNode.id);
           if (newElement) {
@@ -1496,31 +1530,31 @@ function App() {
             }
           }
         }, 10);
-        
+
         return;
       }
-      
+
       // Regular paragraph/heading - create normal block
       {
         // Split content at cursor position
         const beforeCursor = fullText.substring(0, cursorPosition);
         const afterCursor = fullText.substring(cursorPosition);
-        
+
         // Check if node has inline children (formatted content)
         const nodeHasInlineChildren = hasInlineChildren(node);
-        
+
         if (nodeHasInlineChildren && node.children) {
           // Split inline children at cursor position
           let currentPos = 0;
           const beforeChildren: typeof node.children = [];
           const afterChildren: typeof node.children = [];
           let splitDone = false;
-          
+
           for (const child of node.children) {
             const childLength = (child.content || "").length;
             const childStart = currentPos;
             const childEnd = currentPos + childLength;
-            
+
             if (splitDone) {
               // Everything after the split goes to the new node
               afterChildren.push({ ...child });
@@ -1534,7 +1568,7 @@ function App() {
             } else {
               // Cursor is in the middle of this child - need to split it
               const offsetInChild = cursorPosition - childStart;
-              
+
               // Part before cursor stays in current node
               if (offsetInChild > 0) {
                 beforeChildren.push({
@@ -1542,7 +1576,7 @@ function App() {
                   content: child.content!.substring(0, offsetInChild),
                 });
               }
-              
+
               // Part after cursor goes to new node
               if (offsetInChild < childLength) {
                 afterChildren.push({
@@ -1550,22 +1584,22 @@ function App() {
                   content: child.content!.substring(offsetInChild),
                 });
               }
-              
+
               splitDone = true;
             }
-            
+
             currentPos = childEnd;
           }
-          
+
           // Update current node with children before cursor
           dispatch(
             EditorActions.updateNode(nodeId, {
-            children: beforeChildren.length > 0 ? beforeChildren : undefined,
+              children: beforeChildren.length > 0 ? beforeChildren : undefined,
               content:
                 beforeChildren.length === 0 ? beforeCursor : node.content,
             })
           );
-          
+
           // Create new node with children after cursor (deep copy with all properties)
           const newNode: TextNode = {
             id: `${node.type}-` + Date.now(),
@@ -1574,7 +1608,7 @@ function App() {
             children: afterChildren.length > 0 ? afterChildren : undefined,
             attributes: { ...node.attributes },
           };
-          
+
           dispatch(EditorActions.insertNode(newNode, nodeId, "after"));
           dispatch(EditorActions.setActiveNode(newNode.id));
         } else {
@@ -1582,10 +1616,10 @@ function App() {
           // Update current node with content before cursor
           dispatch(
             EditorActions.updateNode(nodeId, {
-            content: beforeCursor,
+              content: beforeCursor,
             })
           );
-          
+
           // Create new node with content after cursor (deep copy all properties)
           const newNode: TextNode = {
             id: `${node.type}-` + Date.now(),
@@ -1593,20 +1627,20 @@ function App() {
             content: afterCursor,
             attributes: { ...node.attributes },
           };
-          
+
           dispatch(EditorActions.insertNode(newNode, nodeId, "after"));
           dispatch(EditorActions.setActiveNode(newNode.id));
         }
-        
+
         console.log("📝 CRUD Action: INSERT_NODE with split content", {
           nodeType: node.type,
           after: nodeId,
           beforeCursor,
           afterCursor,
         });
-        
+
         lastEnterTime.current = currentTime;
-        
+
         // Focus the new node after a brief delay and place cursor at start
         setTimeout(() => {
           const newElement = nodeRefs.current.get(
@@ -1643,14 +1677,11 @@ function App() {
       const isNodeEmpty = !fullTextContent || fullTextContent.trim() === "";
 
       // If cursor is at the start and node is empty or BR, delete the node
-      if (
-        (cursorAtStart && isNodeEmpty) ||
-        node.type === "br"
-      ) {
+      if ((cursorAtStart && isNodeEmpty) || node.type === "br") {
         e.preventDefault();
-        
+
         const currentIndex = siblings.findIndex((n) => n.id === nodeId);
-        
+
         // Don't delete if it's the only node in the container
         if (siblings.length === 1) {
           // Just clear the content instead
@@ -1672,10 +1703,10 @@ function App() {
         // Focus the previous node if it exists, otherwise the next one
         const prevNode = siblings[currentIndex - 1];
         const nextNode = siblings[currentIndex + 1];
-          const nodeToFocus = prevNode || nextNode;
-          
-          if (nodeToFocus) {
-            dispatch(EditorActions.setActiveNode(nodeToFocus.id));
+        const nodeToFocus = prevNode || nextNode;
+
+        if (nodeToFocus) {
+          dispatch(EditorActions.setActiveNode(nodeToFocus.id));
         }
       }
     }
@@ -1687,10 +1718,10 @@ function App() {
     const node = result.node as TextNode;
 
     const newContent = element.textContent || "";
-    
+
     // Get the current text content (from plain content or inline children)
     const currentContent = getNodeTextContent(node);
-    
+
     // Only update if content actually changed
     if (newContent !== currentContent) {
       // Clear any existing timer for this node
@@ -1698,23 +1729,23 @@ function App() {
       if (existingTimer) {
         clearTimeout(existingTimer);
       }
-      
+
       // Debounce the state update - only update after user stops typing for 150ms
       const timer = setTimeout(() => {
         // Auto-detect ordered list pattern: "1. ", "2. ", etc. (only with space)
         const orderedListMatch = newContent.match(/^(\d+)\.\s(.+)$/);
-        
+
         if (orderedListMatch && node.type === "p") {
           // Convert to list item and remove only the number prefix
           const [_, number, content] = orderedListMatch;
-          
+
           dispatch(
             EditorActions.updateNode(node.id, {
               type: "li",
-            content: content,
+              content: content,
             })
           );
-          
+
           console.log("📝 CRUD Action: AUTO-CONVERT to ordered list", {
             nodeId: node.id,
             listNumber: number,
@@ -1728,7 +1759,7 @@ function App() {
           const textLines = newContent
             .split("\n")
             .filter((line) => line.trim() !== "");
-          
+
           if (textLines.length > 1) {
             // Multiple lines - use lines structure
             const updatedLines = textLines.map((lineText) => {
@@ -1736,15 +1767,15 @@ function App() {
               const cleanedText = lineText.replace(/^\d+\.\s*/, "");
               return { content: cleanedText };
             });
-            
+
             dispatch(
               EditorActions.updateNode(node.id, {
-              lines: updatedLines,
-              content: undefined, // Clear simple content
-              children: undefined, // Clear children
+                lines: updatedLines,
+                content: undefined, // Clear simple content
+                children: undefined, // Clear children
               })
             );
-            
+
             console.log("📝 CRUD Action: UPDATE_LINES (debounced)", {
               nodeId: node.id,
               lineCount: updatedLines.length,
@@ -1752,7 +1783,7 @@ function App() {
           } else {
             // Single line - use simple content
             dispatch(EditorActions.updateContent(node.id, newContent));
-            
+
             console.log("📝 CRUD Action: UPDATE_CONTENT (li single line)", {
               nodeId: node.id,
               newContent: newContent,
@@ -1761,7 +1792,7 @@ function App() {
         } else if (!hasInlineChildren(node)) {
           // Simple content node - just update the text
           dispatch(EditorActions.updateContent(node.id, newContent));
-          
+
           console.log("📝 CRUD Action: UPDATE_CONTENT (debounced)", {
             nodeId: node.id,
             newContent: newContent,
@@ -1769,26 +1800,26 @@ function App() {
         } else {
           // Node has inline children with formatting - parse DOM to preserve formatting
           const parsedChildren = parseDOMToInlineChildren(element);
-          
+
           dispatch(
             EditorActions.updateNode(node.id, {
-            children: parsedChildren,
+              children: parsedChildren,
             })
           );
-          
+
           console.log(
             "📝 CRUD Action: UPDATE_NODE with parsed children (debounced)",
             {
-            nodeId: node.id,
-            parsedChildren,
+              nodeId: node.id,
+              parsedChildren,
             }
           );
         }
-        
+
         // Clean up the timer reference
         contentUpdateTimers.current.delete(nodeId);
       }, 150);
-      
+
       // Store the timer reference
       contentUpdateTimers.current.set(nodeId, timer);
     }
@@ -1891,16 +1922,16 @@ function App() {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-        
-        // Check if we're focused inside the editor
-        const activeElement = document.activeElement;
+
+      // Check if we're focused inside the editor
+      const activeElement = document.activeElement;
       const isInEditor = Array.from(nodeRefs.current.values()).some(
         (el) => el === activeElement || el.contains(activeElement)
       );
-        
+
       // Ctrl+A / Cmd+A - Select all content
       if (isCtrlOrCmd && e.key === "a" && isInEditor) {
-          e.preventDefault();
+        e.preventDefault();
 
         // Select all content in the editor by creating a range across all blocks
         const selection = window.getSelection();
@@ -1922,17 +1953,21 @@ function App() {
         e.preventDefault();
         if (state.historyIndex > 0) {
           dispatch(EditorActions.undo());
-       
+
           console.log("⏪ Undo:", state.historyIndex - 1);
         }
       }
 
       // Ctrl+Y / Cmd+Y or Ctrl+Shift+Z - Redo
-      if (isInEditor && ((isCtrlOrCmd && e.key === "y") || (isCtrlOrCmd && e.shiftKey && e.key === "z"))) {
+      if (
+        isInEditor &&
+        ((isCtrlOrCmd && e.key === "y") ||
+          (isCtrlOrCmd && e.shiftKey && e.key === "z"))
+      ) {
         e.preventDefault();
         if (state.historyIndex < state.history.length - 1) {
           dispatch(EditorActions.redo());
-        
+
           console.log("⏩ Redo:", state.historyIndex + 1);
         }
       }
@@ -1950,28 +1985,28 @@ function App() {
     console.log("Format requested:", format);
     console.log("Current state.currentSelection:", state.currentSelection);
     console.log("Current node before toggle:", currentNode);
-    
+
     if (!state.currentSelection) {
       console.warn("❌ No current selection, aborting");
       console.groupEnd();
       return;
     }
-    
+
     // Save selection for restoration
     const { start, end, nodeId, formats } = state.currentSelection;
-    
+
     console.log("Current format state:", formats);
     console.log(
       `Format "${format}" is currently:`,
       formats[format] ? "ACTIVE" : "INACTIVE"
     );
-    
+
     // Dispatch toggle format action - reducer handles everything!
     console.log("🚀 Dispatching toggleFormat action");
     dispatch(EditorActions.toggleFormat(format));
-    
+
     console.log("📝 CRUD Action: TOGGLE_FORMAT dispatched");
-    
+
     // After state updates, check what happened
     setTimeout(() => {
       console.log("⏰ After state update");
@@ -1979,7 +2014,7 @@ function App() {
       console.log("Updated node after toggle:", updatedNode);
       console.log("Updated node attributes:", updatedNode?.attributes);
     }, 100);
-    
+
     // Restore selection after formatting
     setTimeout(() => {
       console.log("⏰ Restoring selection after timeout");
@@ -2003,33 +2038,33 @@ function App() {
     console.log("🔄 [restoreSelection] Starting", { start, end });
     const range = document.createRange();
     const sel = window.getSelection();
-    
+
     let currentPos = 0;
     let startNode: Node | null = null;
     let startOffset = 0;
     let endNode: Node | null = null;
     let endOffset = 0;
     let found = false;
-    
+
     // Walk through all text nodes to find the start and end positions
     const walk = (node: Node) => {
       if (found) return;
-      
+
       if (node.nodeType === Node.TEXT_NODE) {
         const textLength = node.textContent?.length || 0;
-        
+
         if (!startNode && currentPos + textLength >= start) {
           startNode = node;
           startOffset = start - currentPos;
         }
-        
+
         if (currentPos + textLength >= end) {
           endNode = node;
           endOffset = end - currentPos;
           found = true;
           return;
         }
-        
+
         currentPos += textLength;
       } else {
         for (let i = 0; i < node.childNodes.length; i++) {
@@ -2038,11 +2073,11 @@ function App() {
         }
       }
     };
-    
+
     walk(element);
-    
+
     console.log("Found nodes:", { startNode, startOffset, endNode, endOffset });
-    
+
     if (startNode && endNode) {
       try {
         range.setStart(startNode, startOffset);
@@ -2050,7 +2085,7 @@ function App() {
         sel?.removeAllRanges();
         sel?.addRange(range);
         console.log("✅ Selection range set successfully");
-        
+
         // IMPORTANT: After restoring selection, we need to update the format detection
         // This will trigger selectionchange which will re-detect formats correctly
       } catch (e) {
@@ -2063,6 +2098,31 @@ function App() {
     }
   };
 
+  // Handle color selection
+  const handleApplyColor = (color: string) => {
+    if (!state.currentSelection) return;
+
+    const { nodeId, start, end } = state.currentSelection;
+
+    // Apply color as custom class
+    dispatch(EditorActions.applyCustomClass(color));
+
+    setSelectedColor(color);
+
+    toast({
+      title: "Color Applied",
+      description: `Applied color: ${color}`,
+    });
+
+    // Restore selection with a slightly longer delay to allow state update
+    setTimeout(() => {
+      const element = nodeRefs.current.get(nodeId);
+      if (element) {
+        restoreSelection(element, start, end);
+      }
+    }, 50);
+  };
+
   const handleTypeChange = (type: TextNode["type"]) => {
     if (!currentNode) return;
 
@@ -2070,7 +2130,7 @@ function App() {
     if (state.currentSelection) {
       // Save selection info before dispatch
       const { start, end, nodeId } = state.currentSelection;
-      
+
       // Apply as inline element type to selected text only
       const elementType =
         type === "p"
@@ -2085,12 +2145,12 @@ function App() {
               | "code"
               | "blockquote");
       dispatch(EditorActions.applyInlineElementType(elementType));
-      
+
       console.log("📝 CRUD Action: APPLY_INLINE_ELEMENT_TYPE", {
         elementType,
         selection: state.currentSelection,
       });
-      
+
       // Restore selection after state update
       setTimeout(() => {
         const element = nodeRefs.current.get(nodeId);
@@ -2119,6 +2179,79 @@ function App() {
 
   const handleImageUploadClick = () => {
     fileInputRef.current?.click();
+  };
+
+  // Handle creating a list block with header and 3 nested items
+  const handleCreateList = () => {
+    const timestamp = Date.now();
+
+    // Create a container with a header and 3 nested text blocks
+    const listContainer: ContainerNode = {
+      id: `container-${timestamp}`,
+      type: "container",
+      children: [
+        {
+          id: `h3-${timestamp}`,
+          type: "h3",
+          content: "List Title",
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-1`,
+          type: "li",
+          content: "First item",
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-2`,
+          type: "li",
+          content: "Second item",
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-3`,
+          type: "li",
+          content: "Third item",
+          attributes: {},
+        } as TextNode,
+      ],
+      attributes: {},
+    };
+
+    // Insert the list container at the end
+    const lastNode = container.children[container.children.length - 1];
+    if (lastNode) {
+      dispatch(EditorActions.insertNode(listContainer, lastNode.id, "after"));
+    } else {
+      // If no nodes exist, replace the container
+      dispatch(
+        EditorActions.replaceContainer({
+          ...container,
+          children: [listContainer],
+        })
+      );
+    }
+
+    toast({
+      title: "List Created",
+      description: "Added a new list with header and 3 items",
+    });
+
+    // Smooth scroll to the newly created list
+    setTimeout(() => {
+      // Find the last element in the editor (the newly created list container)
+      const editorContent = editorContentRef.current;
+      if (editorContent) {
+        const lastChild = editorContent.querySelector('[data-editor-content]')?.lastElementChild;
+        if (lastChild) {
+          lastChild.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+            inline: "nearest"
+          });
+        }
+      }
+    }, 150);
   };
 
   const handleImageDragStart = (nodeId: string) => {
@@ -2372,9 +2505,7 @@ function App() {
         if (targetId) {
           dispatch(EditorActions.insertNode(imageNode, targetId, "after"));
         } else {
-          dispatch(
-            EditorActions.insertNode(imageNode, container.id, "append")
-          );
+          dispatch(EditorActions.insertNode(imageNode, container.id, "append"));
         }
 
         toast({
@@ -2411,7 +2542,7 @@ function App() {
   const handleDeleteNode = (nodeId: string) => {
     dispatch(EditorActions.deleteNode(nodeId));
     console.log("📝 CRUD Action: DELETE_NODE (image)", { nodeId });
-    
+
     toast({
       title: "Image removed",
       description: "The image has been deleted.",
@@ -2512,9 +2643,7 @@ function App() {
 
     // Insert the nested container in its place
     // Since we deleted the node, we insert after the previous node or prepend to container
-    const nodeIndex = container.children.findIndex(
-      (n) => n.id === nodeId
-    );
+    const nodeIndex = container.children.findIndex((n) => n.id === nodeId);
     if (nodeIndex > 0) {
       const previousNode = container.children[nodeIndex - 1];
       dispatch(
@@ -2595,14 +2724,14 @@ function App() {
         <Card className="shadow-2xl pt-0 rounded-none border-2 gap-3 transition-all duration-300">
           {/* Toolbar inside card - hidden in readOnly mode */}
           {!readOnly && (
-            <CardContent className="p-4 border-b max-w-4xl w-full mx-auto transition-all duration-300">
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Type Selector */}
-              <div className="flex items-center gap-2">
-                <Type className="size-4 text-muted-foreground" />
-                <Select
-                  value={
-                    state.currentSelection?.elementType !== undefined
+            <CardContent className="p-4 sticky w-full top-0 backdrop-blur-2xl z-10 border-b mx-auto transition-all duration-300">
+              <div className="flex items-center max-w-4xl mx-auto w-full  gap-3 flex-wrap">
+                {/* Type Selector */}
+                <div className="flex items-center gap-2">
+                  <Type className="size-4 text-muted-foreground" />
+                  <Select
+                    value={
+                      state.currentSelection?.elementType !== undefined
                         ? state.currentSelection.elementType || "p"
                         : currentNode?.type || "p"
                     }
@@ -2614,18 +2743,18 @@ function App() {
                       currentNode.type === "br" ||
                       currentNode.type === "img"
                     }
-                >
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue placeholder="Select type">
-                      {(() => {
+                  >
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder="Select type">
+                        {(() => {
                           const type =
                             state.currentSelection?.elementType !== undefined
                               ? state.currentSelection.elementType ||
                                 currentNode?.type ||
                                 "p"
                               : currentNode?.type || "p";
-                        
-                        switch (type) {
+
+                          switch (type) {
                             case "h1":
                               return (
                                 <span className="font-bold text-base">
@@ -2674,53 +2803,53 @@ function App() {
                               );
                             default:
                               return <span className="text-sm">Paragraph</span>;
-                        }
-                      })()}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="p">
-                      <span className="text-sm">Paragraph</span>
-                    </SelectItem>
-                    <SelectItem value="h1">
-                      <span className="font-bold text-base">Heading 1</span>
-                    </SelectItem>
-                    <SelectItem value="h2">
-                      <span className="font-bold text-sm">Heading 2</span>
-                    </SelectItem>
-                    <SelectItem value="h3">
-                      <span className="font-semibold text-sm">Heading 3</span>
-                    </SelectItem>
-                    <SelectItem value="h4">
-                      <span className="font-semibold text-xs">Heading 4</span>
-                    </SelectItem>
-                    <SelectItem value="h5">
-                      <span className="font-semibold text-xs">Heading 5</span>
-                    </SelectItem>
-                    <SelectItem value="h6">
-                      <span className="font-semibold text-xs">Heading 6</span>
-                    </SelectItem>
-                    <SelectItem value="li">
-                      <span className="text-sm">List Item</span>
-                    </SelectItem>
-                    <SelectItem value="blockquote">
-                      <span className="italic text-sm">Quote</span>
-                    </SelectItem>
-                    <SelectItem value="code">
-                      <span className="font-mono text-xs">Code</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                          }
+                        })()}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="p">
+                        <span className="text-sm">Paragraph</span>
+                      </SelectItem>
+                      <SelectItem value="h1">
+                        <span className="font-bold text-base">Heading 1</span>
+                      </SelectItem>
+                      <SelectItem value="h2">
+                        <span className="font-bold text-sm">Heading 2</span>
+                      </SelectItem>
+                      <SelectItem value="h3">
+                        <span className="font-semibold text-sm">Heading 3</span>
+                      </SelectItem>
+                      <SelectItem value="h4">
+                        <span className="font-semibold text-xs">Heading 4</span>
+                      </SelectItem>
+                      <SelectItem value="h5">
+                        <span className="font-semibold text-xs">Heading 5</span>
+                      </SelectItem>
+                      <SelectItem value="h6">
+                        <span className="font-semibold text-xs">Heading 6</span>
+                      </SelectItem>
+                      <SelectItem value="li">
+                        <span className="text-sm">List Item</span>
+                      </SelectItem>
+                      <SelectItem value="blockquote">
+                        <span className="italic text-sm">Quote</span>
+                      </SelectItem>
+                      <SelectItem value="code">
+                        <span className="font-mono text-xs">Code</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <Separator orientation="vertical" className="h-8" />
+                <Separator orientation="vertical" className="h-8" />
 
-              {/* Format Buttons - Now using ToggleGroup! */}
-              <ToggleGroup
-                type="multiple"
-                variant="outline"
-                disabled={!state.currentSelection}
-                value={[
+                {/* Format Buttons - Now using ToggleGroup! */}
+                <ToggleGroup
+                  type="multiple"
+                  variant="outline"
+                  disabled={!state.currentSelection}
+                  value={[
                     ...(state.currentSelection?.formats.bold ? ["bold"] : []),
                     ...(state.currentSelection?.formats.italic
                       ? ["italic"]
@@ -2728,95 +2857,157 @@ function App() {
                     ...(state.currentSelection?.formats.underline
                       ? ["underline"]
                       : []),
-                ]}
-              >
-                <ToggleGroupItem
-                  value="bold"
-                  aria-label="Toggle bold"
+                  ]}
+                >
+                  <ToggleGroupItem
+                    value="bold"
+                    aria-label="Toggle bold"
                     onClick={() => handleFormat("bold")}
-                  disabled={!state.currentSelection}
-                >
-                  <Bold className="size-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="italic"
-                  aria-label="Toggle italic"
+                    disabled={!state.currentSelection}
+                  >
+                    <Bold className="size-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="italic"
+                    aria-label="Toggle italic"
                     onClick={() => handleFormat("italic")}
-                  disabled={!state.currentSelection}
-                >
-                  <Italic className="size-4" />
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="underline"
-                  aria-label="Toggle underline"
+                    disabled={!state.currentSelection}
+                  >
+                    <Italic className="size-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="underline"
+                    aria-label="Toggle underline"
                     onClick={() => handleFormat("underline")}
-                  disabled={!state.currentSelection}
+                    disabled={!state.currentSelection}
+                  >
+                    <Underline className="size-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+
+                <Separator orientation="vertical" className="h-8" />
+
+                {/* Color Picker */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!state.currentSelection}
+                      className="gap-2"
+                    >
+                      <Palette className="size-4" />
+                      Color
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Text Colors</h4>
+                      <div className="grid grid-cols-5 gap-2">
+                        {[
+                          { name: "Red", class: "text-red-500" },
+                          { name: "Orange", class: "text-orange-500" },
+                          { name: "Yellow", class: "text-yellow-500" },
+                          { name: "Green", class: "text-green-500" },
+                          { name: "Blue", class: "text-blue-500" },
+                          { name: "Indigo", class: "text-indigo-500" },
+                          { name: "Purple", class: "text-purple-500" },
+                          { name: "Pink", class: "text-pink-500" },
+                          { name: "Teal", class: "text-teal-500" },
+                          { name: "Cyan", class: "text-cyan-500" },
+                        ].map((color) => (
+                          <button
+                            key={color.class}
+                            onClick={() => handleApplyColor(color.class)}
+                            className={`h-10 rounded-md border-2 transition-all hover:scale-110 ${
+                              color.class
+                            } ${
+                              selectedColor === color.class
+                                ? "border-foreground"
+                                : "border-border"
+                            }`}
+                            title={color.name}
+                          >
+                            <span className="font-bold text-2xl">A</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Separator orientation="vertical" className="h-8" />
+
+                {/* Image Upload Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImageUploadClick}
+                  disabled={isUploading}
+                  className="gap-2"
                 >
-                  <Underline className="size-4" />
-                </ToggleGroupItem>
-              </ToggleGroup>
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="size-4" />
+                      Add Image
+                    </>
+                  )}
+                </Button>
 
-              <Separator orientation="vertical" className="h-8" />
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
 
-              {/* Image Upload Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleImageUploadClick}
-                disabled={isUploading}
-                className="gap-2"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <ImagePlus className="size-4" />
-                    Add Image
-                  </>
-                )}
-              </Button>
+                {/* Create List Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCreateList}
+                  className="gap-2"
+                >
+                  <List className="size-4" />
+                  Add List
+                </Button>
 
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-
-              {/* View Code Button with Dialog */}
-              <Dialog>
-                <DialogTrigger asChild>
+                {/* View Code Button with Dialog */}
+                <Dialog>
+                  <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
-                    <Code className="size-4" />
-                    View Code
-                  </Button>
-                </DialogTrigger>
+                      <Code className="size-4" />
+                      View Code
+                    </Button>
+                  </DialogTrigger>
                   <DialogContent className="max-w-[90vw] min-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
-                  <DialogHeader>
-                    <DialogTitle>Export Code</DialogTitle>
-                    <DialogDescription>
-                      Copy the HTML or JSON output of your editor content
-                    </DialogDescription>
-                  </DialogHeader>
-                  
+                    <DialogHeader>
+                      <DialogTitle>Export Code</DialogTitle>
+                      <DialogDescription>
+                        Copy the HTML or JSON output of your editor content
+                      </DialogDescription>
+                    </DialogHeader>
+
                     <Tabs
                       defaultValue="preview"
                       className="flex-1 flex flex-col overflow-hidden"
                     >
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="preview">
-                        <Eye className="h-4 w-4 mr-2" />
-                        Preview
-                      </TabsTrigger>
-                      <TabsTrigger value="html">HTML Output</TabsTrigger>
-                      <TabsTrigger value="json">JSON Data</TabsTrigger>
-                    </TabsList>
-                    
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="preview">
+                          <Eye className="h-4 w-4 mr-2" />
+                          Preview
+                        </TabsTrigger>
+                        <TabsTrigger value="html">HTML Output</TabsTrigger>
+                        <TabsTrigger value="json">JSON Data</TabsTrigger>
+                      </TabsList>
+
                       {/* Enhance Spaces Toggle */}
                       <div className="flex items-center justify-between mt-4 px-1">
                         <p className="text-sm text-muted-foreground">
@@ -2841,13 +3032,13 @@ function App() {
                         value="preview"
                         className="flex-1 flex flex-col overflow-hidden mt-4"
                       >
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-muted-foreground">
-                          Live preview of rendered HTML
-                        </p>
-                      </div>
-                      <div 
-                        className="flex-1 bg-background p-6 rounded-lg overflow-auto border"
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-muted-foreground">
+                            Live preview of rendered HTML
+                          </p>
+                        </div>
+                        <div
+                          className="flex-1 bg-background p-6 rounded-lg overflow-auto border"
                           dangerouslySetInnerHTML={{
                             __html: enhanceSpaces
                               ? `<div class="[&>*]:my-3 [&_*]:my-5">${serializeToHtml(
@@ -2855,91 +3046,91 @@ function App() {
                                 )}</div>`
                               : serializeToHtml(container),
                           }}
-                      />
-                    </TabsContent>
-                    
+                        />
+                      </TabsContent>
+
                       <TabsContent
                         value="html"
                         className="flex-1 flex flex-col overflow-hidden mt-4"
                       >
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-muted-foreground">
-                          HTML with Tailwind CSS classes
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleCopyHtml}
-                          className="gap-2"
-                        >
-                          {copiedHtml ? (
-                            <>
-                              <Check className="h-4 w-4" />
-                              Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-4 w-4" />
-                              Copy HTML
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                      <pre className="flex-1 text-xs bg-secondary text-secondary-foreground p-4 rounded-lg overflow-auto border">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-muted-foreground">
+                            HTML with Tailwind CSS classes
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCopyHtml}
+                            className="gap-2"
+                          >
+                            {copiedHtml ? (
+                              <>
+                                <Check className="h-4 w-4" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-4 w-4" />
+                                Copy HTML
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        <pre className="flex-1 text-xs bg-secondary text-secondary-foreground p-4 rounded-lg overflow-auto border">
                           {enhanceSpaces
                             ? `<div class="[&>*]:my-3 [&_*]:my-5">\n${serializeToHtml(
                                 container
                               )}\n</div>`
                             : serializeToHtml(container)}
-                      </pre>
-                    </TabsContent>
-                    
+                        </pre>
+                      </TabsContent>
+
                       <TabsContent
                         value="json"
                         className="flex-1 flex flex-col overflow-hidden mt-4"
                       >
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm text-muted-foreground">
-                          Editor state as JSON
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleCopyJson}
-                          className="gap-2"
-                        >
-                          {copiedJson ? (
-                            <>
-                              <Check className="h-4 w-4" />
-                              Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-4 w-4" />
-                              Copy JSON
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                      <pre className="flex-1 text-xs bg-secondary text-secondary-foreground p-4 rounded-lg overflow-auto border">
-                        {JSON.stringify(container.children, null, 2)}
-                      </pre>
-                    </TabsContent>
-                  </Tabs>
-                </DialogContent>
-              </Dialog>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-muted-foreground">
+                            Editor state as JSON
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCopyJson}
+                            className="gap-2"
+                          >
+                            {copiedJson ? (
+                              <>
+                                <Check className="h-4 w-4" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-4 w-4" />
+                                Copy JSON
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        <pre className="flex-1 text-xs bg-secondary text-secondary-foreground p-4 rounded-lg overflow-auto border">
+                          {JSON.stringify(container.children, null, 2)}
+                        </pre>
+                      </TabsContent>
+                    </Tabs>
+                  </DialogContent>
+                </Dialog>
 
-              {/* Selection indicator */}
-              {state.hasSelection && (
+                {/* Selection indicator */}
+                {state.hasSelection && (
                   <Badge
                     variant="secondary"
                     className="ml-auto transition-all duration-300"
                   >
-                  <span>Text selected</span>
-                </Badge>
-              )}
-            </div>
-          </CardContent>
+                    <span>Text selected</span>
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
           )}
 
           {/* Editor Content */}
@@ -2948,41 +3139,41 @@ function App() {
               readOnly ? "py-14 md:py-20" : ""
             }`}
           >
-            <div ref={animationParent} data-editor-content>
-            {container.children.map((node, index) => {
-                // Support both TextNode and ContainerNode
-                const isText = isTextNode(node);
-                const textNode = isText ? (node as TextNode) : null;
-              
-                const hasChildren =
-                  textNode &&
-                  Array.isArray(textNode.children) &&
-                  textNode.children.length > 0;
-              // Use a composite key that changes when structure changes
-                const nodeKey = hasChildren
-                  ? `${node.id}-children-${textNode?.children?.length}`
-                  : `${node.id}-content`;
-              
-              const isFirstBlock = index === 0;
-                const isLastBlock =
-                  index === container.children.length - 1;
-              
-              return (
-                <React.Fragment key={nodeKey}>
-                  {/* Add block button before first block */}
-                    {!readOnly && isFirstBlock && (
-                    <AddBlockButton
-                        onAdd={() => handleAddBlock(node.id, "before")}
-                      position="before"
-                    />
-                  )}
+            <div ref={editorContentRef}>
+              <div ref={animationParent} data-editor-content>
+                {container.children.map((node, index) => {
+                  // Support both TextNode and ContainerNode
+                  const isText = isTextNode(node);
+                  const textNode = isText ? (node as TextNode) : null;
 
-                  <div
-                      onDragEnter={(e) => handleDragEnter(e, node.id)}
-                      onDragOver={(e) => handleDragOver(e, node.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, node.id)}
-                    className={`
+                  const hasChildren =
+                    textNode &&
+                    Array.isArray(textNode.children) &&
+                    textNode.children.length > 0;
+                  // Use a composite key that changes when structure changes
+                  const nodeKey = hasChildren
+                    ? `${node.id}-children-${textNode?.children?.length}`
+                    : `${node.id}-content`;
+
+                  const isFirstBlock = index === 0;
+                  const isLastBlock = index === container.children.length - 1;
+
+                  return (
+                    <React.Fragment key={nodeKey}>
+                      {/* Add block button before first block */}
+                      {!readOnly && isFirstBlock && (
+                        <AddBlockButton
+                          onAdd={() => handleAddBlock(node.id, "before")}
+                          position="before"
+                        />
+                      )}
+
+                      <div
+                        onDragEnter={(e) => handleDragEnter(e, node.id)}
+                        onDragOver={(e) => handleDragOver(e, node.id)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, node.id)}
+                        className={`
                         relative transition-all
                         ${
                           dragOverNodeId === node.id &&
@@ -2996,107 +3187,111 @@ function App() {
                             : ""
                         }
                     `}
-                  >
-                    <Block
-                        node={node}
-                        isActive={state.activeNodeId === node.id}
-                    nodeRef={(el) => {
-                      if (el) {
-                            // Get the actual node ID from the element's data attribute
-                            // This ensures nested blocks register with their own IDs
-                            const elementNodeId =
-                              el.getAttribute("data-node-id");
-                            if (elementNodeId) {
-                              nodeRefs.current.set(elementNodeId, el);
-                              console.log(
-                                "📝 [Ref Registration]",
-                                elementNodeId,
-                                "contentEditable:",
-                                el.contentEditable
-                              );
-                            }
-                        
-                        // CRITICAL: Only update DOM if element is NOT focused AND there's no active text selection
-                        // This prevents cursor jumping during typing and selection
-                            // Only do this for TextNodes, not ContainerNodes
-                            if (textNode && elementNodeId === node.id) {
-                              const isCurrentlyFocused =
-                                document.activeElement === el;
-                        const selection = window.getSelection();
-                        
-                        // Check if there's ANY selection anywhere, not just non-collapsed
-                              const hasActiveSelection =
-                                selection &&
-                                selection.rangeCount > 0 &&
-                                !selection.isCollapsed;
-                        
-                        // Also check if this specific element contains the selection
-                        let selectionInThisElement = false;
-                              if (
-                                hasActiveSelection &&
-                                selection.rangeCount > 0
-                              ) {
-                          const range = selection.getRangeAt(0);
-                                selectionInThisElement = el.contains(
-                                  range.commonAncestorContainer
+                      >
+                        <Block
+                          node={node}
+                          isActive={state.activeNodeId === node.id}
+                          nodeRef={(el) => {
+                            if (el) {
+                              // Get the actual node ID from the element's data attribute
+                              // This ensures nested blocks register with their own IDs
+                              const elementNodeId =
+                                el.getAttribute("data-node-id");
+                              if (elementNodeId) {
+                                nodeRefs.current.set(elementNodeId, el);
+                                console.log(
+                                  "📝 [Ref Registration]",
+                                  elementNodeId,
+                                  "contentEditable:",
+                                  el.contentEditable
                                 );
-                        }
-                        
-                        // NEVER update DOM if:
-                        // - Element is focused
-                        // - Element has inline children (formatted content)
-                        // - There's an active selection anywhere
-                        // - This element contains the selection
-                              if (
-                                !isCurrentlyFocused &&
-                                !hasChildren &&
-                                !hasActiveSelection &&
-                                !selectionInThisElement
-                              ) {
-                                const displayContent = textNode.content || "";
-                                const currentContent = el.textContent || "";
-                          
-                          // Only update if content actually differs
-                          if (currentContent !== displayContent) {
-                            el.textContent = displayContent;
-                                }
-                          }
-                        }
-                      } else {
-                            // When element is removed, delete its ref
-                            nodeRefs.current.delete(node.id);
-                          }
-                        }}
-                        onInput={(element) =>
-                          handleContentChange(node.id, element)
-                        }
-                        onKeyDown={(e) => handleKeyDown(e, node.id)}
-                        onClick={() => handleNodeClick(node.id)}
-                        onDelete={
-                          textNode && textNode.type === "img"
-                            ? () => handleDeleteNode(node.id)
-                            : undefined
-                        }
-                        onCreateNested={handleCreateNested}
-                        readOnly={readOnly}
-                        onImageDragStart={handleImageDragStart}
-                  />
-                </div>
+                              }
 
-                {/* Add block button after each block */}
-                    {!readOnly && (
-                <AddBlockButton
-                        onAdd={() => handleAddBlock(node.id, "after")}
-                  position="after"
-                />
-                    )}
-              </React.Fragment>
-              );
-            })}
+                              // CRITICAL: Only update DOM if element is NOT focused AND there's no active text selection
+                              // This prevents cursor jumping during typing and selection
+                              // Only do this for TextNodes, not ContainerNodes
+                              if (textNode && elementNodeId === node.id) {
+                                const isCurrentlyFocused =
+                                  document.activeElement === el;
+                                const selection = window.getSelection();
+
+                                // Check if there's ANY selection anywhere, not just non-collapsed
+                                const hasActiveSelection =
+                                  selection &&
+                                  selection.rangeCount > 0 &&
+                                  !selection.isCollapsed;
+
+                                // Also check if this specific element contains the selection
+                                let selectionInThisElement = false;
+                                if (
+                                  hasActiveSelection &&
+                                  selection.rangeCount > 0
+                                ) {
+                                  const range = selection.getRangeAt(0);
+                                  selectionInThisElement = el.contains(
+                                    range.commonAncestorContainer
+                                  );
+                                }
+
+                                // NEVER update DOM if:
+                                // - Element is focused
+                                // - Element has inline children (formatted content)
+                                // - There's an active selection anywhere
+                                // - This element contains the selection
+                                if (
+                                  !isCurrentlyFocused &&
+                                  !hasChildren &&
+                                  !hasActiveSelection &&
+                                  !selectionInThisElement
+                                ) {
+                                  const displayContent = textNode.content || "";
+                                  const currentContent = el.textContent || "";
+
+                                  // Only update if content actually differs
+                                  if (currentContent !== displayContent) {
+                                    el.textContent = displayContent;
+                                  }
+                                }
+                              }
+                            } else {
+                              // When element is removed, delete its ref
+                              nodeRefs.current.delete(node.id);
+                            }
+                          }}
+                          onInput={(element) =>
+                            handleContentChange(node.id, element)
+                          }
+                          onKeyDown={(e) => handleKeyDown(e, node.id)}
+                          onClick={() => handleNodeClick(node.id)}
+                          onDelete={
+                            textNode && textNode.type === "img"
+                              ? () => handleDeleteNode(node.id)
+                              : undefined
+                          }
+                          onCreateNested={handleCreateNested}
+                          readOnly={readOnly}
+                          onImageDragStart={handleImageDragStart}
+                        />
+                      </div>
+
+                      {/* Add block button after each block */}
+                      {!readOnly && (
+                        <AddBlockButton
+                          onAdd={() => handleAddBlock(node.id, "after")}
+                          position="after"
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Custom Class Popover - Floats on text selection */}
+      {!readOnly && <CustomClassPopover />}
     </div>
   );
 }

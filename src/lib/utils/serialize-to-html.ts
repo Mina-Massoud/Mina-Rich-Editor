@@ -114,7 +114,7 @@ function serializeInlineChildren(node: TextNode): string {
       ? getInlineElementTypeClasses(child.elementType)
       : '';
     
-    const allClasses = [elementTypeClasses, formattingClasses]
+    const allClasses = [elementTypeClasses, formattingClasses, child.className]
       .filter(Boolean)
       .join(' ');
     

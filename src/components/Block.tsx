@@ -52,11 +52,10 @@ export function Block({
         data-node-id={node.id}
         data-node-type="container"
         className={`
-          border-l-2 border-border/50 pl-4 ml-2
+          border-l-2 border-border/50 pl-2 ml-6
           transition-all
           ${isActive ? 'border-primary' : 'hover:border-border'}
         `}
-        style={{ marginLeft: `${depth * 1}rem` }}
         onClick={onClick}
       >
         {containerNode.children.map((childNode) => (
@@ -126,6 +125,7 @@ export function Block({
               child.bold ? 'font-bold' : '',
               child.italic ? 'italic' : '',
               child.underline ? 'underline' : '',
+              child.className || '', // Include custom className
             ].filter(Boolean).join(' ');
             
             // If it's a link
@@ -170,6 +170,7 @@ export function Block({
           child.bold ? 'font-bold' : '',
           child.italic ? 'italic' : '',
           child.underline ? 'underline' : '',
+          child.className || '', // Include custom className
         ].filter(Boolean).join(' ');
         
         // If it's a link

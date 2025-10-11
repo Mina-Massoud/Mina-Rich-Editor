@@ -283,6 +283,16 @@ export interface ApplyInlineElementTypeAction {
 }
 
 /**
+ * APPLY_CUSTOM_CLASS action - applies custom Tailwind class to selected text
+ */
+export interface ApplyCustomClassAction {
+  type: 'APPLY_CUSTOM_CLASS';
+  payload: {
+    className: string;
+  };
+}
+
+/**
  * SELECT_ALL_BLOCKS action - marks all blocks as selected
  */
 export interface SelectAllBlocksAction {
@@ -337,6 +347,7 @@ export type EditorAction =
   | SetCurrentSelectionAction
   | ToggleFormatAction
   | ApplyInlineElementTypeAction
+  | ApplyCustomClassAction
   | SelectAllBlocksAction
   | ClearBlockSelectionAction
   | DeleteSelectedBlocksAction
@@ -483,6 +494,14 @@ export const EditorActions = {
   applyInlineElementType: (elementType: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote' | null): ApplyInlineElementTypeAction => ({
     type: 'APPLY_INLINE_ELEMENT_TYPE',
     payload: { elementType },
+  }),
+
+  /**
+   * Creates an APPLY_CUSTOM_CLASS action.
+   */
+  applyCustomClass: (className: string): ApplyCustomClassAction => ({
+    type: 'APPLY_CUSTOM_CLASS',
+    payload: { className },
   }),
 
   /**

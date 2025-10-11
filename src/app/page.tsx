@@ -20,22 +20,6 @@ export default function Home() {
       {/* Mode Switcher */}
       <Card className="fixed top-4 py-0 right-4 z-[100] shadow-lg">
         <CardContent className="p-3 space-y-3">
-          {/* Editor Mode Buttons */}
-          <div className="flex gap-2">
-            <Button
-              variant={mode === "simple" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setMode("simple")}
-              className="flex-1"
-            >
-              <Zap className="w-4 h-4 mr-1" />
-              Simple
-            </Button>
-           
-          </div>
-
-          <Separator />
-
           {/* Read-only toggle */}
           <div className="flex items-center justify-between space-x-2">
             <Label

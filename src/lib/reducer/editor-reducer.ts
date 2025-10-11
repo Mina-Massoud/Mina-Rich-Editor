@@ -537,6 +537,122 @@ export function editorReducer(
       );
     }
 
+    case 'APPLY_CUSTOM_CLASS': {
+      const { className } = action.payload;
+      
+      console.group('🎨 [APPLY_CUSTOM_CLASS] Reducer executing');
+      console.log('Class to apply:', className);
+      console.log('Current selection:', state.currentSelection);
+      
+      if (!state.currentSelection) {
+        console.warn('❌ Cannot apply custom class without active selection');
+        console.groupEnd();
+        return state;
+      }
+
+      const { nodeId, start, end } = state.currentSelection;
+      console.log('Selection range:', { start, end });
+      
+      const currentContainer = state.history[state.historyIndex];
+      const node = findNodeById(currentContainer, nodeId) as TextNode | undefined;
+      
+      if (!node || !isTextNode(node)) {
+        console.warn('❌ Node not found or not a text node');
+        console.groupEnd();
+        return state;
+      }
+
+      console.log('Found node:', { id: node.id, type: node.type });
+      
+      // Convert node to inline children if it's still plain content
+      const children = hasInlineChildren(node)
+        ? node.children!
+        : [{ content: node.content || '' }];
+      
+      console.log('Starting children:', children);
+      
+      // Build new children array by splitting segments that overlap with selection
+      const newChildren: typeof node.children = [];
+      let currentPos = 0;
+      
+      for (const child of children) {
+        const childLength = (child.content || '').length;
+        const childStart = currentPos;
+        const childEnd = currentPos + childLength;
+        
+        // Check overlap with selection [start, end)
+        if (childEnd <= start || childStart >= end) {
+          // No overlap - keep as is
+          newChildren.push({ ...child });
+        } else {
+          // There's overlap - need to split this child
+          const overlapStart = Math.max(childStart, start);
+          const overlapEnd = Math.min(childEnd, end);
+          
+          // Before overlap (within this child)
+          if (childStart < overlapStart) {
+            newChildren.push({
+              content: child.content!.substring(0, overlapStart - childStart),
+              bold: child.bold,
+              italic: child.italic,
+              underline: child.underline,
+              elementType: child.elementType,
+              className: child.className,
+            });
+          }
+          
+          // Overlapping part - apply the custom class
+          newChildren.push({
+            content: child.content!.substring(
+              overlapStart - childStart,
+              overlapEnd - childStart
+            ),
+            bold: child.bold,
+            italic: child.italic,
+            underline: child.underline,
+            elementType: child.elementType,
+            className: className,
+          });
+          
+          // After overlap (within this child)
+          if (childEnd > overlapEnd) {
+            newChildren.push({
+              content: child.content!.substring(overlapEnd - childStart),
+              bold: child.bold,
+              italic: child.italic,
+              underline: child.underline,
+              elementType: child.elementType,
+              className: child.className,
+            });
+          }
+        }
+        
+        currentPos = childEnd;
+      }
+      
+      console.log('New inline children with custom class:', newChildren);
+
+      // Update the node in the tree
+      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
+        content: undefined, // Clear simple content
+        children: newChildren, // Set inline children
+      })) as ContainerNode;
+
+      console.log('✅ Custom class apply complete');
+      console.groupEnd();
+
+      return addToHistory(
+        {
+          ...state,
+          metadata: {
+            ...state.metadata,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+        newContainer
+      );
+    }
+
     case 'SELECT_ALL_BLOCKS': {
       // Select all block IDs
       const currentContainer = state.history[state.historyIndex];

@@ -89,6 +89,8 @@ export interface InlineText {
   elementType?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote';
   // Link URL (makes the text a clickable link)
   href?: string;
+  // Custom Tailwind CSS classes
+  className?: string;
 }
 
 /**
