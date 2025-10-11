@@ -1922,10 +1922,7 @@ function App() {
         e.preventDefault();
         if (state.historyIndex > 0) {
           dispatch(EditorActions.undo());
-          toast({
-            title: "Undo",
-            description: `Reverted to previous state (${state.historyIndex} / ${state.history.length})`,
-          });
+       
           console.log("⏪ Undo:", state.historyIndex - 1);
         }
       }
