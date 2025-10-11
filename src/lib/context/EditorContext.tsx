@@ -100,18 +100,8 @@ export function EditorProvider({
       if (debug) {
         console.group(`🎬 [Mina Editor] Action: ${action.type}`);
         if ('payload' in action) {
-          console.log('📦 Payload:', action.type !== 'REPLACE_CONTAINER' ? action.payload : '(large payload)');
-        }
+          }
         const currentContainer = state.history[state.historyIndex];
-        console.log('📸 Previous State:', {
-          activeNodeId: state.activeNodeId,
-          hasSelection: state.hasSelection,
-          selectionKey: state.selectionKey,
-          currentSelection: state.currentSelection,
-          nodeCount: currentContainer?.children.length || 0,
-          historyIndex: state.historyIndex,
-          historyLength: state.history.length,
-        });
       }
 
       // Dispatch the action
@@ -121,7 +111,6 @@ export function EditorProvider({
       // If we need the new state immediately, we'd need to use a ref or middleware
       
       if (debug) {
-        console.log('⏱️  Action dispatched at:', new Date().toISOString());
         console.groupEnd();
       }
     };

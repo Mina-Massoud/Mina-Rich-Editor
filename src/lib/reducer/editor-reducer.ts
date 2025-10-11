@@ -1,14 +1,20 @@
 /**
  * Mina Rich Editor - Reducer
- * 
+ *
  * Pure reducer function that handles all state transformations.
  * Follows immutable update patterns for predictable state management.
  * Includes history tracking for undo/redo functionality.
- * 
+ *
  * @packageDocumentation
  */
 
-import { EditorState, ContainerNode, isTextNode, TextNode, hasInlineChildren } from '../types';
+import {
+  EditorState,
+  ContainerNode,
+  isTextNode,
+  TextNode,
+  hasInlineChildren,
+} from "../types";
 import {
   updateNodeById,
   deleteNodeById,
@@ -16,14 +22,14 @@ import {
   moveNode,
   cloneNode,
   findNodeById,
-} from '../utils/tree-operations';
-import { EditorAction } from './actions';
-import { applyFormatting } from '../utils/inline-formatting';
+} from "../utils/tree-operations";
+import { EditorAction } from "./actions";
+import { applyFormatting } from "../utils/inline-formatting";
 
 /**
  * Maximum number of history states to keep
  */
-const MAX_HISTORY_SIZE = 100;
+const MAX_HISTORY_SIZE = 1;
 
 /**
  * Deep clone a container node to preserve history immutability
@@ -36,16 +42,19 @@ function deepCloneContainer(container: ContainerNode): ContainerNode {
  * Add a new container state to history
  * This truncates any "future" history if we're not at the end
  */
-function addToHistory(state: EditorState, newContainer: ContainerNode): EditorState {
+function addToHistory(
+  state: EditorState,
+  newContainer: ContainerNode
+): EditorState {
   // Clone the new container to ensure immutability
   const clonedContainer = deepCloneContainer(newContainer);
-  
+
   // Get current history up to the current index
   const newHistory = state.history.slice(0, state.historyIndex + 1);
-  
+
   // Add the new state
   newHistory.push(clonedContainer);
-  
+
   // Limit history size
   if (newHistory.length > MAX_HISTORY_SIZE) {
     newHistory.shift(); // Remove oldest entry
@@ -55,7 +64,7 @@ function addToHistory(state: EditorState, newContainer: ContainerNode): EditorSt
       historyIndex: newHistory.length - 1,
     };
   }
-  
+
   return {
     ...state,
     history: newHistory,
@@ -66,11 +75,11 @@ function addToHistory(state: EditorState, newContainer: ContainerNode): EditorSt
 /**
  * The main reducer function for the editor.
  * Handles all state transformations immutably.
- * 
+ *
  * @param state - Current editor state
  * @param action - Action to apply
  * @returns New state after applying the action
- * 
+ *
  * @example
  * ```typescript
  * const newState = editorReducer(currentState, {
@@ -84,10 +93,14 @@ export function editorReducer(
   action: EditorAction
 ): EditorState {
   switch (action.type) {
-    case 'UPDATE_NODE': {
+    case "UPDATE_NODE": {
       const { id, updates } = action.payload;
       const currentContainer = state.history[state.historyIndex];
-      const newContainer = updateNodeById(currentContainer, id, () => updates) as ContainerNode;
+      const newContainer = updateNodeById(
+        currentContainer,
+        id,
+        () => updates
+      ) as ContainerNode;
 
       return addToHistory(
         {
@@ -101,13 +114,11 @@ export function editorReducer(
       );
     }
 
-    case 'UPDATE_ATTRIBUTES': {
+    case "UPDATE_ATTRIBUTES": {
       const { id, attributes, merge = true } = action.payload;
       const currentContainer = state.history[state.historyIndex];
       const newContainer = updateNodeById(currentContainer, id, (node) => ({
-        attributes: merge
-          ? { ...node.attributes, ...attributes }
-          : attributes,
+        attributes: merge ? { ...node.attributes, ...attributes } : attributes,
       })) as ContainerNode;
 
       return addToHistory(
@@ -122,7 +133,7 @@ export function editorReducer(
       );
     }
 
-    case 'UPDATE_CONTENT': {
+    case "UPDATE_CONTENT": {
       const { id, content } = action.payload;
       const currentContainer = state.history[state.historyIndex];
       const newContainer = updateNodeById(currentContainer, id, (node) => {
@@ -145,14 +156,14 @@ export function editorReducer(
       );
     }
 
-    case 'DELETE_NODE': {
+    case "DELETE_NODE": {
       const { id } = action.payload;
       const currentContainer = state.history[state.historyIndex];
       const result = deleteNodeById(currentContainer, id);
 
       // If the root container was deleted, prevent it
       if (result === null) {
-        console.warn('Cannot delete the root container');
+        console.warn("Cannot delete the root container");
         return state;
       }
 
@@ -168,10 +179,15 @@ export function editorReducer(
       );
     }
 
-    case 'INSERT_NODE': {
+    case "INSERT_NODE": {
       const { node, targetId, position } = action.payload;
       const currentContainer = state.history[state.historyIndex];
-      const newContainer = insertNode(currentContainer, targetId, node, position) as ContainerNode;
+      const newContainer = insertNode(
+        currentContainer,
+        targetId,
+        node,
+        position
+      ) as ContainerNode;
 
       return addToHistory(
         {
@@ -185,7 +201,7 @@ export function editorReducer(
       );
     }
 
-    case 'MOVE_NODE': {
+    case "MOVE_NODE": {
       const { nodeId, targetId, position } = action.payload;
       const currentContainer = state.history[state.historyIndex];
       const newContainer = moveNode(
@@ -207,16 +223,21 @@ export function editorReducer(
       );
     }
 
-    case 'DUPLICATE_NODE': {
+    case "DUPLICATE_NODE": {
       const { id, newId } = action.payload;
       const currentContainer = state.history[state.historyIndex];
-      
+
       // Clone the node with a new ID
       const nodeToClone = updateNodeById(currentContainer, id, (node) => node);
       const clonedNode = cloneNode(nodeToClone, newId);
-      
+
       // Insert the cloned node after the original
-      const newContainer = insertNode(currentContainer, id, clonedNode, 'after') as ContainerNode;
+      const newContainer = insertNode(
+        currentContainer,
+        id,
+        clonedNode,
+        "after"
+      ) as ContainerNode;
 
       return addToHistory(
         {
@@ -230,7 +251,7 @@ export function editorReducer(
       );
     }
 
-    case 'REPLACE_CONTAINER': {
+    case "REPLACE_CONTAINER": {
       const { container } = action.payload;
 
       return addToHistory(
@@ -245,13 +266,13 @@ export function editorReducer(
       );
     }
 
-    case 'RESET': {
+    case "RESET": {
       return createInitialState();
     }
 
-    case 'BATCH': {
+    case "BATCH": {
       const { actions } = action.payload;
-      
+
       // Apply all actions sequentially
       return actions.reduce(
         (currentState, batchAction) => editorReducer(currentState, batchAction),
@@ -259,7 +280,7 @@ export function editorReducer(
       );
     }
 
-    case 'SET_ACTIVE_NODE': {
+    case "SET_ACTIVE_NODE": {
       const { nodeId } = action.payload;
       return {
         ...state,
@@ -267,7 +288,7 @@ export function editorReducer(
       };
     }
 
-    case 'SET_SELECTION': {
+    case "SET_SELECTION": {
       const { hasSelection } = action.payload;
       return {
         ...state,
@@ -275,19 +296,16 @@ export function editorReducer(
       };
     }
 
-    case 'INCREMENT_SELECTION_KEY': {
+    case "INCREMENT_SELECTION_KEY": {
       return {
         ...state,
         selectionKey: state.selectionKey + 1,
       };
     }
 
-    case 'SET_CURRENT_SELECTION': {
+    case "SET_CURRENT_SELECTION": {
       const { selection } = action.payload;
-      console.log('🔍 [SET_CURRENT_SELECTION] Reducer executing', {
-        newSelection: selection,
-        hasFormats: selection ? selection.formats : null,
-      });
+
       return {
         ...state,
         currentSelection: selection,
@@ -295,49 +313,44 @@ export function editorReducer(
       };
     }
 
-    case 'APPLY_INLINE_ELEMENT_TYPE': {
+    case "APPLY_INLINE_ELEMENT_TYPE": {
       const { elementType } = action.payload;
-      
-      console.group('🎨 [APPLY_INLINE_ELEMENT_TYPE] Reducer executing');
-      console.log('Element type to apply:', elementType);
-      console.log('Current selection:', state.currentSelection);
-      
+
+      console.group("🎨 [APPLY_INLINE_ELEMENT_TYPE] Reducer executing");
+
       if (!state.currentSelection) {
-        console.warn('❌ Cannot apply element type without active selection');
+        console.warn("❌ Cannot apply element type without active selection");
         console.groupEnd();
         return state;
       }
 
       const { nodeId, start, end } = state.currentSelection;
-      console.log('Selection range:', { start, end });
-      
+
       const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as TextNode | undefined;
-      
+      const node = findNodeById(currentContainer, nodeId) as
+        | TextNode
+        | undefined;
+
       if (!node || !isTextNode(node)) {
-        console.warn('❌ Node not found or not a text node');
+        console.warn("❌ Node not found or not a text node");
         console.groupEnd();
         return state;
       }
 
-      console.log('Found node:', { id: node.id, type: node.type });
-      
       // Convert node to inline children if it's still plain content
       const children = hasInlineChildren(node)
         ? node.children!
-        : [{ content: node.content || '' }];
-      
-      console.log('Starting children:', children);
-      
+        : [{ content: node.content || "" }];
+
       // Build new children array by splitting segments that overlap with selection
       const newChildren: typeof node.children = [];
       let currentPos = 0;
-      
+
       for (const child of children) {
-        const childLength = (child.content || '').length;
+        const childLength = (child.content || "").length;
         const childStart = currentPos;
         const childEnd = currentPos + childLength;
-        
+
         // Check overlap with selection [start, end)
         if (childEnd <= start || childStart >= end) {
           // No overlap - keep as is
@@ -346,7 +359,7 @@ export function editorReducer(
           // There's overlap - need to split this child
           const overlapStart = Math.max(childStart, start);
           const overlapEnd = Math.min(childEnd, end);
-          
+
           // Before overlap (within this child)
           if (childStart < overlapStart) {
             newChildren.push({
@@ -357,7 +370,7 @@ export function editorReducer(
               elementType: child.elementType,
             });
           }
-          
+
           // Overlapping part - apply the element type
           newChildren.push({
             content: child.content!.substring(
@@ -369,7 +382,7 @@ export function editorReducer(
             underline: child.underline,
             elementType: elementType || undefined,
           });
-          
+
           // After overlap (within this child)
           if (childEnd > overlapEnd) {
             newChildren.push({
@@ -381,11 +394,9 @@ export function editorReducer(
             });
           }
         }
-        
+
         currentPos = childEnd;
       }
-      
-      console.log('New inline children:', newChildren);
 
       // Update the node in the tree
       const newContainer = updateNodeById(currentContainer, nodeId, () => ({
@@ -393,7 +404,6 @@ export function editorReducer(
         children: newChildren, // Set inline children
       })) as ContainerNode;
 
-      console.log('✅ Element type apply complete');
       console.groupEnd();
 
       return addToHistory(
@@ -408,54 +418,44 @@ export function editorReducer(
       );
     }
 
-    case 'TOGGLE_FORMAT': {
+    case "TOGGLE_FORMAT": {
       const { format } = action.payload;
-      
-      console.group('🎨 [TOGGLE_FORMAT] Reducer executing');
-      console.log('Format to toggle:', format);
-      console.log('Current selection:', state.currentSelection);
-      
+
       if (!state.currentSelection) {
-        console.warn('❌ Cannot toggle format without active selection');
+        console.warn("❌ Cannot toggle format without active selection");
         console.groupEnd();
         return state;
       }
 
       const { nodeId, start, end, formats } = state.currentSelection;
-      console.log('Current format states:', formats);
-      console.log('Selection range:', { start, end });
-      
+
       const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as TextNode | undefined;
-      
+      const node = findNodeById(currentContainer, nodeId) as
+        | TextNode
+        | undefined;
+
       if (!node || !isTextNode(node)) {
-        console.warn('❌ Node not found or not a text node');
+        console.warn("❌ Node not found or not a text node");
         console.groupEnd();
         return state;
       }
 
-      console.log('Found node:', { id: node.id, type: node.type });
-
       const isActive = formats[format];
-      
-      console.log(`Format "${format}" is currently:`, isActive ? 'ACTIVE (will remove)' : 'INACTIVE (will apply)');
-      
+
       // Convert node to inline children if it's still plain content
       const children = hasInlineChildren(node)
         ? node.children!
-        : [{ content: node.content || '' }];
-      
-      console.log('Starting children:', children);
-      
+        : [{ content: node.content || "" }];
+
       // Build new children array by splitting segments that overlap with selection
       const newChildren: typeof node.children = [];
       let currentPos = 0;
-      
+
       for (const child of children) {
-        const childLength = (child.content || '').length;
+        const childLength = (child.content || "").length;
         const childStart = currentPos;
         const childEnd = currentPos + childLength;
-        
+
         // Check overlap with selection [start, end)
         if (childEnd <= start || childStart >= end) {
           // No overlap - keep as is
@@ -464,7 +464,7 @@ export function editorReducer(
           // There's overlap - need to split this child
           const overlapStart = Math.max(childStart, start);
           const overlapEnd = Math.min(childEnd, end);
-          
+
           // Before overlap (within this child)
           if (childStart < overlapStart) {
             newChildren.push({
@@ -475,19 +475,19 @@ export function editorReducer(
               elementType: child.elementType, // Preserve elementType
             });
           }
-          
+
           // Overlapping part - toggle the format
           newChildren.push({
             content: child.content!.substring(
               overlapStart - childStart,
               overlapEnd - childStart
             ),
-            bold: format === 'bold' ? !isActive : child.bold,
-            italic: format === 'italic' ? !isActive : child.italic,
-            underline: format === 'underline' ? !isActive : child.underline,
+            bold: format === "bold" ? !isActive : child.bold,
+            italic: format === "italic" ? !isActive : child.italic,
+            underline: format === "underline" ? !isActive : child.underline,
             elementType: child.elementType, // Preserve elementType
           });
-          
+
           // After overlap (within this child)
           if (childEnd > overlapEnd) {
             newChildren.push({
@@ -499,11 +499,9 @@ export function editorReducer(
             });
           }
         }
-        
+
         currentPos = childEnd;
       }
-      
-      console.log('New inline children:', newChildren);
 
       // Update the node in the tree
       const newContainer = updateNodeById(currentContainer, nodeId, () => ({
@@ -520,8 +518,6 @@ export function editorReducer(
         },
       };
 
-      console.log('New format state:', newSelection.formats);
-      console.log('✅ Format toggle complete');
       console.groupEnd();
 
       return addToHistory(
@@ -537,49 +533,44 @@ export function editorReducer(
       );
     }
 
-    case 'APPLY_CUSTOM_CLASS': {
+    case "APPLY_CUSTOM_CLASS": {
       const { className } = action.payload;
-      
-      console.group('🎨 [APPLY_CUSTOM_CLASS] Reducer executing');
-      console.log('Class to apply:', className);
-      console.log('Current selection:', state.currentSelection);
-      
+
+      console.group("🎨 [APPLY_CUSTOM_CLASS] Reducer executing");
+
       if (!state.currentSelection) {
-        console.warn('❌ Cannot apply custom class without active selection');
+        console.warn("❌ Cannot apply custom class without active selection");
         console.groupEnd();
         return state;
       }
 
       const { nodeId, start, end } = state.currentSelection;
-      console.log('Selection range:', { start, end });
-      
+
       const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as TextNode | undefined;
-      
+      const node = findNodeById(currentContainer, nodeId) as
+        | TextNode
+        | undefined;
+
       if (!node || !isTextNode(node)) {
-        console.warn('❌ Node not found or not a text node');
+        console.warn("❌ Node not found or not a text node");
         console.groupEnd();
         return state;
       }
 
-      console.log('Found node:', { id: node.id, type: node.type });
-      
       // Convert node to inline children if it's still plain content
       const children = hasInlineChildren(node)
         ? node.children!
-        : [{ content: node.content || '' }];
-      
-      console.log('Starting children:', children);
-      
+        : [{ content: node.content || "" }];
+
       // Build new children array by splitting segments that overlap with selection
       const newChildren: typeof node.children = [];
       let currentPos = 0;
-      
+
       for (const child of children) {
-        const childLength = (child.content || '').length;
+        const childLength = (child.content || "").length;
         const childStart = currentPos;
         const childEnd = currentPos + childLength;
-        
+
         // Check overlap with selection [start, end)
         if (childEnd <= start || childStart >= end) {
           // No overlap - keep as is
@@ -588,7 +579,7 @@ export function editorReducer(
           // There's overlap - need to split this child
           const overlapStart = Math.max(childStart, start);
           const overlapEnd = Math.min(childEnd, end);
-          
+
           // Before overlap (within this child)
           if (childStart < overlapStart) {
             newChildren.push({
@@ -600,7 +591,7 @@ export function editorReducer(
               className: child.className,
             });
           }
-          
+
           // Overlapping part - apply the custom class
           newChildren.push({
             content: child.content!.substring(
@@ -613,7 +604,7 @@ export function editorReducer(
             elementType: child.elementType,
             className: className,
           });
-          
+
           // After overlap (within this child)
           if (childEnd > overlapEnd) {
             newChildren.push({
@@ -626,11 +617,9 @@ export function editorReducer(
             });
           }
         }
-        
+
         currentPos = childEnd;
       }
-      
-      console.log('New inline children with custom class:', newChildren);
 
       // Update the node in the tree
       const newContainer = updateNodeById(currentContainer, nodeId, () => ({
@@ -638,7 +627,6 @@ export function editorReducer(
         children: newChildren, // Set inline children
       })) as ContainerNode;
 
-      console.log('✅ Custom class apply complete');
       console.groupEnd();
 
       return addToHistory(
@@ -653,24 +641,26 @@ export function editorReducer(
       );
     }
 
-    case 'SELECT_ALL_BLOCKS': {
+    case "SELECT_ALL_BLOCKS": {
       // Select all block IDs
       const currentContainer = state.history[state.historyIndex];
-      const allBlockIds = new Set(currentContainer.children.map(child => child.id));
+      const allBlockIds = new Set(
+        currentContainer.children.map((child) => child.id)
+      );
       return {
         ...state,
         selectedBlocks: allBlockIds,
       };
     }
 
-    case 'CLEAR_BLOCK_SELECTION': {
+    case "CLEAR_BLOCK_SELECTION": {
       return {
         ...state,
         selectedBlocks: new Set(),
       };
     }
 
-    case 'DELETE_SELECTED_BLOCKS': {
+    case "DELETE_SELECTED_BLOCKS": {
       if (state.selectedBlocks.size === 0) {
         return state;
       }
@@ -678,15 +668,15 @@ export function editorReducer(
       const currentContainer = state.history[state.historyIndex];
       // Delete all selected blocks
       const newChildren = currentContainer.children.filter(
-        child => !state.selectedBlocks.has(child.id)
+        (child) => !state.selectedBlocks.has(child.id)
       );
 
       // If all blocks were deleted, create a new empty paragraph
       if (newChildren.length === 0) {
         const newNode: TextNode = {
-          id: 'p-' + Date.now(),
-          type: 'p',
-          content: '',
+          id: "p-" + Date.now(),
+          type: "p",
+          content: "",
           attributes: {},
         };
         newChildren.push(newNode);
@@ -709,7 +699,7 @@ export function editorReducer(
       );
     }
 
-    case 'UNDO': {
+    case "UNDO": {
       if (state.historyIndex > 0) {
         const newIndex = state.historyIndex - 1;
         return {
@@ -720,7 +710,7 @@ export function editorReducer(
       return state;
     }
 
-    case 'REDO': {
+    case "REDO": {
       if (state.historyIndex < state.history.length - 1) {
         const newIndex = state.historyIndex + 1;
         return {
@@ -734,17 +724,17 @@ export function editorReducer(
     default:
       // Exhaustiveness check
       const _exhaustive: never = action;
-      console.warn('Unknown action type:', _exhaustive);
+      console.warn("Unknown action type:", _exhaustive);
       return state;
   }
 }
 
 /**
  * Creates the initial state for a new editor instance.
- * 
+ *
  * @param container - Optional custom root container
  * @returns Initial editor state
- * 
+ *
  * @example
  * ```typescript
  * const initialState = createInitialState();
@@ -755,14 +745,14 @@ export function createInitialState(
   container?: Partial<ContainerNode>
 ): EditorState {
   const initialContainer: ContainerNode = {
-    id: 'root',
-    type: 'container',
+    id: "root",
+    type: "container",
     children: [],
     ...container,
   };
-  
+
   return {
-    version: '1.0.0',
+    version: "1.0.0",
     history: [deepCloneContainer(initialContainer)],
     historyIndex: 0,
     activeNodeId: null,
@@ -776,4 +766,3 @@ export function createInitialState(
     },
   };
 }
-

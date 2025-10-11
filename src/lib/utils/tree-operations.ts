@@ -20,7 +20,7 @@ import { EditorNode, ContainerNode, isContainerNode } from '../types';
  * ```typescript
  * const found = findNodeById(rootContainer, 'paragraph-123');
  * if (found) {
- *   console.log('Found node:', found);
+ *
  * }
  * ```
  */
@@ -58,7 +58,7 @@ export function findNodeById(
  * ```typescript
  * const parent = findParentById(rootContainer, 'child-node-id');
  * if (parent) {
- *   console.log('Parent has', parent.children.length, 'children');
+ *
  * }
  * ```
  */
@@ -371,7 +371,7 @@ export function cloneNode(node: EditorNode, newId?: string): EditorNode {
  * // Count all nodes
  * let count = 0;
  * traverseTree(root, () => count++);
- * console.log('Total nodes:', count);
+ *
  * 
  * // Find all images
  * const images: TextNode[] = [];

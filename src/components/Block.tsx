@@ -11,19 +11,23 @@
 import React, { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { TextNode, EditorNode, isContainerNode, ContainerNode } from '../lib';
 import { ImageBlock } from './ImageBlock';
+import { CommandMenu } from './CommandMenu';
 
 interface BlockProps {
   node: EditorNode;
   isActive: boolean;
-  nodeRef: (el: HTMLDivElement | null) => void;
+  nodeRef: (el: HTMLElement | null) => void;
   onInput: (element: HTMLElement) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void;
   onClick: () => void;
   onDelete?: () => void;
   onCreateNested?: (nodeId: string) => void; // Callback to create a nested block
   depth?: number; // Track nesting depth for styling
   readOnly?: boolean; // View-only mode - prevents editing
   onImageDragStart?: (nodeId: string) => void; // Callback when image starts being dragged
+  onChangeBlockType?: (nodeId: string, newType: string) => void; // Callback to change block type
+  onInsertImage?: (nodeId: string) => void; // Callback to insert image
+  onCreateList?: (nodeId: string, listType: string) => void; // Callback to create a list container (ol or ul)
 }
 
 export function Block({
@@ -38,25 +42,46 @@ export function Block({
   depth = 0,
   readOnly = false,
   onImageDragStart,
+  onChangeBlockType,
+  onInsertImage,
+  onCreateList,
 }: BlockProps) {
-  const localRef = useRef<HTMLDivElement>(null);
+  const localRef = useRef<HTMLElement>(null);
   const isComposingRef = useRef(false); // Track IME composition
   const shouldPreserveSelectionRef = useRef(false);
+  
+  // Command menu state
+  const [showCommandMenu, setShowCommandMenu] = useState(false);
+  const [commandMenuAnchor, setCommandMenuAnchor] = useState<HTMLElement | null>(null);
   
   // Handle container nodes (recursive rendering)
   if (isContainerNode(node)) {
     const containerNode = node as ContainerNode;
+    
+    // Determine if this container holds list items
+    // Check for listType attribute first (new method), then fall back to checking first child type (old method for backwards compatibility)
+    const firstChild = containerNode.children[0];
+    const listTypeFromAttribute = containerNode.attributes?.listType as string | undefined;
+    const listTypeFromChild = firstChild && (firstChild.type === 'ul' || firstChild.type === 'ol' || firstChild.type === 'li') ? 
+      (firstChild.type === 'li' ? 'ul' : firstChild.type) : null; // Default to 'ul' if we detect 'li' children
+    
+    const listType = listTypeFromAttribute || listTypeFromChild;
+    const isListContainer = !!listType;
+    
+    // Use ul/ol for list containers, div for regular nested containers
+    const ContainerElement = listType === 'ul' ? 'ul' : listType === 'ol' ? 'ol' : 'div';
+    
+    const containerClasses = isListContainer
+      ? `list-none pl-0 ml-6` // No default bullets/numbers, we'll style via children
+      : `border-l-2 border-border/50 pl-2 ml-6 transition-all ${isActive ? 'border-primary' : 'hover:border-border'}`;
+    
     return (
-      <div
+      <ContainerElement
         key={node.id}
         data-node-id={node.id}
         data-node-type="container"
-        className={`
-          border-l-2 border-border/50 pl-2 ml-6
-          transition-all
-          ${isActive ? 'border-primary' : 'hover:border-border'}
-        `}
-        onClick={onClick}
+        data-list-type={listType || undefined}
+        className={containerClasses}
       >
         {containerNode.children.map((childNode) => (
           <Block
@@ -65,16 +90,25 @@ export function Block({
             isActive={isActive}
             nodeRef={nodeRef}
             onInput={onInput}
-            onKeyDown={onKeyDown}
+            onKeyDown={(e) => {
+              // When Block handles keyboard events for children, we need to ensure
+              // the event reaches SimpleEditor's handleKeyDown with the CHILD's ID,
+              // not the container's ID. Block's handleKeyDown will call this with
+              // the child's textNode.id already in scope.
+              onKeyDown(e);
+            }}
             onClick={onClick}
             onDelete={onDelete}
             onCreateNested={onCreateNested}
             depth={depth + 1}
             readOnly={readOnly}
             onImageDragStart={onImageDragStart}
+            onChangeBlockType={onChangeBlockType}
+            onInsertImage={onInsertImage}
+            onCreateList={onCreateList}
           />
         ))}
-      </div>
+      </ContainerElement>
     );
   }
   
@@ -152,11 +186,6 @@ export function Block({
           }).join('');
         } else {
           lineContent = line.content || '';
-        }
-        
-        // Add line number for list items
-        if (textNode.type === 'li') {
-          return `${index + 1}. ${lineContent}`;
         }
         
         return lineContent;
@@ -326,29 +355,130 @@ export function Block({
 
   // Handle input with selection preservation
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const text = element.textContent || '';
+    
+    // Check if the block is empty and user typed "/"
+    if (text === '/' && !readOnly && onChangeBlockType) {
+      setShowCommandMenu(true);
+      setCommandMenuAnchor(element);
+    } else if (showCommandMenu && text !== '/') {
+      // Close menu if user continues typing
+      setShowCommandMenu(false);
+    }
+    
     // Set flag to prevent content updates until next render
     shouldPreserveSelectionRef.current = true;
     
     // Call the parent onInput handler
-    onInput(e.currentTarget);
+    onInput(element);
     
     // Reset the flag after a short delay to allow React to process
     setTimeout(() => {
       shouldPreserveSelectionRef.current = false;
     }, 0);
-  }, [onInput]);
+  }, [onInput, readOnly, onChangeBlockType, showCommandMenu]);
+
+  // Handle command selection
+  const handleCommandSelect = useCallback((commandValue: string) => {
+    if (!localRef.current) return;
+    
+    // Clear the "/" character
+    localRef.current.textContent = '';
+    
+    // Close the menu immediately
+    setShowCommandMenu(false);
+    setCommandMenuAnchor(null);
+    
+    // Handle image insertion specially
+    if (commandValue === 'img' && onInsertImage) {
+      onInsertImage(textNode.id);
+      return;
+    }
+    
+    // Handle list creation (both ordered and unordered) - create a container with multiple list items
+    if ((commandValue === 'ol' || commandValue === 'ul') && onCreateList) {
+      // Small delay to ensure menu is closed before creating the list
+      setTimeout(() => {
+        onCreateList(textNode.id, commandValue);
+      }, 50);
+      return;
+    }
+    
+    // For other block types, just change the type
+    if (onChangeBlockType) {
+      onChangeBlockType(textNode.id, commandValue);
+      
+      // Focus back on the block
+      setTimeout(() => {
+        localRef.current?.focus();
+      }, 0);
+    }
+  }, [onChangeBlockType, onInsertImage, onCreateList, textNode.id]);
 
   // Handle keydown - intercept Shift+Enter for nested blocks
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' && e.shiftKey && onCreateNested) {
+    // Close command menu on Escape
+    if (e.key === 'Escape' && showCommandMenu) {
       e.preventDefault();
-      onCreateNested(textNode.id);
+      setShowCommandMenu(false);
+      setCommandMenuAnchor(null);
+      return;
+    }
+    
+    // If command menu is open, let it handle the keyboard events
+    if (showCommandMenu && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+      // Don't prevent default - let CommandMenu handle it
+      return;
+    }
+    
+    // For list items (ul/ol), handle Enter and Shift+Enter specially
+    // For non-list items, Shift+Enter creates nested blocks
+    const isListItem = textNode.type === 'ul' || textNode.type === 'ol' || textNode.type === 'li';
+    
+    // Handle Shift+Enter
+    if (e.key === 'Enter' && e.shiftKey) {
+      console.log('🔷 [Block.tsx] Shift+Enter detected', {
+        nodeId: textNode.id,
+        nodeType: textNode.type,
+        isListItem,
+      });
+      
+      if (isListItem) {
+        // For list items, pass to SimpleEditor to add line break within item
+        // Prevent default to stop browser from adding a line break
+        // Stop propagation to prevent container from receiving this event
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('🔷 [Block.tsx] Passing to SimpleEditor for list item line break');
+        onKeyDown(e);
+        return;
+      } else if (onCreateNested) {
+        // For non-list items, create nested block
+        console.log('🔷 [Block.tsx] Creating nested block');
+        e.preventDefault();
+        onCreateNested(textNode.id);
+        return;
+      }
+    }
+    
+    // Handle regular Enter for list items
+    if (e.key === 'Enter' && !e.shiftKey && isListItem) {
+      console.log('🔷 [Block.tsx] Regular Enter in list item', {
+        nodeId: textNode.id,
+        nodeType: textNode.type,
+      });
+      // Stop propagation to prevent container from receiving this event
+      // SimpleEditor will handle creating a new list item at the same level
+      e.stopPropagation();
+      console.log('🔷 [Block.tsx] Passing to SimpleEditor to create new list item');
+      onKeyDown(e);
       return;
     }
     
     // Pass to parent handler for other keys
     onKeyDown(e);
-  }, [onKeyDown, onCreateNested, textNode.id]);
+  }, [onKeyDown, onCreateNested, textNode.id, showCommandMenu]);
 
   // Handle clicks on links in read-only mode
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -368,33 +498,102 @@ export function Block({
     onClick();
   }, [readOnly, onClick]);
 
+  // Check if block is empty
+  const isEmpty = !textNode.content || textNode.content.trim() === '';
+  const showPlaceholder = isEmpty && isActive && !readOnly && onChangeBlockType;
+  
+  // Use li for list items, div for everything else
+  const isListItem = textNode.type === 'li';
+  
+  // Get custom class from attributes if it exists
+  const customClassName = textNode.attributes?.className || '';
+  
+  // Common props for both div and li elements
+  const commonProps = {
+    key: textNode.id,
+    'data-node-id': textNode.id,
+    'data-node-type': textNode.type,
+    contentEditable: !readOnly,
+    suppressContentEditableWarning: true,
+    className: `
+      ${isListItem ? 'relative' : ''} 
+      ${getTypeClassName(textNode.type)}
+      ${customClassName}
+      ${readOnly ? '' : 'outline-none focus:ring-1 focus:ring-border/50'}
+      rounded-lg px-3 py-2 mb-2
+      transition-all
+      ${!readOnly && isActive ? 'ring-1 ring-border/50 bg-accent/5' : ''}
+      ${!readOnly ? 'hover:bg-accent/5' : ''}
+      ${readOnly ? 'cursor-default' : ''}
+    `,
+    style: { marginLeft: `${depth * 0.5}rem` },
+    spellCheck: false,
+  };
+
   return (
-    <div
-      key={textNode.id}
-      ref={(el) => {
-        localRef.current = el;
-        nodeRef(el);
-      }}
-      data-node-id={textNode.id}
-      contentEditable={!readOnly}
-      suppressContentEditableWarning
-      onInput={readOnly ? undefined : handleInput}
-      onKeyDown={readOnly ? undefined : handleKeyDown}
-      onClick={handleClick}
-      onCompositionStart={readOnly ? undefined : handleCompositionStart}
-      onCompositionEnd={readOnly ? undefined : handleCompositionEnd}
-      className={`
-        ${getTypeClassName(textNode.type)}
-        ${readOnly ? '' : 'outline-none focus:ring-1 focus:ring-border/50'}
-        rounded-lg px-3 py-2 mb-2
-        transition-all
-        ${!readOnly && isActive ? 'ring-1 ring-border/50 bg-accent/5' : ''}
-        ${!readOnly ? 'hover:bg-accent/5' : ''}
-        ${readOnly ? 'cursor-default' : ''}
-      `}
-      style={{ marginLeft: `${depth * 0.5}rem` }}
-      spellCheck={false}
-    />
+    <>
+      {isListItem ? (
+        // For list items, render li directly without wrapper div
+        <li
+          {...commonProps}
+          ref={(el: HTMLLIElement | null) => {
+            localRef.current = el;
+            nodeRef(el);
+          }}
+          onInput={readOnly ? undefined : (e) => handleInput(e as any)}
+          onKeyDown={readOnly ? undefined : (e) => handleKeyDown(e as any)}
+          onClick={(e) => handleClick(e as any)}
+          onCompositionStart={readOnly ? undefined : handleCompositionStart}
+          onCompositionEnd={readOnly ? undefined : handleCompositionEnd}
+        >
+          {/* Placeholder text for list items */}
+          {showPlaceholder && (
+            <div
+              className="absolute left-3 top-2 pointer-events-none text-muted-foreground/50 select-none"
+              style={{ marginLeft: `${depth * 0.5}rem` }}
+            >
+              Type / for commands...
+            </div>
+          )}
+        </li>
+      ) : (
+        // For non-list items, use wrapper div for positioning
+        <div className="relative">
+          <div
+            {...commonProps}
+            ref={(el: HTMLDivElement | null) => {
+              localRef.current = el;
+              nodeRef(el);
+            }}
+            onInput={readOnly ? undefined : handleInput}
+            onKeyDown={readOnly ? undefined : handleKeyDown}
+            onClick={handleClick}
+            onCompositionStart={readOnly ? undefined : handleCompositionStart}
+            onCompositionEnd={readOnly ? undefined : handleCompositionEnd}
+          />
+          
+          {/* Placeholder text */}
+          {showPlaceholder && (
+            <div
+              className="absolute left-3 top-2 pointer-events-none text-muted-foreground/50 select-none"
+              style={{ marginLeft: `${depth * 0.5}rem` }}
+            >
+              Type / for commands...
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Command Menu */}
+      {!readOnly && (
+        <CommandMenu
+          isOpen={showCommandMenu}
+          onClose={() => setShowCommandMenu(false)}
+          onSelect={handleCommandSelect}
+          anchorElement={commandMenuAnchor}
+        />
+      )}
+    </>
   );
 }
 
@@ -417,8 +616,12 @@ function getTypeClassName(type: string): string {
       return 'text-base font-semibold text-foreground leading-[1.4]';
     case 'p':
       return 'text-base text-foreground leading-relaxed';
+    case 'ul':
+      return 'text-base text-foreground leading-relaxed';
+    case 'ol':
+      return 'text-base text-foreground leading-relaxed';
     case 'li':
-      return 'text-base text-foreground leading-relaxed list-decimal list-inside';
+      return 'text-base text-foreground leading-relaxed';
     case 'blockquote':
       return 'text-base text-muted-foreground italic border-l-4 border-primary pl-6 py-2';
     case 'code':

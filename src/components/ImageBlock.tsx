@@ -32,7 +32,6 @@ export function ImageBlock({
   const [imageLoading, setImageLoading] = useState(true);
 
   const handleDragStart = (e: React.DragEvent) => {
-    console.log('🎯 [ImageBlock] Drag started for node:', node.id);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', node.id);
     e.dataTransfer.setData('application/json', JSON.stringify({
@@ -46,7 +45,6 @@ export function ImageBlock({
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
-    console.log('🏁 [ImageBlock] Drag ended for node:', node.id);
   };
 
   const imageUrl = node.attributes?.src as string | undefined;

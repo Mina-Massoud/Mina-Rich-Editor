@@ -269,7 +269,7 @@ function serializeEditorNode(node: EditorNode, indent: string = ''): string {
  * @example
  * ```typescript
  * const html = serializeToHtml(state.container);
- * console.log(html);
+ *
  * // Output:
  * // <div class="editor-content">
  * //   <h1 class="text-5xl font-extrabold">Title</h1>

@@ -301,7 +301,7 @@ export function SimpleEditor({ readOnly = false }: SimpleEditorProps = {}) {
   const { toast } = useToast();
   const [animationParent] = useAutoAnimate();
   const lastEnterTime = useRef<number>(0);
-  const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const nodeRefs = useRef<Map<string, HTMLElement>>(new Map());
   const contentUpdateTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorContentRef = useRef<HTMLDivElement>(null);
@@ -316,16 +316,10 @@ export function SimpleEditor({ readOnly = false }: SimpleEditorProps = {}) {
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>("");
 
+  console.log("state" , state)
+
   // Get the current container from history
   const container = state.history[state.historyIndex];
-
-  console.log("state", state);
-  console.log("History:", {
-    current: state.historyIndex,
-    total: state.history.length,
-    canUndo: state.historyIndex > 0,
-    canRedo: state.historyIndex < state.history.length - 1,
-  });
 
   // Initialize with comprehensive demo content if empty
   useEffect(() => {
@@ -348,15 +342,27 @@ export function SimpleEditor({ readOnly = false }: SimpleEditorProps = {}) {
           type: "p",
           children: [
             { content: "The ", bold: false },
-            { content: "first rich text editor", bold: true, className: "text-blue-500" },
+            {
+              content: "first rich text editor",
+              bold: true,
+              className: "text-blue-500",
+            },
             { content: " built entirely with ", bold: false },
             { content: "Tailwind CSS", bold: true, className: "text-cyan-500" },
             { content: " and ", bold: false },
             { content: "shadcn/ui", bold: true, className: "text-purple-500" },
             { content: ". Unleash your creativity with ", bold: false },
-            { content: "custom classes", underline: true, className: "text-orange-500" },
+            {
+              content: "custom classes",
+              underline: true,
+              className: "text-orange-500",
+            },
             { content: " and ", bold: false },
-            { content: "unlimited colors", italic: true, className: "text-pink-500" },
+            {
+              content: "unlimited colors",
+              italic: true,
+              className: "text-pink-500",
+            },
             { content: "!", bold: false },
           ],
           attributes: {},
@@ -1233,7 +1239,13 @@ function App() {
         dispatch(EditorActions.setActiveNode(demoNodes[0].id));
       }
     } else if (!state.activeNodeId && container.children.length > 0) {
-      dispatch(EditorActions.setActiveNode(container.children[0]?.id || null));
+      // Find the first focusable node (skip container nodes)
+      const firstFocusableNode = container.children.find(
+        (child) => !isContainerNode(child)
+      );
+      if (firstFocusableNode) {
+        dispatch(EditorActions.setActiveNode(firstFocusableNode.id));
+      }
     }
   }, [
     container.children.length,
@@ -1251,13 +1263,11 @@ function App() {
 
   // Track text selection and update state
   const handleSelectionChange = React.useCallback(() => {
-    console.log("📍 [handleSelectionChange] Called");
     const selection = window.getSelection();
     const hasText =
       selection !== null &&
       !selection.isCollapsed &&
       selection.toString().length > 0;
-    console.log("Selection hasText:", hasText, "text:", selection?.toString());
 
     // Get the FRESH current node from state (not the stale one from render)
     const freshCurrentNode = state.activeNodeId
@@ -1265,8 +1275,6 @@ function App() {
           | TextNode
           | undefined)
       : (container.children[0] as TextNode | undefined);
-
-    console.log("🔄 Fresh current node:", freshCurrentNode);
 
     if (hasText && freshCurrentNode && selection) {
       const element = nodeRefs.current.get(freshCurrentNode.id);
@@ -1278,15 +1286,8 @@ function App() {
         const start = preSelectionRange.toString().length;
         const end = start + range.toString().length;
 
-        console.log("📏 Selection range calculated:", {
-          start,
-          end,
-          nodeId: freshCurrentNode.id,
-        });
-
         // Detect active formats in the selected range
         const detected = detectFormatsInRange(freshCurrentNode, start, end);
-        console.log("🎨 Detected formats in range:", detected);
 
         const selectionInfo: SelectionInfo = {
           text: selection.toString(),
@@ -1313,15 +1314,10 @@ function App() {
           currentSel.formats.underline !== detected.underline;
 
         if (changed) {
-          console.log(
-            "🚀 Dispatching setCurrentSelection with:",
-            selectionInfo
-          );
           dispatch(EditorActions.setCurrentSelection(selectionInfo));
         }
       }
     } else if (state.currentSelection !== null) {
-      console.log("🚀 Dispatching setCurrentSelection(null) - no selection");
       dispatch(EditorActions.setCurrentSelection(null));
     }
   }, [state, dispatch]);
@@ -1362,64 +1358,48 @@ function App() {
   };
 
   const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLDivElement>,
+    e: React.KeyboardEvent<HTMLElement>,
     nodeId: string
   ) => {
+    // CRITICAL: Get the actual node ID from the DOM element's data attribute
+    // This ensures we get the correct ID for nested list items, not the container's ID
+    const actualNodeId = (e.currentTarget as HTMLElement).getAttribute('data-node-id') || nodeId;
+    
+    console.log("🔵 [SimpleEditor.handleKeyDown] Called", {
+      key: e.key,
+      shiftKey: e.shiftKey,
+      passedNodeId: nodeId,
+      actualNodeId,
+    });
+    
     if (e.key === "Enter") {
-      const result = findNodeInTree(nodeId, container);
-      if (!result || !isTextNode(result.node)) return;
+      console.log("🔵 [SimpleEditor] Enter key detected");
+      const result = findNodeInTree(actualNodeId, container);
+      if (!result || !isTextNode(result.node)) {
+        console.log("❌ [SimpleEditor] Node not found or not a text node", {
+          searchedId: actualNodeId,
+        });
+        return;
+      }
       const node = result.node as TextNode;
+      console.log("🔵 [SimpleEditor] Node found:", {
+        id: node.id,
+        type: node.type,
+      });
 
-      // Shift+Enter: For list items, add a new line within the SAME block
+      // Shift+Enter: For list items, add a line break within the same item
       // For other blocks, insert a line break within the block
       if (e.shiftKey) {
-        e.preventDefault();
+        console.log("🔍 [Shift+Enter] Detected in SimpleEditor", {
+          nodeId: actualNodeId,
+          nodeType: node.type,
+        });
 
-        // For list items, add a new line to the lines array
-        if (node.type === "li") {
-          const element = nodeRefs.current.get(nodeId);
-          if (!element) return;
-
-          // Get current text content from DOM
-          const textContent = element.innerText || element.textContent || "";
-
-          // Parse the current content into lines
-          const lines = textContent
-            .split("\n")
-            .map((line) => ({ content: line }));
-
-          // Add a new empty line
-          lines.push({ content: "" });
-
-          // Update the node with the new lines structure
-          dispatch(
-            EditorActions.updateNode(nodeId, {
-              lines: lines,
-              content: undefined, // Clear old content field
-              children: undefined, // Clear old children field
-            })
-          );
-
-          console.log("📝 CRUD Action: ADD_LINE to list item", {
-            nodeId,
-            totalLines: lines.length,
-          });
-
-          // Focus and move cursor to the new line
-          setTimeout(() => {
-            if (element) {
-              element.focus();
-              // Move cursor to end
-              const range = document.createRange();
-              const sel = window.getSelection();
-              range.selectNodeContents(element);
-              range.collapse(false);
-              sel?.removeAllRanges();
-              sel?.addRange(range);
-            }
-          }, 10);
-        } else {
-          // For non-list items, just insert a line break within the block
+        // For list items (ul, ol, or li), just insert a line break within the same item
+        if (node.type === "ul" || node.type === "ol" || node.type === "li") {
+          // preventDefault is already called in Block.tsx
+          console.log("🔍 [Shift+Enter] Inserting line break in list item");
+          
           const selection = window.getSelection();
           if (selection && selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
@@ -1431,9 +1411,28 @@ function App() {
             selection.removeAllRanges();
             selection.addRange(range);
 
-            const element = nodeRefs.current.get(nodeId);
+            const element = nodeRefs.current.get(actualNodeId);
             if (element) {
-              handleContentChange(nodeId, element);
+              handleContentChange(actualNodeId, element);
+            }
+          }
+        } else {
+          // For non-list items, just insert a line break within the block
+          e.preventDefault();
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            const br = document.createElement("br");
+            range.insertNode(br);
+            range.setStartAfter(br);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            const element = nodeRefs.current.get(actualNodeId);
+            if (element) {
+              handleContentChange(actualNodeId, element);
             }
           }
         }
@@ -1448,7 +1447,7 @@ function App() {
 
       // Get cursor position
       const selection = window.getSelection();
-      const element = nodeRefs.current.get(nodeId);
+      const element = nodeRefs.current.get(actualNodeId);
 
       if (!element || !selection) return;
 
@@ -1465,10 +1464,16 @@ function App() {
       // Get the full text content
       const fullText = getNodeTextContent(node);
 
-      // Check if this is a list item (ol/li)
-      if (node.type === "li") {
-        // If the list item is empty, exit the list
-        if (!fullText || fullText.trim() === "") {
+      // Check if this is a list item (ul or ol)
+      if (node.type === "ul" || node.type === "ol" || node.type === "li") {
+        const listType = "li"; // Always create li elements when pressing Enter in a list
+
+        // Split content at cursor position
+        const beforeCursor = fullText.substring(0, cursorPosition);
+        const afterCursor = fullText.substring(cursorPosition);
+
+        // If the current item is empty (no text before or after cursor), exit the list
+        if (!beforeCursor.trim() && !afterCursor.trim()) {
           // Convert to paragraph and exit list
           const newNode: TextNode = {
             id: "p-" + Date.now(),
@@ -1477,8 +1482,8 @@ function App() {
             attributes: {},
           };
 
-          dispatch(EditorActions.deleteNode(nodeId));
-          dispatch(EditorActions.insertNode(newNode, nodeId, "after"));
+          dispatch(EditorActions.deleteNode(actualNodeId));
+          dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
           dispatch(EditorActions.setActiveNode(newNode.id));
 
           setTimeout(() => {
@@ -1491,26 +1496,26 @@ function App() {
           return;
         }
 
-        // Create new list item after current one
-        const beforeCursor = fullText.substring(0, cursorPosition);
-        const afterCursor = fullText.substring(cursorPosition);
+        // Create new list item after current one at the SAME LEVEL
 
         // Update current node with content before cursor
         dispatch(
-          EditorActions.updateNode(nodeId, {
+          EditorActions.updateNode(actualNodeId, {
             content: beforeCursor,
+            children: undefined, // Clear inline formatting when splitting
+            lines: undefined, // Clear multiline structure
           })
         );
 
-        // Create new list item with content after cursor
+        // Create new list item with content after cursor, same type as current
         const newNode: TextNode = {
-          id: "li-" + Date.now(),
-          type: "li",
+          id: `${listType}-${Date.now()}`,
+          type: listType,
           content: afterCursor,
           attributes: {},
         };
 
-        dispatch(EditorActions.insertNode(newNode, nodeId, "after"));
+        dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
         dispatch(EditorActions.setActiveNode(newNode.id));
 
         lastEnterTime.current = currentTime;
@@ -1593,7 +1598,7 @@ function App() {
 
           // Update current node with children before cursor
           dispatch(
-            EditorActions.updateNode(nodeId, {
+            EditorActions.updateNode(actualNodeId, {
               children: beforeChildren.length > 0 ? beforeChildren : undefined,
               content:
                 beforeChildren.length === 0 ? beforeCursor : node.content,
@@ -1609,13 +1614,13 @@ function App() {
             attributes: { ...node.attributes },
           };
 
-          dispatch(EditorActions.insertNode(newNode, nodeId, "after"));
+          dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
           dispatch(EditorActions.setActiveNode(newNode.id));
         } else {
           // Simple case: no inline children, just plain text
           // Update current node with content before cursor
           dispatch(
-            EditorActions.updateNode(nodeId, {
+            EditorActions.updateNode(actualNodeId, {
               content: beforeCursor,
             })
           );
@@ -1628,16 +1633,9 @@ function App() {
             attributes: { ...node.attributes },
           };
 
-          dispatch(EditorActions.insertNode(newNode, nodeId, "after"));
+          dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
           dispatch(EditorActions.setActiveNode(newNode.id));
         }
-
-        console.log("📝 CRUD Action: INSERT_NODE with split content", {
-          nodeType: node.type,
-          after: nodeId,
-          beforeCursor,
-          afterCursor,
-        });
 
         lastEnterTime.current = currentTime;
 
@@ -1695,10 +1693,6 @@ function App() {
 
         // Delete the current node
         dispatch(EditorActions.deleteNode(nodeId));
-        console.log("📝 CRUD Action: DELETE_NODE", {
-          nodeId: nodeId,
-          nodeType: node.type,
-        });
 
         // Focus the previous node if it exists, otherwise the next one
         const prevNode = siblings[currentIndex - 1];
@@ -1745,12 +1739,6 @@ function App() {
               content: content,
             })
           );
-
-          console.log("📝 CRUD Action: AUTO-CONVERT to ordered list", {
-            nodeId: node.id,
-            listNumber: number,
-            content: content,
-          });
         } else if (
           node.type === "li" &&
           (node.lines || newContent.includes("\n"))
@@ -1775,28 +1763,13 @@ function App() {
                 children: undefined, // Clear children
               })
             );
-
-            console.log("📝 CRUD Action: UPDATE_LINES (debounced)", {
-              nodeId: node.id,
-              lineCount: updatedLines.length,
-            });
           } else {
             // Single line - use simple content
             dispatch(EditorActions.updateContent(node.id, newContent));
-
-            console.log("📝 CRUD Action: UPDATE_CONTENT (li single line)", {
-              nodeId: node.id,
-              newContent: newContent,
-            });
           }
         } else if (!hasInlineChildren(node)) {
           // Simple content node - just update the text
           dispatch(EditorActions.updateContent(node.id, newContent));
-
-          console.log("📝 CRUD Action: UPDATE_CONTENT (debounced)", {
-            nodeId: node.id,
-            newContent: newContent,
-          });
         } else {
           // Node has inline children with formatting - parse DOM to preserve formatting
           const parsedChildren = parseDOMToInlineChildren(element);
@@ -1805,14 +1778,6 @@ function App() {
             EditorActions.updateNode(node.id, {
               children: parsedChildren,
             })
-          );
-
-          console.log(
-            "📝 CRUD Action: UPDATE_NODE with parsed children (debounced)",
-            {
-              nodeId: node.id,
-              parsedChildren,
-            }
           );
         }
 
@@ -1831,24 +1796,11 @@ function App() {
 
     const activeId = state.activeNodeId; // Capture in a const to satisfy TypeScript
 
-    console.log("🎯 [Focus Effect] Attempting to focus node:", activeId);
-    console.log(
-      "🎯 [Focus Effect] Available refs:",
-      Array.from(nodeRefs.current.keys())
-    );
-
     // Retry logic to handle async rendering of nested blocks
     const attemptFocus = (retries = 0) => {
       const element = nodeRefs.current.get(activeId);
-      console.log(
-        `🎯 [Focus Attempt ${retries}] Element found:`,
-        !!element,
-        "for node:",
-        activeId
-      );
 
       if (element && document.activeElement !== element) {
-        console.log("✅ [Focus Success] Focusing element:", activeId);
         element.focus();
         // Place cursor at the end of the element
         const range = document.createRange();
@@ -1865,16 +1817,11 @@ function App() {
         sel?.addRange(range);
       } else if (!element && retries < 10) {
         // Element not ready yet, retry
-        console.log(`⏳ [Focus Retry] Will retry (${retries + 1}/10) in 50ms`);
         setTimeout(() => attemptFocus(retries + 1), 50);
       } else if (!element) {
         console.error(
           "❌ [Focus Failed] Element not found after 10 retries:",
           activeId
-        );
-        console.log(
-          "❌ [Focus Failed] Available refs:",
-          Array.from(nodeRefs.current.keys())
         );
       }
     };
@@ -1903,7 +1850,6 @@ function App() {
           range.collapse(true);
           sel?.removeAllRanges();
           sel?.addRange(range);
-          console.log("🔄 [History] Restored focus after history change");
         }, 50);
       }
     }
@@ -1943,8 +1889,6 @@ function App() {
           range.selectNodeContents(editorContent);
           selection.removeAllRanges();
           selection.addRange(range);
-
-          console.log("✅ Selected all editor content");
         }
       }
 
@@ -1953,8 +1897,6 @@ function App() {
         e.preventDefault();
         if (state.historyIndex > 0) {
           dispatch(EditorActions.undo());
-
-          console.log("⏪ Undo:", state.historyIndex - 1);
         }
       }
 
@@ -1967,8 +1909,6 @@ function App() {
         e.preventDefault();
         if (state.historyIndex < state.history.length - 1) {
           dispatch(EditorActions.redo());
-
-          console.log("⏩ Redo:", state.historyIndex + 1);
         }
       }
     };
@@ -1982,9 +1922,6 @@ function App() {
   // Handle format button clicks - completely state-driven!
   const handleFormat = (format: "bold" | "italic" | "underline") => {
     console.group("🔘 [handleFormat] Button clicked");
-    console.log("Format requested:", format);
-    console.log("Current state.currentSelection:", state.currentSelection);
-    console.log("Current node before toggle:", currentNode);
 
     if (!state.currentSelection) {
       console.warn("❌ No current selection, aborting");
@@ -1995,33 +1932,19 @@ function App() {
     // Save selection for restoration
     const { start, end, nodeId, formats } = state.currentSelection;
 
-    console.log("Current format state:", formats);
-    console.log(
-      `Format "${format}" is currently:`,
-      formats[format] ? "ACTIVE" : "INACTIVE"
-    );
-
     // Dispatch toggle format action - reducer handles everything!
-    console.log("🚀 Dispatching toggleFormat action");
     dispatch(EditorActions.toggleFormat(format));
-
-    console.log("📝 CRUD Action: TOGGLE_FORMAT dispatched");
 
     // After state updates, check what happened
     setTimeout(() => {
-      console.log("⏰ After state update");
       const updatedNode = container.children.find((n) => n.id === nodeId);
-      console.log("Updated node after toggle:", updatedNode);
-      console.log("Updated node attributes:", updatedNode?.attributes);
     }, 100);
 
     // Restore selection after formatting
     setTimeout(() => {
-      console.log("⏰ Restoring selection after timeout");
       const element = nodeRefs.current.get(nodeId);
       if (element) {
         restoreSelection(element, start, end);
-        console.log("✅ Selection restored");
       } else {
         console.warn("❌ Element not found for selection restoration");
       }
@@ -2035,7 +1958,6 @@ function App() {
     start: number,
     end: number
   ) => {
-    console.log("🔄 [restoreSelection] Starting", { start, end });
     const range = document.createRange();
     const sel = window.getSelection();
 
@@ -2076,15 +1998,12 @@ function App() {
 
     walk(element);
 
-    console.log("Found nodes:", { startNode, startOffset, endNode, endOffset });
-
     if (startNode && endNode) {
       try {
         range.setStart(startNode, startOffset);
         range.setEnd(endNode, endOffset);
         sel?.removeAllRanges();
         sel?.addRange(range);
-        console.log("✅ Selection range set successfully");
 
         // IMPORTANT: After restoring selection, we need to update the format detection
         // This will trigger selectionchange which will re-detect formats correctly
@@ -2146,11 +2065,6 @@ function App() {
               | "blockquote");
       dispatch(EditorActions.applyInlineElementType(elementType));
 
-      console.log("📝 CRUD Action: APPLY_INLINE_ELEMENT_TYPE", {
-        elementType,
-        selection: state.currentSelection,
-      });
-
       // Restore selection after state update
       setTimeout(() => {
         const element = nodeRefs.current.get(nodeId);
@@ -2165,15 +2079,18 @@ function App() {
           type,
         })
       );
-
-      console.log("📝 CRUD Action: UPDATE_NODE", {
-        nodeId: currentNode.id,
-        newType: type,
-      });
     }
   };
 
   const handleNodeClick = (nodeId: string) => {
+    // Don't set container nodes as active - they're not focusable
+    // Only text nodes and image nodes can be focused
+    const result = findNodeInTree(nodeId, container);
+    if (result && isContainerNode(result.node)) {
+      // For container nodes, don't set as active
+      // The child blocks will handle their own clicks
+      return;
+    }
     dispatch(EditorActions.setActiveNode(nodeId));
   };
 
@@ -2215,7 +2132,9 @@ function App() {
           attributes: {},
         } as TextNode,
       ],
-      attributes: {},
+      attributes: {
+        listType: "ul", // Default to unordered list
+      },
     };
 
     // Insert the list container at the end
@@ -2242,12 +2161,14 @@ function App() {
       // Find the last element in the editor (the newly created list container)
       const editorContent = editorContentRef.current;
       if (editorContent) {
-        const lastChild = editorContent.querySelector('[data-editor-content]')?.lastElementChild;
+        const lastChild = editorContent.querySelector(
+          "[data-editor-content]"
+        )?.lastElementChild;
         if (lastChild) {
           lastChild.scrollIntoView({
             behavior: "smooth",
             block: "end",
-            inline: "nearest"
+            inline: "nearest",
           });
         }
       }
@@ -2255,14 +2176,12 @@ function App() {
   };
 
   const handleImageDragStart = (nodeId: string) => {
-    console.log("🎯 [SimpleEditor] Image drag started:", nodeId);
     setDraggingNodeId(nodeId);
   };
 
   const handleDragEnter = (e: React.DragEvent, nodeId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("🟡 [DragEnter]", { nodeId, draggingNodeId });
   };
 
   const handleDragOver = (e: React.DragEvent, nodeId: string) => {
@@ -2277,13 +2196,6 @@ function App() {
     const midPoint = rect.top + rect.height / 2;
     const position = e.clientY < midPoint ? "before" : "after";
 
-    console.log("🔵 [DragOver]", {
-      nodeId,
-      position,
-      clientY: e.clientY,
-      midPoint,
-    });
-
     setDragOverNodeId(nodeId);
     setDropPosition(position);
   };
@@ -2297,47 +2209,24 @@ function App() {
     const currentTarget = e.currentTarget as HTMLElement;
 
     if (!currentTarget.contains(relatedTarget)) {
-      console.log("🔴 [DragLeave] Actually leaving");
       setDragOverNodeId(null);
       setDropPosition(null);
     } else {
-      console.log("🔴 [DragLeave] Entering child, ignoring");
     }
   };
 
   const handleDrop = async (e: React.DragEvent, nodeId: string) => {
-    console.log("🟢🟢🟢 [Drop] HANDLER CALLED!", { nodeId });
     e.preventDefault();
     e.stopPropagation();
 
-    console.log("🟢 [Drop] Started", {
-      nodeId,
-      dropPosition,
-      draggingNodeId,
-      dataTransfer: e.dataTransfer,
-      files: e.dataTransfer.files.length,
-      items: e.dataTransfer.items?.length,
-      types: e.dataTransfer.types,
-    });
-
     // Check if we're moving an existing image block
     const draggedNodeId = e.dataTransfer.getData("text/plain");
-    console.log("🟢 [Drop] Dragged node ID from dataTransfer:", draggedNodeId);
 
     if (draggedNodeId && draggingNodeId) {
       // Moving an existing image
-      console.log(
-        "🔄 [Drop] Moving existing image node:",
-        draggingNodeId,
-        "to",
-        dropPosition,
-        "of",
-        nodeId
-      );
 
       // Don't drop on itself
       if (draggingNodeId === nodeId) {
-        console.log("⚠️ [Drop] Cannot drop on itself");
         setDragOverNodeId(null);
         setDropPosition(null);
         setDraggingNodeId(null);
@@ -2366,8 +2255,6 @@ function App() {
           title: "Image moved!",
           description: `Image repositioned ${dropPosition} the block`,
         });
-
-        console.log("✅ [Drop] Image moved successfully");
       }
 
       setDragOverNodeId(null);
@@ -2377,13 +2264,11 @@ function App() {
     }
 
     // Otherwise, handle file upload
-    console.log("📁 [Drop] Handling file upload");
 
     // Try to get files from dataTransfer
     let files: File[] = [];
 
     if (e.dataTransfer.items) {
-      console.log("🟢 [Drop] Using dataTransfer.items");
       // Use DataTransferItemList interface
       const items = Array.from(e.dataTransfer.items);
       files = items
@@ -2391,33 +2276,23 @@ function App() {
         .map((item) => item.getAsFile())
         .filter((file): file is File => file !== null);
     } else {
-      console.log("🟢 [Drop] Using dataTransfer.files");
       // Use DataTransferList interface
       files = Array.from(e.dataTransfer.files);
     }
 
-    console.log(
-      "🟢 [Drop] Files:",
-      files.map((f) => ({ name: f.name, type: f.type, size: f.size }))
-    );
-
     const imageFile = files.find((file) => file.type.startsWith("image/"));
 
     if (!imageFile) {
-      console.log("❌ [Drop] No image file found. Files:", files);
       setDragOverNodeId(null);
       setDropPosition(null);
       setDraggingNodeId(null);
       return;
     }
 
-    console.log("🟢 [Drop] Image file found:", imageFile.name, imageFile.type);
     setIsUploading(true);
 
     try {
-      console.log("🟢 [Drop] Uploading image...");
       const result = await uploadImage(imageFile);
-      console.log("🟢 [Drop] Upload result:", result);
 
       if (result.success && result.url) {
         const imageNode: TextNode = {
@@ -2430,45 +2305,25 @@ function App() {
           },
         };
 
-        console.log("✅ [Drop] Creating image node:", imageNode);
-        console.log(
-          "✅ [Drop] Inserting at position:",
-          dropPosition,
-          "relative to node:",
-          nodeId
-        );
-
         // Insert at the determined position
         dispatch(
           EditorActions.insertNode(imageNode, nodeId, dropPosition || "after")
         );
         dispatch(EditorActions.setActiveNode(imageNode.id));
 
-        console.log("✅ [Drop] Image inserted successfully");
-
         toast({
           title: "Image uploaded!",
           description: `Image placed ${dropPosition} the block`,
         });
-
-        console.log("📝 CRUD Action: INSERT_NODE (image via drag-drop)", {
-          nodeId: imageNode.id,
-          url: result.url,
-          position: dropPosition,
-          targetNodeId: nodeId,
-        });
       } else {
-        console.log("❌ [Drop] Upload failed:", result.error);
       }
     } catch (error) {
-      console.error("❌ [Drop] Error:", error);
       toast({
         variant: "destructive",
         title: "Upload failed",
         description: "Failed to upload image. Please try again.",
       });
     } finally {
-      console.log("🏁 [Drop] Cleaning up");
       setIsUploading(false);
       setDragOverNodeId(null);
       setDropPosition(null);
@@ -2512,11 +2367,6 @@ function App() {
           title: "Image uploaded",
           description: "Your image has been added to the editor.",
         });
-
-        console.log("📝 CRUD Action: INSERT_NODE (image)", {
-          nodeId: imageNode.id,
-          url: result.url,
-        });
       } else {
         toast({
           variant: "destructive",
@@ -2541,12 +2391,112 @@ function App() {
 
   const handleDeleteNode = (nodeId: string) => {
     dispatch(EditorActions.deleteNode(nodeId));
-    console.log("📝 CRUD Action: DELETE_NODE (image)", { nodeId });
 
     toast({
       title: "Image removed",
       description: "The image has been deleted.",
     });
+  };
+
+  const handleChangeBlockType = (nodeId: string, newType: string) => {
+    // Special handling for list items - initialize with empty content
+    if (newType === "li") {
+      dispatch(
+        EditorActions.updateNode(nodeId, {
+          type: newType as any,
+          content: "",
+        })
+      );
+    } else {
+      dispatch(EditorActions.updateNode(nodeId, { type: newType as any }));
+    }
+
+    // Focus the updated node after a brief delay
+    setTimeout(() => {
+      const element = nodeRefs.current.get(nodeId);
+      if (element) {
+        element.focus();
+      }
+    }, 50);
+  };
+
+  const handleInsertImageFromCommand = (nodeId: string) => {
+    // Delete the current empty block
+    dispatch(EditorActions.deleteNode(nodeId));
+
+    // Trigger the file input
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 100);
+  };
+
+  // Handle creating a list from command menu (ol or ul)
+  const handleCreateListFromCommand = (nodeId: string, listType: string) => {
+    const timestamp = Date.now();
+    const firstItemId = `li-${timestamp}-1`;
+
+    // Create a container with 3 list items (always "li", regardless of ul/ol)
+    // The container's attributes will store whether it's ul or ol
+    const listContainer: ContainerNode = {
+      id: `container-${timestamp}`,
+      type: "container",
+      attributes: {
+        listType: listType, // Store 'ul' or 'ol' in the container attributes
+      },
+      children: [
+        {
+          id: firstItemId,
+          type: "li",
+          content: "",
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-2`,
+          type: "li",
+          content: "",
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-3`,
+          type: "li",
+          content: "",
+          attributes: {},
+        } as TextNode,
+      ],
+    };
+
+    // Insert the list container after the current node, then delete the current node
+    dispatch(EditorActions.insertNode(listContainer, nodeId, "after"));
+    dispatch(EditorActions.deleteNode(nodeId));
+
+    const listTypeLabel = listType === "ol" ? "numbered" : "bulleted";
+    toast({
+      title: "List Created",
+      description: `Created a ${listTypeLabel} list with 3 items`,
+    });
+
+    // Focus the first item after a longer delay to ensure nested elements are registered
+    // Nested elements take longer to mount and register their refs
+    setTimeout(() => {
+      const element = nodeRefs.current.get(firstItemId);
+      if (element) {
+        element.focus();
+        // Also set it as active node
+        dispatch(EditorActions.setActiveNode(firstItemId));
+      } else {
+        console.warn(
+          "⚠️ [Focus Warning] First list item not found yet, retrying..."
+        );
+        // Retry after another delay
+        setTimeout(() => {
+          const retryElement = nodeRefs.current.get(firstItemId);
+          if (retryElement) {
+            retryElement.focus();
+            dispatch(EditorActions.setActiveNode(firstItemId));
+          }
+        }, 100);
+      }
+    }, 150);
   };
 
   const handleAddBlock = (
@@ -2563,12 +2513,6 @@ function App() {
 
     dispatch(EditorActions.insertNode(newNode, targetId, position));
     dispatch(EditorActions.setActiveNode(newNode.id));
-
-    console.log("📝 CRUD Action: INSERT_NODE (new paragraph)", {
-      nodeId: newNode.id,
-      position,
-      targetId,
-    });
 
     // Focus the new node after a brief delay
     setTimeout(() => {
@@ -2601,12 +2545,6 @@ function App() {
       // Insert after the current node within the parent container
       dispatch(EditorActions.insertNode(newParagraph, nodeId, "after"));
       dispatch(EditorActions.setActiveNode(newParagraph.id));
-
-      console.log("📝 CRUD Action: ADD_TO_NESTED_CONTAINER", {
-        currentNodeId: nodeId,
-        newNodeId: newParagraph.id,
-        parentContainerId: parentId,
-      });
 
       // Focus is handled by the useEffect watching state.activeNodeId
       return;
@@ -2657,12 +2595,6 @@ function App() {
 
     // Set the new paragraph as active
     dispatch(EditorActions.setActiveNode(newParagraphId));
-
-    console.log("📝 CRUD Action: CREATE_NESTED_CONTAINER", {
-      originalNodeId: nodeId,
-      nestedContainerId: nestedContainer.id,
-      newParagraphId,
-    });
 
     toast({
       title: "Nested block created",
@@ -3199,12 +3131,6 @@ function App() {
                                 el.getAttribute("data-node-id");
                               if (elementNodeId) {
                                 nodeRefs.current.set(elementNodeId, el);
-                                console.log(
-                                  "📝 [Ref Registration]",
-                                  elementNodeId,
-                                  "contentEditable:",
-                                  el.contentEditable
-                                );
                               }
 
                               // CRITICAL: Only update DOM if element is NOT focused AND there's no active text selection
@@ -3271,6 +3197,9 @@ function App() {
                           onCreateNested={handleCreateNested}
                           readOnly={readOnly}
                           onImageDragStart={handleImageDragStart}
+                          onChangeBlockType={handleChangeBlockType}
+                          onInsertImage={handleInsertImageFromCommand}
+                          onCreateList={handleCreateListFromCommand}
                         />
                       </div>
 

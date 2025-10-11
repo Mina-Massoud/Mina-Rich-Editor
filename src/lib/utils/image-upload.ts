@@ -33,7 +33,7 @@ export interface UploadResult {
  * ```typescript
  * const result = await uploadImage(file);
  * if (result.success) {
- *   console.log('Image uploaded:', result.url);
+ *
  * }
  * ```
  */
