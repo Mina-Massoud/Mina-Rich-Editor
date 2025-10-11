@@ -1023,10 +1023,20 @@ export function editorReducer(
 export function createInitialState(
   container?: Partial<ContainerNode>
 ): EditorState {
+  // If container is provided, use it; otherwise create with at least one empty block
+  const defaultChildren = container?.children !== undefined 
+    ? container.children 
+    : [{
+        id: "p-" + Date.now(),
+        type: "p" as const,
+        content: "",
+        attributes: {},
+      }];
+
   const initialContainer: ContainerNode = {
     id: "root",
     type: "container",
-    children: [],
+    children: defaultChildren,
     ...container,
   };
 
@@ -1034,7 +1044,7 @@ export function createInitialState(
     version: "1.0.0",
     history: [deepCloneContainer(initialContainer)],
     historyIndex: 0,
-    activeNodeId: null,
+    activeNodeId: initialContainer.children.length > 0 ? initialContainer.children[0].id : null,
     hasSelection: false,
     selectionKey: 0,
     currentSelection: null,

@@ -3495,7 +3495,7 @@ export function SimpleEditor({
 
           {/* Editor Content */}
           <CardContent
-            className={`p-6 min-h-screen transition-all duration-300 max-w-4xl mx-auto ${
+            className={`p-6 w-full min-h-screen transition-all duration-300 max-w-4xl mx-auto ${
               readOnly ? "py-14 md:py-20" : ""
             }`}
           >
