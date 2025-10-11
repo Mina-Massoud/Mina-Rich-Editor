@@ -10,12 +10,12 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import { useAutoAnimate } from "@formkit/auto-animate/react";
 import {
   useEditor,
   EditorActions,
   type TextNode,
   type EditorNode,
+  type EditorState,
   type SelectionInfo,
   hasInlineChildren,
   getNodeTextContent,
@@ -23,51 +23,19 @@ import {
   isTextNode,
   isContainerNode,
   ContainerNode,
+  useSelectionManager,
+  useSelection,
 } from "../lib";
 import { Block } from "./Block";
 import { AddBlockButton } from "./AddBlockButton";
 import { CustomClassPopover } from "./CustomClassPopover";
-import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { Separator } from "./ui/separator";
+import { LinkPopover } from "./LinkPopover";
+import { EditorToolbar } from "./EditorToolbar";
 import { Badge } from "./ui/badge";
 import { Card, CardContent } from "./ui/card";
-import { Button } from "./ui/button";
-import { Switch } from "./ui/switch";
-import { Label } from "./ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import {
-  Bold,
-  Italic,
-  Underline,
-  Type,
-  ImagePlus,
-  Loader2,
-  Code,
-  Copy,
-  Check,
-  Eye,
-  Palette,
-  List,
-} from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Input } from "./ui/input";
 import { uploadImage } from "../lib/utils/image-upload";
 import { useToast } from "@/hooks/use-toast";
+import { Toolbar } from "./Toolbar";
 
 /**
  * Parse DOM element back into inline children structure
@@ -82,7 +50,9 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
       bold?: boolean;
       italic?: boolean;
       underline?: boolean;
+      className?: string;
       elementType?:
+        | "p"
         | "h1"
         | "h2"
         | "h3"
@@ -101,6 +71,7 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
           inheritedFormats.bold ||
           inheritedFormats.italic ||
           inheritedFormats.underline ||
+          inheritedFormats.className ||
           inheritedFormats.elementType;
         if (hasAnyFormatting) {
           children.push({
@@ -108,6 +79,7 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
             bold: inheritedFormats.bold || undefined,
             italic: inheritedFormats.italic || undefined,
             underline: inheritedFormats.underline || undefined,
+            className: inheritedFormats.className || undefined,
             elementType: inheritedFormats.elementType,
           });
         } else {
@@ -125,6 +97,7 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
 
       // Detect element type from classes
       let elementType:
+        | "p"
         | "h1"
         | "h2"
         | "h3"
@@ -134,21 +107,21 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
         | "code"
         | "blockquote"
         | undefined = undefined;
-      if (classList.some((c) => c.includes("text-5xl"))) {
+      if (classList.some((c) => c.includes("text-4xl"))) {
         elementType = "h1";
-      } else if (classList.some((c) => c.includes("text-4xl"))) {
-        elementType = "h2";
       } else if (classList.some((c) => c.includes("text-3xl"))) {
-        elementType = "h3";
+        elementType = "h2";
       } else if (classList.some((c) => c.includes("text-2xl"))) {
+        elementType = "h3";
+      } else if (classList.some((c) => c.includes("text-xl"))) {
         elementType = "h4";
       } else if (
-        classList.some((c) => c.includes("text-xl")) &&
-        !classList.includes("border-l-4")
+        classList.some((c) => c.includes("text-lg")) &&
+        classList.includes("font-semibold")
       ) {
         elementType = "h5";
       } else if (
-        classList.some((c) => c.includes("text-lg")) &&
+        classList.some((c) => c.includes("text-base")) &&
         classList.includes("font-semibold")
       ) {
         elementType = "h6";
@@ -156,13 +129,44 @@ function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
         elementType = "code";
       } else if (classList.includes("border-l-4")) {
         elementType = "blockquote";
+      } else if (
+        classList.some((c) => c.includes("text-base")) &&
+        classList.some((c) => c.includes("leading-relaxed"))
+      ) {
+        elementType = "p";
       }
+
+      // Extract custom classes (filter out known formatting classes and extra spacing classes)
+      const knownClasses = [
+        "font-bold",
+        "italic",
+        "underline",
+        "text-5xl",
+        "text-4xl",
+        "text-3xl",
+        "text-2xl",
+        "text-xl",
+        "text-lg",
+        "font-semibold",
+        "font-mono",
+        "border-l-4",
+        "pl-4",
+        "text-primary",
+        "hover:underline",
+        "cursor-pointer",
+        "inline-block",
+        "pr-1", // italic spacing classes
+      ];
+      const customClasses = classList.filter((c) => !knownClasses.includes(c));
+      const customClassName =
+        customClasses.length > 0 ? customClasses.join(" ") : undefined;
 
       // Merge with inherited formatting
       const currentFormats = {
         bold: bold || inheritedFormats.bold,
         italic: italic || inheritedFormats.italic,
         underline: underline || inheritedFormats.underline,
+        className: customClassName || inheritedFormats.className,
         elementType: elementType || inheritedFormats.elementType,
       };
 
@@ -209,12 +213,18 @@ function detectFormatsInRange(
     | "code"
     | "blockquote"
     | null;
+  href?: string | null;
+  className?: string | null;
+  styles?: Record<string, string> | null;
 } {
   const formats = {
     bold: false,
     italic: false,
     underline: false,
     elementType: null as any,
+    href: null as string | null,
+    className: null as string | null,
+    styles: null as Record<string, string> | null,
   };
 
   // If node has no children, check node-level attributes
@@ -224,6 +234,9 @@ function detectFormatsInRange(
       italic: node.attributes?.italic === true,
       underline: node.attributes?.underline === true,
       elementType: null,
+      href: null,
+      className: null,
+      styles: null,
     };
   }
 
@@ -238,6 +251,12 @@ function detectFormatsInRange(
   let charsInRange = 0;
   let firstElementType: typeof formats.elementType = undefined;
   let allSameElementType = true;
+  let firstHref: string | undefined = undefined;
+  let allSameHref = true;
+  let firstClassName: string | undefined = undefined;
+  let allSameClassName = true;
+  let firstStyles: Record<string, string> | undefined = undefined;
+  let allSameStyles = true;
 
   for (const child of node.children) {
     const childLength = (child.content || "").length;
@@ -275,6 +294,30 @@ function detectFormatsInRange(
       } else if (firstElementType !== childElementType) {
         allSameElementType = false;
       }
+
+      // Check href
+      const childHref = child.href || null;
+      if (firstHref === undefined) {
+        firstHref = childHref || undefined;
+      } else if (firstHref !== childHref) {
+        allSameHref = false;
+      }
+
+      // Check className
+      const childClassName = child.className || null;
+      if (firstClassName === undefined) {
+        firstClassName = childClassName || undefined;
+      } else if (firstClassName !== childClassName) {
+        allSameClassName = false;
+      }
+
+      // Check styles
+      const childStyles = child.styles || null;
+      if (firstStyles === undefined) {
+        firstStyles = childStyles || undefined;
+      } else if (JSON.stringify(firstStyles) !== JSON.stringify(childStyles)) {
+        allSameStyles = false;
+      }
     }
 
     currentPos = childEnd;
@@ -286,6 +329,9 @@ function detectFormatsInRange(
     italic: charsInRange > 0 && allItalic,
     underline: charsInRange > 0 && allUnderline,
     elementType: allSameElementType ? firstElementType : null,
+    href: allSameHref ? firstHref || null : null,
+    className: allSameClassName ? firstClassName || null : null,
+    styles: allSameStyles ? firstStyles || null : null,
   };
 }
 
@@ -294,29 +340,33 @@ function detectFormatsInRange(
  */
 interface SimpleEditorProps {
   readOnly?: boolean; // View-only mode - renders content without editing capabilities
+  onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler - should return the uploaded image URL
 }
 
-export function SimpleEditor({ readOnly = false }: SimpleEditorProps = {}) {
+export function SimpleEditor({
+  readOnly: initialReadOnly = false,
+  onUploadImage,
+}: SimpleEditorProps = {}) {
   const [state, dispatch] = useEditor();
+  const selectionManager = useSelectionManager();
   const { toast } = useToast();
-  const [animationParent] = useAutoAnimate();
   const lastEnterTime = useRef<number>(0);
   const nodeRefs = useRef<Map<string, HTMLElement>>(new Map());
   const contentUpdateTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const multipleFileInputRef = useRef<HTMLInputElement>(null);
   const editorContentRef = useRef<HTMLDivElement>(null);
+  const [readOnly, setReadOnly] = useState(initialReadOnly);
   const [isUploading, setIsUploading] = useState(false);
   const [copiedHtml, setCopiedHtml] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
-  const [enhanceSpaces, setEnhanceSpaces] = useState(false);
+  const [enhanceSpaces, setEnhanceSpaces] = useState(true);
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
-  const [dropPosition, setDropPosition] = useState<"before" | "after" | null>(
-    null
-  );
+  const [dropPosition, setDropPosition] = useState<
+    "before" | "after" | "left" | "right" | null
+  >(null);
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>("");
-
-  console.log("state" , state)
 
   // Get the current container from history
   const container = state.history[state.historyIndex];
@@ -1229,15 +1279,33 @@ function App() {
         } as TextNode,
       ];
 
-      // Dispatch all nodes
-      demoNodes.forEach((node) => {
-        dispatch(EditorActions.insertNode(node, container.id, "append"));
-      });
+      // Create new state with all demo nodes in a single dispatch
+      const newContainer: ContainerNode = {
+        ...container,
+        children: demoNodes,
+      };
 
-      // Set first node as active
-      if (demoNodes.length > 0) {
-        dispatch(EditorActions.setActiveNode(demoNodes[0].id));
-      }
+      const newState: EditorState = {
+        ...state,
+        history: [newContainer],
+        historyIndex: 0,
+        activeNodeId: demoNodes.length > 0 ? demoNodes[0].id : null,
+        metadata: {
+          ...state.metadata,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+
+      // Dispatch single SET_STATE action with all content
+      dispatch(EditorActions.setState(newState));
+
+      console.log(
+        "📝 [Initial Content] Loaded demo content with",
+        demoNodes.length,
+        "nodes"
+      );
+      console.log("📝 [Initial Content] First node:", demoNodes[0]);
     } else if (!state.activeNodeId && container.children.length > 0) {
       // Find the first focusable node (skip container nodes)
       const firstFocusableNode = container.children.find(
@@ -1261,7 +1329,10 @@ function App() {
         | undefined)
     : (container.children[0] as TextNode | undefined);
 
-  // Track text selection and update state
+  // Debounced dispatch for selection state updates
+  const selectionDispatchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Track text selection - updates ref immediately, state with debounce
   const handleSelectionChange = React.useCallback(() => {
     const selection = window.getSelection();
     const hasText =
@@ -1300,10 +1371,13 @@ function App() {
             underline: detected.underline,
           },
           elementType: detected.elementType,
+          href: detected.href,
+          className: detected.className,
+          styles: detected.styles,
         };
 
-        // Only dispatch if selection actually changed
-        const currentSel = state.currentSelection;
+        // Check if selection actually changed
+        const currentSel = selectionManager.getSelection();
         const changed =
           !currentSel ||
           currentSel.start !== start ||
@@ -1311,16 +1385,46 @@ function App() {
           currentSel.nodeId !== freshCurrentNode.id ||
           currentSel.formats.bold !== detected.bold ||
           currentSel.formats.italic !== detected.italic ||
-          currentSel.formats.underline !== detected.underline;
+          currentSel.formats.underline !== detected.underline ||
+          currentSel.elementType !== detected.elementType;
 
         if (changed) {
-          dispatch(EditorActions.setCurrentSelection(selectionInfo));
+          // Update ref immediately (fast, no re-renders)
+          selectionManager.setSelection(selectionInfo);
+
+          // Debounce state dispatch to avoid excessive re-renders
+          if (selectionDispatchTimerRef.current) {
+            clearTimeout(selectionDispatchTimerRef.current);
+          }
+
+          selectionDispatchTimerRef.current = setTimeout(() => {
+            dispatch(EditorActions.setCurrentSelection(selectionInfo));
+          }, 150); // 150ms debounce for toolbar updates
         }
       }
-    } else if (state.currentSelection !== null) {
-      dispatch(EditorActions.setCurrentSelection(null));
+    } else {
+      const currentSel = selectionManager.getSelection();
+      if (currentSel !== null) {
+        // Clear ref immediately
+        selectionManager.setSelection(null);
+
+        // Clear state with debounce
+        if (selectionDispatchTimerRef.current) {
+          clearTimeout(selectionDispatchTimerRef.current);
+        }
+
+        selectionDispatchTimerRef.current = setTimeout(() => {
+          dispatch(EditorActions.setCurrentSelection(null));
+        }, 150);
+      }
     }
-  }, [state, dispatch]);
+  }, [
+    state.activeNodeId,
+    container.children,
+    selectionManager,
+    nodeRefs,
+    dispatch,
+  ]);
 
   useEffect(() => {
     document.addEventListener("selectionchange", handleSelectionChange);
@@ -1363,15 +1467,16 @@ function App() {
   ) => {
     // CRITICAL: Get the actual node ID from the DOM element's data attribute
     // This ensures we get the correct ID for nested list items, not the container's ID
-    const actualNodeId = (e.currentTarget as HTMLElement).getAttribute('data-node-id') || nodeId;
-    
+    const actualNodeId =
+      (e.currentTarget as HTMLElement).getAttribute("data-node-id") || nodeId;
+
     console.log("🔵 [SimpleEditor.handleKeyDown] Called", {
       key: e.key,
       shiftKey: e.shiftKey,
       passedNodeId: nodeId,
       actualNodeId,
     });
-    
+
     if (e.key === "Enter") {
       console.log("🔵 [SimpleEditor] Enter key detected");
       const result = findNodeInTree(actualNodeId, container);
@@ -1399,7 +1504,7 @@ function App() {
         if (node.type === "ul" || node.type === "ol" || node.type === "li") {
           // preventDefault is already called in Block.tsx
           console.log("🔍 [Shift+Enter] Inserting line break in list item");
-          
+
           const selection = window.getSelection();
           if (selection && selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
@@ -1805,16 +1910,16 @@ function App() {
         // Place cursor at the end of the element
         const range = document.createRange();
         const sel = window.getSelection();
-        if (element.childNodes.length > 0) {
-          const lastNode = element.childNodes[element.childNodes.length - 1];
-          const offset = lastNode.textContent?.length || 0;
-          range.setStart(lastNode, offset);
-        } else {
-          range.setStart(element, 0);
-        }
-        range.collapse(true);
-        sel?.removeAllRanges();
-        sel?.addRange(range);
+        // if (element.childNodes.length > 0) {
+        //   const lastNode = element.childNodes[element.childNodes.length - 1];
+        //   const offset = lastNode.textContent?.length || 0;
+        //   range.setStart(lastNode, offset);
+        // } else {
+        //   range.setStart(element, 0);
+        // }
+        // range.collapse(true);
+        // sel?.removeAllRanges();
+        // sel?.addRange(range);
       } else if (!element && retries < 10) {
         // Element not ready yet, retry
         setTimeout(() => attemptFocus(retries + 1), 50);
@@ -1828,32 +1933,6 @@ function App() {
 
     attemptFocus();
   }, [state.activeNodeId]);
-
-  // Restore focus when history changes (undo/redo)
-  useEffect(() => {
-    if (state.activeNodeId && !readOnly) {
-      const element = nodeRefs.current.get(state.activeNodeId);
-      if (element) {
-        // Small delay to ensure DOM is updated
-        setTimeout(() => {
-          element.focus();
-          // Place cursor at the end
-          const range = document.createRange();
-          const sel = window.getSelection();
-          if (element.childNodes.length > 0) {
-            const lastNode = element.childNodes[element.childNodes.length - 1];
-            const offset = lastNode.textContent?.length || 0;
-            range.setStart(lastNode, offset);
-          } else {
-            range.setStart(element, 0);
-          }
-          range.collapse(true);
-          sel?.removeAllRanges();
-          sel?.addRange(range);
-        }, 50);
-      }
-    }
-  }, [state.historyIndex, readOnly]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -1875,37 +1954,53 @@ function App() {
         (el) => el === activeElement || el.contains(activeElement)
       );
 
-      // Ctrl+A / Cmd+A - Select all content
+      // Ctrl+A / Cmd+A - Select all content in current block only (requires focus)
       if (isCtrlOrCmd && e.key === "a" && isInEditor) {
         e.preventDefault();
 
-        // Select all content in the editor by creating a range across all blocks
+        // Select all content in the current block only
         const selection = window.getSelection();
         if (!selection) return;
 
-        const editorContent = document.querySelector("[data-editor-content]");
-        if (editorContent) {
+        // Find the current block element (the contentEditable element)
+        const currentBlock = activeElement as HTMLElement;
+        if (currentBlock && currentBlock.isContentEditable) {
           const range = document.createRange();
-          range.selectNodeContents(editorContent);
+          range.selectNodeContents(currentBlock);
           selection.removeAllRanges();
           selection.addRange(range);
         }
       }
 
-      // Ctrl+Z / Cmd+Z - Undo
-      if (isCtrlOrCmd && e.key === "z" && !e.shiftKey && isInEditor) {
+      // Ctrl+Z / Cmd+Z - Undo (works globally, no focus required)
+      if (isCtrlOrCmd && e.key === "z" && !e.shiftKey) {
+        // Don't interfere with native undo in input fields outside the editor
+        if (
+          !isInEditor &&
+          (activeElement?.tagName === "INPUT" ||
+            activeElement?.tagName === "TEXTAREA")
+        ) {
+          return;
+        }
         e.preventDefault();
         if (state.historyIndex > 0) {
           dispatch(EditorActions.undo());
         }
       }
 
-      // Ctrl+Y / Cmd+Y or Ctrl+Shift+Z - Redo
+      // Ctrl+Y / Cmd+Y or Ctrl+Shift+Z - Redo (works globally, no focus required)
       if (
-        isInEditor &&
-        ((isCtrlOrCmd && e.key === "y") ||
-          (isCtrlOrCmd && e.shiftKey && e.key === "z"))
+        (isCtrlOrCmd && e.key === "y") ||
+        (isCtrlOrCmd && e.shiftKey && e.key === "z")
       ) {
+        // Don't interfere with native redo in input fields outside the editor
+        if (
+          !isInEditor &&
+          (activeElement?.tagName === "INPUT" ||
+            activeElement?.tagName === "TEXTAREA")
+        ) {
+          return;
+        }
         e.preventDefault();
         if (state.historyIndex < state.history.length - 1) {
           dispatch(EditorActions.redo());
@@ -1923,14 +2018,16 @@ function App() {
   const handleFormat = (format: "bold" | "italic" | "underline") => {
     console.group("🔘 [handleFormat] Button clicked");
 
-    if (!state.currentSelection) {
+    // Get fresh selection from ref (more up-to-date than state)
+    const refSelection = selectionManager.getSelection();
+    if (!refSelection) {
       console.warn("❌ No current selection, aborting");
       console.groupEnd();
       return;
     }
 
     // Save selection for restoration
-    const { start, end, nodeId, formats } = state.currentSelection;
+    const { start, end, nodeId, formats } = refSelection;
 
     // Dispatch toggle format action - reducer handles everything!
     dispatch(EditorActions.toggleFormat(format));
@@ -2019,12 +2116,14 @@ function App() {
 
   // Handle color selection
   const handleApplyColor = (color: string) => {
-    if (!state.currentSelection) return;
+    // Get fresh selection from ref
+    const refSelection = selectionManager.getSelection();
+    if (!refSelection) return;
 
-    const { nodeId, start, end } = state.currentSelection;
+    const { nodeId, start, end } = refSelection;
 
-    // Apply color as custom class
-    dispatch(EditorActions.applyCustomClass(color));
+    // Apply color as inline style
+    dispatch(EditorActions.applyInlineStyle('color', color));
 
     setSelectedColor(color);
 
@@ -2042,34 +2141,59 @@ function App() {
     }, 50);
   };
 
+  const handleApplyFontSize = (fontSize: string) => {
+    // Get fresh selection from ref
+    const refSelection = selectionManager.getSelection();
+    if (!refSelection) return;
+
+    const { nodeId, start, end } = refSelection;
+
+    // Apply font size as inline style
+    dispatch(EditorActions.applyInlineStyle('fontSize', fontSize));
+
+    toast({
+      title: "Font Size Applied",
+      description: `Applied font size: ${fontSize}`,
+    });
+
+    // Restore selection with a slightly longer delay to allow state update
+    setTimeout(() => {
+      const element = nodeRefs.current.get(nodeId);
+      if (element) {
+        restoreSelection(element, start, end);
+      }
+    }, 50);
+  };
+
   const handleTypeChange = (type: TextNode["type"]) => {
     if (!currentNode) return;
 
-    // Check if there's a selection
-    if (state.currentSelection) {
+    // Check if there's a selection (use ref for freshest data)
+    const refSelection = selectionManager.getSelection();
+    if (refSelection) {
       // Save selection info before dispatch
-      const { start, end, nodeId } = state.currentSelection;
+      const { start, end, nodeId } = refSelection;
 
       // Apply as inline element type to selected text only
-      const elementType =
-        type === "p"
-          ? null
-          : (type as
-              | "h1"
-              | "h2"
-              | "h3"
-              | "h4"
-              | "h5"
-              | "h6"
-              | "code"
-              | "blockquote");
+      const elementType = type as
+        | "p"
+        | "h1"
+        | "h2"
+        | "h3"
+        | "h4"
+        | "h5"
+        | "h6"
+        | "code"
+        | "blockquote";
       dispatch(EditorActions.applyInlineElementType(elementType));
 
-      // Restore selection after state update
+      // Restore selection after state update and trigger re-detection
       setTimeout(() => {
         const element = nodeRefs.current.get(nodeId);
         if (element) {
           restoreSelection(element, start, end);
+          // Manually trigger selection change detection to update the UI
+          handleSelectionChange();
         }
       }, 0);
     } else {
@@ -2098,8 +2222,12 @@ function App() {
     fileInputRef.current?.click();
   };
 
+  const handleMultipleImagesUploadClick = () => {
+    multipleFileInputRef.current?.click();
+  };
+
   // Handle creating a list block with header and 3 nested items
-  const handleCreateList = () => {
+  const handleCreateList = (listType: "ul" | "ol") => {
     const timestamp = Date.now();
 
     // Create a container with a header and 3 nested text blocks
@@ -2133,7 +2261,7 @@ function App() {
         } as TextNode,
       ],
       attributes: {
-        listType: "ul", // Default to unordered list
+        listType: listType,
       },
     };
 
@@ -2151,14 +2279,68 @@ function App() {
       );
     }
 
+    const listTypeLabel = listType === "ol" ? "ordered" : "unordered";
     toast({
       title: "List Created",
-      description: "Added a new list with header and 3 items",
+      description: `Added a new ${listTypeLabel} list with header and 3 items`,
     });
 
     // Smooth scroll to the newly created list
     setTimeout(() => {
       // Find the last element in the editor (the newly created list container)
+      const editorContent = editorContentRef.current;
+      if (editorContent) {
+        const lastChild = editorContent.querySelector(
+          "[data-editor-content]"
+        )?.lastElementChild;
+        if (lastChild) {
+          lastChild.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+            inline: "nearest",
+          });
+        }
+      }
+    }, 150);
+  };
+
+  const handleCreateLink = () => {
+    const timestamp = Date.now();
+
+    // Create a paragraph with a link
+    const linkNode: TextNode = {
+      id: `p-${timestamp}`,
+      type: "p",
+      children: [
+        {
+          content: "www.text.com",
+          href: "https://www.text.com",
+        },
+      ],
+      attributes: {},
+    };
+
+    // Insert the link node at the end
+    const lastNode = container.children[container.children.length - 1];
+    if (lastNode) {
+      dispatch(EditorActions.insertNode(linkNode, lastNode.id, "after"));
+    } else {
+      // If no nodes exist, replace the container
+      dispatch(
+        EditorActions.replaceContainer({
+          ...container,
+          children: [linkNode],
+        })
+      );
+    }
+
+    toast({
+      title: "Link Created",
+      description: "Added a new link element",
+    });
+
+    // Smooth scroll to the newly created link
+    setTimeout(() => {
       const editorContent = editorContentRef.current;
       if (editorContent) {
         const lastChild = editorContent.querySelector(
@@ -2188,13 +2370,162 @@ function App() {
     e.preventDefault();
     e.stopPropagation();
 
-    // Allow drop - this is required for drop to work
-    e.dataTransfer.dropEffect = "copy";
+    // Check if we're dragging an existing block (image) or files from outside
+    const draggedNodeId = e.dataTransfer.getData("text/plain");
 
-    // Determine drop position based on mouse Y position relative to element
+    // Don't show drop indicator if we're hovering over the dragged element itself
+    if (draggingNodeId === nodeId) {
+      e.dataTransfer.dropEffect = "none";
+      setDragOverNodeId(null);
+      setDropPosition(null);
+      return;
+    }
+
+    // Helper to find a node (could be at root or inside a container)
+    const findNodeAnywhere = (
+      id: string
+    ): { node: EditorNode; parentId?: string } | null => {
+      // Check root level
+      const rootNode = container.children.find((n) => n.id === id);
+      if (rootNode) return { node: rootNode };
+
+      // Check inside containers
+      for (const child of container.children) {
+        if (isContainerNode(child)) {
+          const containerNode = child as ContainerNode;
+          const foundInContainer = containerNode.children.find(
+            (c) => c.id === id
+          );
+          if (foundInContainer)
+            return { node: foundInContainer, parentId: child.id };
+        }
+      }
+      return null;
+    };
+
+    const targetResult = findNodeAnywhere(nodeId);
+    const draggingResult = draggingNodeId
+      ? findNodeAnywhere(draggingNodeId)
+      : null;
+
+    if (!targetResult) return;
+
+    const targetNode = targetResult.node;
+    const draggingNode = draggingResult?.node;
+    const isTargetImage =
+      isTextNode(targetNode) && (targetNode as TextNode).type === "img";
+    const isDraggingImage =
+      draggingNode &&
+      isTextNode(draggingNode) &&
+      (draggingNode as TextNode).type === "img";
+
+    // Check if target and dragging nodes are in the same flex container
+    const inSameFlexContainer =
+      targetResult.parentId &&
+      draggingResult?.parentId &&
+      targetResult.parentId === draggingResult.parentId;
+
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+    // If both are images, check for horizontal (left/right) drop zones
+    if (isTargetImage && isDraggingImage) {
+      const edgeThreshold = rect.width * 0.3; // 30% from each edge
+
+      // If in same flex container, allow reordering via horizontal drop
+      if (inSameFlexContainer) {
+        // Get the parent container to check positions
+        const parent = draggingResult?.parentId
+          ? (container.children.find(
+              (c) => c.id === draggingResult.parentId
+            ) as ContainerNode)
+          : null;
+
+        if (parent) {
+          const dragIndex = parent.children.findIndex(
+            (c) => c.id === draggingNodeId
+          );
+          const targetIndex = parent.children.findIndex((c) => c.id === nodeId);
+
+          // Check if we're on the left edge
+          if (e.clientX < rect.left + edgeThreshold) {
+            // Prevent dropping to the left of the item immediately to our right
+            if (targetIndex === dragIndex + 1) {
+              e.dataTransfer.dropEffect = "none";
+              setDragOverNodeId(null);
+              setDropPosition(null);
+              return;
+            }
+            setDragOverNodeId(nodeId);
+            setDropPosition("left");
+            e.dataTransfer.dropEffect = "move";
+            return;
+          }
+          // Check if we're on the right edge
+          else if (e.clientX > rect.right - edgeThreshold) {
+            // Prevent dropping to the right of the item immediately to our left
+            if (targetIndex === dragIndex - 1) {
+              e.dataTransfer.dropEffect = "none";
+              setDragOverNodeId(null);
+              setDropPosition(null);
+              return;
+            }
+            setDragOverNodeId(nodeId);
+            setDropPosition("right");
+            e.dataTransfer.dropEffect = "move";
+            return;
+          }
+        }
+        // If we're in the middle of an item in the same flex container, no drop
+        e.dataTransfer.dropEffect = "none";
+        setDragOverNodeId(null);
+        setDropPosition(null);
+        return;
+      } else {
+        // Not in same container - allow horizontal merge
+        if (e.clientX < rect.left + edgeThreshold) {
+          setDragOverNodeId(nodeId);
+          setDropPosition("left");
+          e.dataTransfer.dropEffect = "move";
+          return;
+        } else if (e.clientX > rect.right - edgeThreshold) {
+          setDragOverNodeId(nodeId);
+          setDropPosition("right");
+          e.dataTransfer.dropEffect = "move";
+          return;
+        }
+      }
+    }
+
+    // Default vertical drop logic
     const midPoint = rect.top + rect.height / 2;
     const position = e.clientY < midPoint ? "before" : "after";
+
+    // If dragging an existing block, check if this would result in no movement
+    if (draggingNodeId) {
+      // Find the indices of the dragged node and target node
+      const draggedIndex = container.children.findIndex(
+        (n) => n.id === draggingNodeId
+      );
+      const targetIndex = container.children.findIndex((n) => n.id === nodeId);
+
+      // Don't allow drops that would result in no movement:
+      // - Dropping "after" on the previous block (would stay in same position)
+      // - Dropping "before" on the next block (would stay in same position)
+      if (
+        (position === "after" && targetIndex === draggedIndex - 1) ||
+        (position === "before" && targetIndex === draggedIndex + 1)
+      ) {
+        e.dataTransfer.dropEffect = "none";
+        setDragOverNodeId(null);
+        setDropPosition(null);
+        return;
+      }
+    }
+
+    // Allow drop - this is required for drop to work
+    // Use "move" for existing blocks, "copy" for external files
+    e.dataTransfer.dropEffect =
+      draggedNodeId || draggingNodeId ? "move" : "copy";
 
     setDragOverNodeId(nodeId);
     setDropPosition(position);
@@ -2233,22 +2564,318 @@ function App() {
         return;
       }
 
-      // Delete from old position
-      dispatch(EditorActions.deleteNode(draggingNodeId));
+      // Helper to find a node anywhere (root or in container)
+      const findNodeAnywhere = (
+        id: string
+      ): {
+        node: EditorNode;
+        parentId?: string;
+        parent?: ContainerNode;
+      } | null => {
+        const rootNode = container.children.find((n) => n.id === id);
+        if (rootNode) return { node: rootNode };
 
-      // Insert at new position
-      // We need to find the node by ID first
-      const draggingNode = container.children.find(
+        for (const child of container.children) {
+          if (isContainerNode(child)) {
+            const containerNode = child as ContainerNode;
+            const foundInContainer = containerNode.children.find(
+              (c) => c.id === id
+            );
+            if (foundInContainer)
+              return {
+                node: foundInContainer,
+                parentId: child.id,
+                parent: containerNode,
+              };
+          }
+        }
+        return null;
+      };
+
+      const draggingResult = findNodeAnywhere(draggingNodeId);
+      const targetResult = findNodeAnywhere(nodeId);
+
+      if (!draggingResult || !targetResult) {
+        setDragOverNodeId(null);
+        setDropPosition(null);
+        setDraggingNodeId(null);
+        return;
+      }
+
+      const draggingNode = draggingResult.node;
+      const targetNode = targetResult.node;
+      const inSameFlexContainer =
+        draggingResult.parentId &&
+        targetResult.parentId &&
+        draggingResult.parentId === targetResult.parentId;
+
+      // Check if this is a horizontal drop (left/right)
+      if (dropPosition === "left" || dropPosition === "right") {
+        // Case 1: Reordering images within the same flex container
+        if (
+          inSameFlexContainer &&
+          draggingResult.parent &&
+          targetResult.parent
+        ) {
+          console.log("🔄 Reordering images within flex container");
+          const parent = draggingResult.parent;
+          const newChildren = [...parent.children];
+
+          const dragIndex = newChildren.findIndex(
+            (c) => c.id === draggingNodeId
+          );
+          const targetIndex = newChildren.findIndex((c) => c.id === nodeId);
+
+          // Remove the dragged item from its current position
+          const [draggedItem] = newChildren.splice(dragIndex, 1);
+
+          // Calculate the new target index after removal
+          const adjustedTargetIndex =
+            dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
+
+          // Insert at the correct position based on drop side
+          if (dropPosition === "left") {
+            newChildren.splice(adjustedTargetIndex, 0, draggedItem);
+          } else {
+            // "right"
+            newChildren.splice(adjustedTargetIndex + 1, 0, draggedItem);
+          }
+
+          // Update the container with new order (single action for history)
+          dispatch(
+            EditorActions.updateNode(parent.id, {
+              children: newChildren as any,
+            })
+          );
+
+          toast({
+            title: "Image repositioned!",
+            description: "Image order updated in flex layout",
+          });
+
+          setDragOverNodeId(null);
+          setDropPosition(null);
+          setDraggingNodeId(null);
+          return;
+        }
+
+        // Case 2: Merging two separate images into a flex container (or adding to existing one)
+        if (isTextNode(draggingNode) && isTextNode(targetNode)) {
+          console.log("🔗 Merging images into flex container");
+
+          // If one of them is already in a flex container, add the dragged one to it
+          if (
+            draggingResult.parentId &&
+            draggingResult.parent?.attributes?.layoutType === "flex"
+          ) {
+            // Dragging node is in a flex container, extract it and merge with target
+            console.log("📤 Extracting from flex container to merge");
+          } else if (
+            targetResult.parentId &&
+            targetResult.parent?.attributes?.layoutType === "flex"
+          ) {
+            // Target is in flex container, add dragged node to it
+            console.log("📥 Adding to existing flex container");
+            const parent = targetResult.parent;
+            const targetIndex = parent.children.findIndex(
+              (c) => c.id === nodeId
+            );
+            const newChildren = [...parent.children];
+
+            // Insert dragged node at the appropriate position
+            if (dropPosition === "left") {
+              newChildren.splice(targetIndex, 0, draggingNode as TextNode);
+            } else {
+              newChildren.splice(targetIndex + 1, 0, draggingNode as TextNode);
+            }
+
+            // Batch: delete from old location and update container (single history entry)
+            dispatch(
+              EditorActions.batch([
+                EditorActions.deleteNode(draggingNodeId),
+                EditorActions.updateNode(parent.id, {
+                  children: newChildren as any,
+                }),
+              ])
+            );
+
+            toast({
+              title: "Image added!",
+              description: "Image added to the flex layout",
+            });
+
+            setDragOverNodeId(null);
+            setDropPosition(null);
+            setDraggingNodeId(null);
+            return;
+          }
+
+          // Neither is in a flex container - create a new one
+          console.log("🆕 Creating new flex container");
+
+          // Find reference nodes at root level
+          const targetRootIndex = container.children.findIndex(
+            (n) =>
+              n.id === nodeId ||
+              (isContainerNode(n) &&
+                (n as ContainerNode).children.some((c) => c.id === nodeId))
+          );
+          const draggingRootIndex = container.children.findIndex(
+            (n) =>
+              n.id === draggingNodeId ||
+              (isContainerNode(n) &&
+                (n as ContainerNode).children.some(
+                  (c) => c.id === draggingNodeId
+                ))
+          );
+
+          // Find a stable reference node for insertion
+          let referenceNodeId: string | null = null;
+          let insertPosition: "before" | "after" = "after";
+
+          const firstIndex = Math.min(targetRootIndex, draggingRootIndex);
+          if (firstIndex > 0) {
+            referenceNodeId = container.children[firstIndex - 1].id;
+            insertPosition = "after";
+          } else if (container.children.length > 2) {
+            for (let i = 0; i < container.children.length; i++) {
+              if (i !== targetRootIndex && i !== draggingRootIndex) {
+                referenceNodeId = container.children[i].id;
+                insertPosition = i < firstIndex ? "after" : "before";
+                break;
+              }
+            }
+          }
+
+          // Create a flex container with both images
+          const timestamp = Date.now();
+          const flexContainer: ContainerNode = {
+            id: `flex-container-${timestamp}`,
+            type: "container",
+            children:
+              dropPosition === "left"
+                ? [draggingNode as TextNode, targetNode as TextNode]
+                : [targetNode as TextNode, draggingNode as TextNode],
+            attributes: {
+              layoutType: "flex",
+              gap: "4",
+            },
+          };
+
+          // Batch: delete both images and insert flex container (single history entry)
+          const actions: any[] = [
+            EditorActions.deleteNode(draggingNodeId),
+            EditorActions.deleteNode(nodeId),
+          ];
+
+          if (referenceNodeId) {
+            actions.push(
+              EditorActions.insertNode(
+                flexContainer,
+                referenceNodeId,
+                insertPosition
+              )
+            );
+          } else {
+            actions.push(
+              EditorActions.replaceContainer({
+                ...container,
+                children: [flexContainer],
+              })
+            );
+          }
+
+          dispatch(EditorActions.batch(actions));
+
+          toast({
+            title: "Images merged!",
+            description: "Images placed side by side in a flex layout",
+          });
+
+          setDragOverNodeId(null);
+          setDropPosition(null);
+          setDraggingNodeId(null);
+          return;
+        }
+      }
+
+      // Vertical drop - extract from container or move at root level
+      console.log("⬇️ Vertical drop");
+
+      // If the dragging node is in a flex container, we need to extract it
+      if (draggingResult.parentId && draggingResult.parent) {
+        console.log("📤 Extracting from flex container");
+        const parent = draggingResult.parent;
+        const remainingChildren = parent.children.filter(
+          (c) => c.id !== draggingNodeId
+        );
+        const insertPos =
+          dropPosition === "before" || dropPosition === "after"
+            ? dropPosition
+            : "after";
+
+        // Batch all actions for single history entry
+        const actions: any[] = [EditorActions.deleteNode(draggingNodeId)];
+
+        // If only one child remains, unwrap the container
+        if (remainingChildren.length === 1) {
+          console.log("🎁 Unwrapping single remaining child");
+          actions.push(EditorActions.deleteNode(parent.id));
+
+          // Find where to insert the remaining child
+          const parentIndex = container.children.findIndex(
+            (c) => c.id === parent.id
+          );
+          if (parentIndex > 0) {
+            const prevNode = container.children[parentIndex - 1];
+            actions.push(
+              EditorActions.insertNode(
+                remainingChildren[0],
+                prevNode.id,
+                "after"
+              )
+            );
+          } else if (parentIndex === 0 && container.children.length > 1) {
+            const nextNode = container.children[1];
+            actions.push(
+              EditorActions.insertNode(
+                remainingChildren[0],
+                nextNode.id,
+                "before"
+              )
+            );
+          }
+        }
+
+        // Insert dragged node at new position
+        actions.push(EditorActions.insertNode(draggingNode, nodeId, insertPos));
+        actions.push(EditorActions.setActiveNode(draggingNodeId));
+
+        dispatch(EditorActions.batch(actions));
+
+        toast({
+          title: "Image moved!",
+          description: "Image extracted and repositioned",
+        });
+
+        setDragOverNodeId(null);
+        setDropPosition(null);
+        setDraggingNodeId(null);
+        return;
+      }
+
+      // Standard move at root level
+      const draggingNodeAtRoot = container.children.find(
         (n) => n.id === draggingNodeId
       );
-      if (draggingNode) {
-        dispatch(
-          EditorActions.insertNode(
-            draggingNode,
-            nodeId,
-            dropPosition || "after"
-          )
-        );
+      if (draggingNodeAtRoot) {
+        // Convert dropPosition to valid InsertPosition
+        const insertPos =
+          dropPosition === "before" || dropPosition === "after"
+            ? dropPosition
+            : "after";
+
+        dispatch(EditorActions.moveNode(draggingNodeId, nodeId, insertPos));
         dispatch(EditorActions.setActiveNode(draggingNodeId));
 
         toast({
@@ -2292,36 +2919,51 @@ function App() {
     setIsUploading(true);
 
     try {
-      const result = await uploadImage(imageFile);
+      // Use custom upload handler if provided, otherwise use default
+      let imageUrl: string;
 
-      if (result.success && result.url) {
-        const imageNode: TextNode = {
-          id: "img-" + Date.now(),
-          type: "img",
-          content: "", // Optional caption
-          attributes: {
-            src: result.url,
-            alt: imageFile.name,
-          },
-        };
-
-        // Insert at the determined position
-        dispatch(
-          EditorActions.insertNode(imageNode, nodeId, dropPosition || "after")
-        );
-        dispatch(EditorActions.setActiveNode(imageNode.id));
-
-        toast({
-          title: "Image uploaded!",
-          description: `Image placed ${dropPosition} the block`,
-        });
+      if (onUploadImage) {
+        imageUrl = await onUploadImage(imageFile);
       } else {
+        const result = await uploadImage(imageFile);
+        if (!result.success || !result.url) {
+          throw new Error(result.error || "Upload failed");
+        }
+        imageUrl = result.url;
       }
+
+      const imageNode: TextNode = {
+        id: "img-" + Date.now(),
+        type: "img",
+        content: "", // Optional caption
+        attributes: {
+          src: imageUrl,
+          alt: imageFile.name,
+        },
+      };
+
+      // Insert at the determined position
+      // Convert dropPosition to valid InsertPosition
+      const insertPos =
+        dropPosition === "before" || dropPosition === "after"
+          ? dropPosition
+          : "after";
+
+      dispatch(EditorActions.insertNode(imageNode, nodeId, insertPos));
+      dispatch(EditorActions.setActiveNode(imageNode.id));
+
+      toast({
+        title: "Image uploaded!",
+        description: `Image placed ${dropPosition} the block`,
+      });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Upload failed",
-        description: "Failed to upload image. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload image. Please try again.",
       });
     } finally {
       setIsUploading(false);
@@ -2338,47 +2980,52 @@ function App() {
     setIsUploading(true);
 
     try {
-      // Upload the image
-      const result = await uploadImage(file);
+      // Use custom upload handler if provided, otherwise use default
+      let imageUrl: string;
 
-      if (result.success && result.url) {
-        // Create new image node
-        const imageNode: TextNode = {
-          id: "img-" + Date.now(),
-          type: "img",
-          content: "", // Optional caption
-          attributes: {
-            src: result.url,
-            alt: file.name,
-          },
-        };
-
-        // Insert image after current node or at end
-        const targetId =
-          state.activeNodeId ||
-          container.children[container.children.length - 1]?.id;
-        if (targetId) {
-          dispatch(EditorActions.insertNode(imageNode, targetId, "after"));
-        } else {
-          dispatch(EditorActions.insertNode(imageNode, container.id, "append"));
-        }
-
-        toast({
-          title: "Image uploaded",
-          description: "Your image has been added to the editor.",
-        });
+      if (onUploadImage) {
+        imageUrl = await onUploadImage(file);
       } else {
-        toast({
-          variant: "destructive",
-          title: "Upload failed",
-          description: result.error || "Failed to upload image",
-        });
+        const result = await uploadImage(file);
+        if (!result.success || !result.url) {
+          throw new Error(result.error || "Upload failed");
+        }
+        imageUrl = result.url;
       }
+
+      // Create new image node
+      const imageNode: TextNode = {
+        id: "img-" + Date.now(),
+        type: "img",
+        content: "", // Optional caption
+        attributes: {
+          src: imageUrl,
+          alt: file.name,
+        },
+      };
+
+      // Insert image after current node or at end
+      const targetId =
+        state.activeNodeId ||
+        container.children[container.children.length - 1]?.id;
+      if (targetId) {
+        dispatch(EditorActions.insertNode(imageNode, targetId, "after"));
+      } else {
+        dispatch(EditorActions.insertNode(imageNode, container.id, "append"));
+      }
+
+      toast({
+        title: "Image uploaded",
+        description: "Your image has been added to the editor.",
+      });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Upload failed",
-        description: "An unexpected error occurred",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
       });
     } finally {
       setIsUploading(false);
@@ -2389,8 +3036,151 @@ function App() {
     }
   };
 
+  const handleMultipleFilesChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+
+    try {
+      // Upload all images
+      const uploadPromises = files.map(async (file) => {
+        if (onUploadImage) {
+          return await onUploadImage(file);
+        } else {
+          const result = await uploadImage(file);
+          if (!result.success || !result.url) {
+            throw new Error(result.error || "Upload failed");
+          }
+          return result.url;
+        }
+      });
+
+      const imageUrls = await Promise.all(uploadPromises);
+
+      // Create image nodes
+      const timestamp = Date.now();
+      const imageNodes: TextNode[] = imageUrls.map((url, index) => ({
+        id: `img-${timestamp}-${index}`,
+        type: "img",
+        content: "",
+        attributes: {
+          src: url,
+          alt: files[index].name,
+        },
+      }));
+
+      // Create flex container with images
+      const flexContainer: ContainerNode = {
+        id: `flex-container-${timestamp}`,
+        type: "container",
+        children: imageNodes,
+        attributes: {
+          layoutType: "flex",
+          gap: "4",
+          flexWrap: "wrap", // Enable wrapping
+        },
+      };
+
+      // Insert the flex container after current node or at end
+      const targetId =
+        state.activeNodeId ||
+        container.children[container.children.length - 1]?.id;
+      if (targetId) {
+        dispatch(EditorActions.insertNode(flexContainer, targetId, "after"));
+      } else {
+        dispatch(
+          EditorActions.insertNode(flexContainer, container.id, "append")
+        );
+      }
+
+      toast({
+        title: "Images uploaded",
+        description: `${imageUrls.length} images added in a flex layout.`,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (multipleFileInputRef.current) {
+        multipleFileInputRef.current.value = "";
+      }
+    }
+  };
+
   const handleDeleteNode = (nodeId: string) => {
-    dispatch(EditorActions.deleteNode(nodeId));
+    console.log("🗑️ Attempting to delete node:", nodeId);
+    console.log(
+      "📦 Current container children:",
+      container.children.map((c) => ({ id: c.id, type: c.type }))
+    );
+
+    // Check if the node is inside a flex container
+    const parentContainer = container.children.find(
+      (child) =>
+        isContainerNode(child) &&
+        (child as ContainerNode).children.some((c) => c.id === nodeId)
+    );
+
+    if (parentContainer) {
+      console.log("📦 Node is inside container:", parentContainer.id);
+      const containerNode = parentContainer as ContainerNode;
+      const remainingChildren = containerNode.children.filter(
+        (c) => c.id !== nodeId
+      );
+
+      console.log("👶 Remaining children:", remainingChildren.length);
+
+      // If only one child left, unwrap it from the container
+      if (remainingChildren.length === 1) {
+        console.log("🎁 Unwrapping single child from container");
+
+        // Batch: delete container and insert remaining child (single history entry)
+        const containerIndex = container.children.findIndex(
+          (c) => c.id === parentContainer.id
+        );
+        const actions: any[] = [EditorActions.deleteNode(parentContainer.id)];
+
+        if (containerIndex > 0) {
+          const prevNode = container.children[containerIndex - 1];
+          actions.push(
+            EditorActions.insertNode(remainingChildren[0], prevNode.id, "after")
+          );
+        } else if (containerIndex === 0 && container.children.length > 1) {
+          const nextNode = container.children[1];
+          actions.push(
+            EditorActions.insertNode(
+              remainingChildren[0],
+              nextNode.id,
+              "before"
+            )
+          );
+        }
+
+        dispatch(EditorActions.batch(actions));
+      } else if (remainingChildren.length === 0) {
+        console.log("🧹 No children left, deleting container");
+        // No children left, delete the container
+        dispatch(EditorActions.deleteNode(parentContainer.id));
+      } else {
+        console.log("✂️ Removing child from container");
+        // Multiple children remain, just remove this one
+        dispatch(EditorActions.deleteNode(nodeId));
+      }
+    } else {
+      console.log("📄 Node is at root level, deleting directly");
+      dispatch(EditorActions.deleteNode(nodeId));
+    }
 
     toast({
       title: "Image removed",
@@ -2649,420 +3439,58 @@ function App() {
     }
   };
 
+  console.log("current container", container);
+
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
       {/* Editor with integrated toolbar */}
       <div className="mx-auto">
+        <Toolbar readOnly={readOnly} onReadOnlyChange={setReadOnly} />
         <Card className="shadow-2xl pt-0 rounded-none border-2 gap-3 transition-all duration-300">
-          {/* Toolbar inside card - hidden in readOnly mode */}
+          {/* Toolbar - hidden in readOnly mode */}
           {!readOnly && (
-            <CardContent className="p-4 sticky w-full top-0 backdrop-blur-2xl z-10 border-b mx-auto transition-all duration-300">
-              <div className="flex items-center max-w-4xl mx-auto w-full  gap-3 flex-wrap">
-                {/* Type Selector */}
-                <div className="flex items-center gap-2">
-                  <Type className="size-4 text-muted-foreground" />
-                  <Select
-                    value={
-                      state.currentSelection?.elementType !== undefined
-                        ? state.currentSelection.elementType || "p"
-                        : currentNode?.type || "p"
-                    }
-                    onValueChange={(value) =>
-                      handleTypeChange(value as TextNode["type"])
-                    }
-                    disabled={
-                      !currentNode ||
-                      currentNode.type === "br" ||
-                      currentNode.type === "img"
-                    }
-                  >
-                    <SelectTrigger className="w-[160px]">
-                      <SelectValue placeholder="Select type">
-                        {(() => {
-                          const type =
-                            state.currentSelection?.elementType !== undefined
-                              ? state.currentSelection.elementType ||
-                                currentNode?.type ||
-                                "p"
-                              : currentNode?.type || "p";
+            <EditorToolbar
+              currentNode={currentNode}
+              currentSelection={state.currentSelection}
+              selectedColor={selectedColor}
+              isUploading={isUploading}
+              enhanceSpaces={enhanceSpaces}
+              copiedHtml={copiedHtml}
+              copiedJson={copiedJson}
+              container={container}
+              onTypeChange={handleTypeChange}
+              onFormat={handleFormat}
+              onColorSelect={handleApplyColor}
+              onFontSizeSelect={handleApplyFontSize}
+              onImageUploadClick={handleImageUploadClick}
+              onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
+              onCreateList={handleCreateList}
+              onCreateLink={handleCreateLink}
+              onCopyHtml={handleCopyHtml}
+              onCopyJson={handleCopyJson}
+              onEnhanceSpacesChange={setEnhanceSpaces}
+            />
+          )}
 
-                          switch (type) {
-                            case "h1":
-                              return (
-                                <span className="font-bold text-base">
-                                  Heading 1
-                                </span>
-                              );
-                            case "h2":
-                              return (
-                                <span className="font-bold text-sm">
-                                  Heading 2
-                                </span>
-                              );
-                            case "h3":
-                              return (
-                                <span className="font-semibold text-sm">
-                                  Heading 3
-                                </span>
-                              );
-                            case "h4":
-                              return (
-                                <span className="font-semibold text-xs">
-                                  Heading 4
-                                </span>
-                              );
-                            case "h5":
-                              return (
-                                <span className="font-semibold text-xs">
-                                  Heading 5
-                                </span>
-                              );
-                            case "h6":
-                              return (
-                                <span className="font-semibold text-xs">
-                                  Heading 6
-                                </span>
-                              );
-                            case "li":
-                              return <span className="text-sm">List Item</span>;
-                            case "blockquote":
-                              return (
-                                <span className="italic text-sm">Quote</span>
-                              );
-                            case "code":
-                              return (
-                                <span className="font-mono text-xs">Code</span>
-                              );
-                            default:
-                              return <span className="text-sm">Paragraph</span>;
-                          }
-                        })()}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="p">
-                        <span className="text-sm">Paragraph</span>
-                      </SelectItem>
-                      <SelectItem value="h1">
-                        <span className="font-bold text-base">Heading 1</span>
-                      </SelectItem>
-                      <SelectItem value="h2">
-                        <span className="font-bold text-sm">Heading 2</span>
-                      </SelectItem>
-                      <SelectItem value="h3">
-                        <span className="font-semibold text-sm">Heading 3</span>
-                      </SelectItem>
-                      <SelectItem value="h4">
-                        <span className="font-semibold text-xs">Heading 4</span>
-                      </SelectItem>
-                      <SelectItem value="h5">
-                        <span className="font-semibold text-xs">Heading 5</span>
-                      </SelectItem>
-                      <SelectItem value="h6">
-                        <span className="font-semibold text-xs">Heading 6</span>
-                      </SelectItem>
-                      <SelectItem value="li">
-                        <span className="text-sm">List Item</span>
-                      </SelectItem>
-                      <SelectItem value="blockquote">
-                        <span className="italic text-sm">Quote</span>
-                      </SelectItem>
-                      <SelectItem value="code">
-                        <span className="font-mono text-xs">Code</span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator orientation="vertical" className="h-8" />
-
-                {/* Format Buttons - Now using ToggleGroup! */}
-                <ToggleGroup
-                  type="multiple"
-                  variant="outline"
-                  disabled={!state.currentSelection}
-                  value={[
-                    ...(state.currentSelection?.formats.bold ? ["bold"] : []),
-                    ...(state.currentSelection?.formats.italic
-                      ? ["italic"]
-                      : []),
-                    ...(state.currentSelection?.formats.underline
-                      ? ["underline"]
-                      : []),
-                  ]}
-                >
-                  <ToggleGroupItem
-                    value="bold"
-                    aria-label="Toggle bold"
-                    onClick={() => handleFormat("bold")}
-                    disabled={!state.currentSelection}
-                  >
-                    <Bold className="size-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="italic"
-                    aria-label="Toggle italic"
-                    onClick={() => handleFormat("italic")}
-                    disabled={!state.currentSelection}
-                  >
-                    <Italic className="size-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="underline"
-                    aria-label="Toggle underline"
-                    onClick={() => handleFormat("underline")}
-                    disabled={!state.currentSelection}
-                  >
-                    <Underline className="size-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-
-                <Separator orientation="vertical" className="h-8" />
-
-                {/* Color Picker */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!state.currentSelection}
-                      className="gap-2"
-                    >
-                      <Palette className="size-4" />
-                      Color
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80">
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-sm">Text Colors</h4>
-                      <div className="grid grid-cols-5 gap-2">
-                        {[
-                          { name: "Red", class: "text-red-500" },
-                          { name: "Orange", class: "text-orange-500" },
-                          { name: "Yellow", class: "text-yellow-500" },
-                          { name: "Green", class: "text-green-500" },
-                          { name: "Blue", class: "text-blue-500" },
-                          { name: "Indigo", class: "text-indigo-500" },
-                          { name: "Purple", class: "text-purple-500" },
-                          { name: "Pink", class: "text-pink-500" },
-                          { name: "Teal", class: "text-teal-500" },
-                          { name: "Cyan", class: "text-cyan-500" },
-                        ].map((color) => (
-                          <button
-                            key={color.class}
-                            onClick={() => handleApplyColor(color.class)}
-                            className={`h-10 rounded-md border-2 transition-all hover:scale-110 ${
-                              color.class
-                            } ${
-                              selectedColor === color.class
-                                ? "border-foreground"
-                                : "border-border"
-                            }`}
-                            title={color.name}
-                          >
-                            <span className="font-bold text-2xl">A</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                <Separator orientation="vertical" className="h-8" />
-
-                {/* Image Upload Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleImageUploadClick}
-                  disabled={isUploading}
-                  className="gap-2"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <ImagePlus className="size-4" />
-                      Add Image
-                    </>
-                  )}
-                </Button>
-
-                {/* Hidden file input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-
-                {/* Create List Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCreateList}
-                  className="gap-2"
-                >
-                  <List className="size-4" />
-                  Add List
-                </Button>
-
-                {/* View Code Button with Dialog */}
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Code className="size-4" />
-                      View Code
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-[90vw] min-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col">
-                    <DialogHeader>
-                      <DialogTitle>Export Code</DialogTitle>
-                      <DialogDescription>
-                        Copy the HTML or JSON output of your editor content
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <Tabs
-                      defaultValue="preview"
-                      className="flex-1 flex flex-col overflow-hidden"
-                    >
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="preview">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Preview
-                        </TabsTrigger>
-                        <TabsTrigger value="html">HTML Output</TabsTrigger>
-                        <TabsTrigger value="json">JSON Data</TabsTrigger>
-                      </TabsList>
-
-                      {/* Enhance Spaces Toggle */}
-                      <div className="flex items-center justify-between mt-4 px-1">
-                        <p className="text-sm text-muted-foreground">
-                          Preview Options
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Label
-                            htmlFor="enhance-spaces"
-                            className="text-sm cursor-pointer"
-                          >
-                            Enhance Spaces
-                          </Label>
-                          <Switch
-                            id="enhance-spaces"
-                            checked={enhanceSpaces}
-                            onCheckedChange={setEnhanceSpaces}
-                          />
-                        </div>
-                      </div>
-
-                      <TabsContent
-                        value="preview"
-                        className="flex-1 flex flex-col overflow-hidden mt-4"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-muted-foreground">
-                            Live preview of rendered HTML
-                          </p>
-                        </div>
-                        <div
-                          className="flex-1 bg-background p-6 rounded-lg overflow-auto border"
-                          dangerouslySetInnerHTML={{
-                            __html: enhanceSpaces
-                              ? `<div class="[&>*]:my-3 [&_*]:my-5">${serializeToHtml(
-                                  container
-                                )}</div>`
-                              : serializeToHtml(container),
-                          }}
-                        />
-                      </TabsContent>
-
-                      <TabsContent
-                        value="html"
-                        className="flex-1 flex flex-col overflow-hidden mt-4"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-muted-foreground">
-                            HTML with Tailwind CSS classes
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleCopyHtml}
-                            className="gap-2"
-                          >
-                            {copiedHtml ? (
-                              <>
-                                <Check className="h-4 w-4" />
-                                Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-4 w-4" />
-                                Copy HTML
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        <pre className="flex-1 text-xs bg-secondary text-secondary-foreground p-4 rounded-lg overflow-auto border">
-                          {enhanceSpaces
-                            ? `<div class="[&>*]:my-3 [&_*]:my-5">\n${serializeToHtml(
-                                container
-                              )}\n</div>`
-                            : serializeToHtml(container)}
-                        </pre>
-                      </TabsContent>
-
-                      <TabsContent
-                        value="json"
-                        className="flex-1 flex flex-col overflow-hidden mt-4"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm text-muted-foreground">
-                            Editor state as JSON
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleCopyJson}
-                            className="gap-2"
-                          >
-                            {copiedJson ? (
-                              <>
-                                <Check className="h-4 w-4" />
-                                Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-4 w-4" />
-                                Copy JSON
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        <pre className="flex-1 text-xs bg-secondary text-secondary-foreground p-4 rounded-lg overflow-auto border">
-                          {JSON.stringify(container.children, null, 2)}
-                        </pre>
-                      </TabsContent>
-                    </Tabs>
-                  </DialogContent>
-                </Dialog>
-
-                {/* Selection indicator */}
-                {state.hasSelection && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-auto transition-all duration-300"
-                  >
-                    <span>Text selected</span>
-                  </Badge>
-                )}
-              </div>
-            </CardContent>
+          {/* Hidden file inputs for image uploads */}
+          {!readOnly && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <input
+                ref={multipleFileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleMultipleFilesChange}
+                className="hidden"
+              />
+            </>
           )}
 
           {/* Editor Content */}
@@ -3072,7 +3500,7 @@ function App() {
             }`}
           >
             <div ref={editorContentRef}>
-              <div ref={animationParent} data-editor-content>
+              <div data-editor-content>
                 {container.children.map((node, index) => {
                   // Support both TextNode and ContainerNode
                   const isText = isTextNode(node);
@@ -3088,7 +3516,6 @@ function App() {
                     : `${node.id}-content`;
 
                   const isFirstBlock = index === 0;
-                  const isLastBlock = index === container.children.length - 1;
 
                   return (
                     <React.Fragment key={nodeKey}>
@@ -3109,18 +3536,36 @@ function App() {
                         relative transition-all
                         ${
                           dragOverNodeId === node.id &&
-                          dropPosition === "before"
+                          dropPosition === "before" &&
+                          draggingNodeId !== node.id
                             ? "before:absolute before:inset-x-0 before:-top-1 before:h-1 before:bg-primary/30 before:z-10 before:rounded-full"
                             : ""
                         }
                         ${
-                          dragOverNodeId === node.id && dropPosition === "after"
+                          dragOverNodeId === node.id &&
+                          dropPosition === "after" &&
+                          draggingNodeId !== node.id
                             ? "after:absolute after:inset-x-0 after:-bottom-1 after:h-1 after:bg-primary/30 after:z-10 after:rounded-full"
+                            : ""
+                        }
+                        ${
+                          dragOverNodeId === node.id &&
+                          dropPosition === "left" &&
+                          draggingNodeId !== node.id
+                            ? "before:absolute before:inset-y-0 before:-left-1 before:w-1 before:bg-blue-500/50 before:z-10 before:rounded-full"
+                            : ""
+                        }
+                        ${
+                          dragOverNodeId === node.id &&
+                          dropPosition === "right" &&
+                          draggingNodeId !== node.id
+                            ? "after:absolute after:inset-y-0 after:-right-1 after:w-1 after:bg-blue-500/50 after:z-10 after:rounded-full"
                             : ""
                         }
                     `}
                       >
                         <Block
+                          key={`${node.id}-${node.type}`}
                           node={node}
                           isActive={state.activeNodeId === node.id}
                           nodeRef={(el) => {
@@ -3190,9 +3635,9 @@ function App() {
                           onKeyDown={(e) => handleKeyDown(e, node.id)}
                           onClick={() => handleNodeClick(node.id)}
                           onDelete={
-                            textNode && textNode.type === "img"
-                              ? () => handleDeleteNode(node.id)
-                              : undefined
+                            // Pass delete handler for all blocks - Block component will decide if it's needed
+                            (nodeId?: string) =>
+                              handleDeleteNode(nodeId || node.id)
                           }
                           onCreateNested={handleCreateNested}
                           readOnly={readOnly}
@@ -3200,6 +3645,7 @@ function App() {
                           onChangeBlockType={handleChangeBlockType}
                           onInsertImage={handleInsertImageFromCommand}
                           onCreateList={handleCreateListFromCommand}
+                          onUploadImage={onUploadImage}
                         />
                       </div>
 
@@ -3221,6 +3667,9 @@ function App() {
 
       {/* Custom Class Popover - Floats on text selection */}
       {!readOnly && <CustomClassPopover />}
+
+      {/* Link Popover - Floats on text selection */}
+      {!readOnly && <LinkPopover />}
     </div>
   );
 }

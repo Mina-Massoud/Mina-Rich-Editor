@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { TextNode } from '../lib';
 import { Card } from './ui/card';
 import { Skeleton } from './ui/skeleton';
-import { X, ImageIcon } from 'lucide-react';
+import { X, ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface ImageBlockProps {
@@ -50,6 +50,8 @@ export function ImageBlock({
   const imageUrl = node.attributes?.src as string | undefined;
   const altText = node.attributes?.alt as string | undefined;
   const caption = node.content || '';
+  const isUploading = node.attributes?.loading === 'true' || node.attributes?.loading === true;
+  const hasError = node.attributes?.error === 'true' || node.attributes?.error === true;
 
   const handleImageLoad = () => {
     setImageLoading(false);
@@ -67,7 +69,7 @@ export function ImageBlock({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={`
-        relative mb-4 p-4 transition-all duration-200 cursor-move group
+        relative !border-0 mb-4 p-4 transition-all duration-200 cursor-move group
         ${isActive ? 'ring-2 ring-primary/50 bg-accent/5' : 'hover:bg-accent/5'}
       `}
       onClick={onClick}
@@ -89,43 +91,66 @@ export function ImageBlock({
 
       {/* Image container */}
       <div className="relative w-full">
-        {/* Loading skeleton */}
-        {imageLoading && !imageError && (
-          <Skeleton className="w-full h-64 rounded-lg" />
-        )}
-
-        {/* Error state */}
-        {imageError && (
-          <div className="w-full h-64 flex flex-col items-center justify-center bg-muted rounded-lg border-2 border-dashed border-muted-foreground/25">
-            <ImageIcon className="h-12 w-12 text-muted-foreground/50 mb-2" />
-            <p className="text-sm text-muted-foreground">Failed to load image</p>
-            {imageUrl && (
-              <p className="text-xs text-muted-foreground/70 mt-1 max-w-xs truncate">
-                {imageUrl}
-              </p>
-            )}
+        {/* Uploading state - show spinner overlay */}
+        {isUploading && (
+          <div className="w-full h-64 flex flex-col items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed border-primary/50">
+            <Loader2 className="h-12 w-12 text-primary animate-spin mb-3" />
+            <p className="text-sm font-medium text-foreground">Uploading image...</p>
+            <p className="text-xs text-muted-foreground mt-1">Please wait</p>
           </div>
         )}
 
-        {/* Actual image */}
-        {imageUrl && !imageError && (
-          <img
-            src={imageUrl}
-            alt={altText || caption || 'Uploaded image'}
-            className={`
-              w-full h-auto rounded-lg object-cover max-h-[600px]
-              ${imageLoading ? 'hidden' : 'block'}
-            `}
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-          />
+        {/* Error state (from upload failure) */}
+        {!isUploading && hasError && (
+          <div className="w-full h-64 flex flex-col items-center justify-center bg-destructive/10 rounded-lg border-2 border-dashed border-destructive/50">
+            <X className="h-12 w-12 text-destructive mb-2" />
+            <p className="text-sm font-medium text-destructive">Upload Failed</p>
+            <p className="text-xs text-muted-foreground mt-1">Please try again</p>
+          </div>
         )}
 
-        {/* Caption */}
-        {caption && !imageLoading && (
-          <p className="text-sm text-muted-foreground text-center mt-3 italic">
-            {caption}
-          </p>
+        {/* Normal image loading/error states */}
+        {!isUploading && !hasError && (
+          <>
+            {/* Loading skeleton */}
+            {imageLoading && !imageError && (
+              <Skeleton className="w-full h-64 rounded-lg" />
+            )}
+
+            {/* Error state */}
+            {imageError && (
+              <div className="w-full h-64 flex flex-col items-center justify-center bg-muted rounded-lg border-2 border-dashed border-muted-foreground/25">
+                <ImageIcon className="h-12 w-12 text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">Failed to load image</p>
+                {imageUrl && (
+                  <p className="text-xs text-muted-foreground/70 mt-1 max-w-xs truncate">
+                    {imageUrl}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Actual image */}
+            {imageUrl && !imageError && (
+              <img
+                src={imageUrl}
+                alt={altText || caption || 'Uploaded image'}
+                className={`
+                  w-full h-auto rounded-lg object-cover max-h-[600px]
+                  ${imageLoading ? 'hidden' : 'block'}
+                `}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+              />
+            )}
+
+            {/* Caption */}
+            {caption && !imageLoading && (
+              <p className="text-sm text-muted-foreground text-center mt-3 italic">
+                {caption}
+              </p>
+            )}
+          </>
         )}
       </div>
     </Card>

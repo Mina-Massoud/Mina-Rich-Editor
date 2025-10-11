@@ -114,6 +114,18 @@ function serializeInlineChildren(node: TextNode): string {
       ? getInlineElementTypeClasses(child.elementType)
       : '';
     
+    // Build inline styles from the styles object
+    let inlineStyles = '';
+    if (child.styles) {
+      inlineStyles = Object.entries(child.styles)
+        .map(([key, value]) => {
+          // Convert camelCase to kebab-case (fontSize -> font-size)
+          const kebabKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+          return `${kebabKey}: ${value}`;
+        })
+        .join('; ') + ';';
+    }
+    
     const allClasses = [elementTypeClasses, formattingClasses, child.className]
       .filter(Boolean)
       .join(' ');
@@ -127,14 +139,17 @@ function serializeInlineChildren(node: TextNode): string {
         .join(' ');
       const italicSpacing = child.italic ? 'inline-block pr-1' : '';
       const finalClasses = [linkClasses, italicSpacing].filter(Boolean).join(' ');
-      return `<a href="${escapeHtml(child.href)}" target="_blank" rel="noopener noreferrer" class="${finalClasses}">${content}</a>`;
+      const styleAttr = inlineStyles ? ` style="${inlineStyles}"` : '';
+      return `<a href="${escapeHtml(child.href)}" target="_blank" rel="noopener noreferrer" class="${finalClasses}"${styleAttr}>${content}</a>`;
     }
     
-    if (allClasses) {
+    if (allClasses || inlineStyles) {
       // Add inline-block pr-1 for italic text to prevent overlapping
       const italicSpacing = child.italic ? 'inline-block pr-1' : '';
       const finalClasses = [allClasses, italicSpacing].filter(Boolean).join(' ');
-      return `<span class="${finalClasses}">${content}</span>`;
+      const classAttr = finalClasses ? ` class="${finalClasses}"` : '';
+      const styleAttr = inlineStyles ? ` style="${inlineStyles}"` : '';
+      return `<span${classAttr}${styleAttr}>${content}</span>`;
     }
     
     return content;
@@ -196,7 +211,30 @@ function serializeTextNode(node: TextNode, indent: string = ''): string {
  * Serialize a container node to HTML (recursive)
  */
 function serializeContainerNode(node: ContainerNode, indent: string = ''): string {
-  let html = `${indent}<div class="nested-container border-l-2 border-border/50 pl-4 ml-2">\n`;
+  // Check if this is a flex container for images
+  const layoutType = node.attributes?.layoutType as string | undefined;
+  const isFlexContainer = layoutType === 'flex';
+  const gap = node.attributes?.gap as string | undefined;
+  const flexWrap = node.attributes?.flexWrap as string | undefined;
+  
+  // Determine container type and classes
+  const firstChild = node.children[0];
+  const listTypeFromAttribute = node.attributes?.listType as string | undefined;
+  const listType = listTypeFromAttribute || 
+    (isTextNode(firstChild) && (firstChild as TextNode).type === 'li' ? 'ol' : undefined);
+  const isListContainer = !!listType;
+  
+  // Build container classes matching the preview
+  const containerClasses = isFlexContainer
+    ? `flex flex-row gap-${gap || '4'} items-start ${flexWrap === 'wrap' ? 'flex-wrap items-center' : ''}`
+    : isListContainer
+    ? `list-none pl-0 ml-6`
+    : `nested-container border-l-2 border-border/50 pl-4 ml-2`;
+  
+  // Use ul/ol for list containers, div for regular/flex containers
+  const containerTag = listType === 'ul' ? 'ul' : listType === 'ol' ? 'ol' : 'div';
+  
+  let html = `${indent}<${containerTag} class="${containerClasses}">\n`;
   
   // Recursively serialize children
   let i = 0;
@@ -206,8 +244,15 @@ function serializeContainerNode(node: ContainerNode, indent: string = ''): strin
     if (isTextNode(child)) {
       const textNode = child as TextNode;
       
-      // Check if this is the start of a list
-      if (textNode.type === 'li') {
+      // For flex containers, wrap each child in a flex item div
+      if (isFlexContainer) {
+        html += `${indent}  <div class="flex-1 min-w-[280px] max-w-full">\n`;
+        html += serializeTextNode(textNode, indent + '    ');
+        html += `${indent}  </div>\n`;
+        i++;
+      }
+      // Check if this is the start of a list (and not already in a list container)
+      else if (textNode.type === 'li' && !isListContainer) {
         // Start ordered list
         html += `${indent}  <ol class="list-decimal list-inside space-y-1">\n`;
         
@@ -237,15 +282,23 @@ function serializeContainerNode(node: ContainerNode, indent: string = ''): strin
         i++;
       }
     } else if (isContainerNode(child)) {
-      // Nested container - recurse!
-      html += serializeContainerNode(child as ContainerNode, indent + '  ');
-      i++;
+      // For flex containers, wrap nested containers in flex items
+      if (isFlexContainer) {
+        html += `${indent}  <div class="flex-1 min-w-[280px] max-w-full">\n`;
+        html += serializeContainerNode(child as ContainerNode, indent + '    ');
+        html += `${indent}  </div>\n`;
+        i++;
+      } else {
+        // Nested container - recurse!
+        html += serializeContainerNode(child as ContainerNode, indent + '  ');
+        i++;
+      }
     } else {
       i++;
     }
   }
   
-  html += `${indent}</div>\n`;
+  html += `${indent}</${containerTag}>\n`;
   return html;
 }
 

@@ -29,7 +29,7 @@ import { applyFormatting } from "../utils/inline-formatting";
 /**
  * Maximum number of history states to keep
  */
-const MAX_HISTORY_SIZE = 1;
+const MAX_HISTORY_SIZE = 100;
 
 /**
  * Deep clone a container node to preserve history immutability
@@ -270,6 +270,11 @@ export function editorReducer(
       return createInitialState();
     }
 
+    case "SET_STATE": {
+      const { state: newState } = action.payload;
+      return newState;
+    }
+
     case "BATCH": {
       const { actions } = action.payload;
 
@@ -363,34 +368,26 @@ export function editorReducer(
           // Before overlap (within this child)
           if (childStart < overlapStart) {
             newChildren.push({
+              ...child,
               content: child.content!.substring(0, overlapStart - childStart),
-              bold: child.bold,
-              italic: child.italic,
-              underline: child.underline,
-              elementType: child.elementType,
             });
           }
 
           // Overlapping part - apply the element type
           newChildren.push({
+            ...child,
             content: child.content!.substring(
               overlapStart - childStart,
               overlapEnd - childStart
             ),
-            bold: child.bold,
-            italic: child.italic,
-            underline: child.underline,
-            elementType: elementType || undefined,
+            elementType: elementType,
           });
 
           // After overlap (within this child)
           if (childEnd > overlapEnd) {
             newChildren.push({
+              ...child,
               content: child.content!.substring(overlapEnd - childStart),
-              bold: child.bold,
-              italic: child.italic,
-              underline: child.underline,
-              elementType: child.elementType,
             });
           }
         }
@@ -468,16 +465,14 @@ export function editorReducer(
           // Before overlap (within this child)
           if (childStart < overlapStart) {
             newChildren.push({
+              ...child,
               content: child.content!.substring(0, overlapStart - childStart),
-              bold: child.bold,
-              italic: child.italic,
-              underline: child.underline,
-              elementType: child.elementType, // Preserve elementType
             });
           }
 
           // Overlapping part - toggle the format
           newChildren.push({
+            ...child,
             content: child.content!.substring(
               overlapStart - childStart,
               overlapEnd - childStart
@@ -485,17 +480,13 @@ export function editorReducer(
             bold: format === "bold" ? !isActive : child.bold,
             italic: format === "italic" ? !isActive : child.italic,
             underline: format === "underline" ? !isActive : child.underline,
-            elementType: child.elementType, // Preserve elementType
           });
 
           // After overlap (within this child)
           if (childEnd > overlapEnd) {
             newChildren.push({
+              ...child,
               content: child.content!.substring(overlapEnd - childStart),
-              bold: child.bold,
-              italic: child.italic,
-              underline: child.underline,
-              elementType: child.elementType, // Preserve elementType
             });
           }
         }
@@ -583,37 +574,325 @@ export function editorReducer(
           // Before overlap (within this child)
           if (childStart < overlapStart) {
             newChildren.push({
+              ...child,
               content: child.content!.substring(0, overlapStart - childStart),
-              bold: child.bold,
-              italic: child.italic,
-              underline: child.underline,
-              elementType: child.elementType,
-              className: child.className,
             });
           }
 
-          // Overlapping part - apply the custom class
+          // Overlapping part - merge className (just combine classes now, no styles)
+          const existingClasses = (child.className || '').split(' ').filter(Boolean);
+          const newClasses = className.split(' ').filter(Boolean);
+          const mergedClasses = [...new Set([...existingClasses, ...newClasses])];
+          const mergedClassName = mergedClasses.join(' ').trim();
+          
           newChildren.push({
+            ...child,
             content: child.content!.substring(
               overlapStart - childStart,
               overlapEnd - childStart
             ),
-            bold: child.bold,
-            italic: child.italic,
-            underline: child.underline,
-            elementType: child.elementType,
-            className: className,
+            className: mergedClassName || undefined,
           });
 
           // After overlap (within this child)
           if (childEnd > overlapEnd) {
             newChildren.push({
+              ...child,
               content: child.content!.substring(overlapEnd - childStart),
-              bold: child.bold,
-              italic: child.italic,
-              underline: child.underline,
-              elementType: child.elementType,
-              className: child.className,
+            });
+          }
+        }
+
+        currentPos = childEnd;
+      }
+
+      // Update the node in the tree
+      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
+        content: undefined, // Clear simple content
+        children: newChildren, // Set inline children
+      })) as ContainerNode;
+
+      console.groupEnd();
+
+      return addToHistory(
+        {
+          ...state,
+          metadata: {
+            ...state.metadata,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+        newContainer
+      );
+    }
+
+    case "APPLY_INLINE_STYLE": {
+      const { property, value } = action.payload;
+
+      console.group(`🎨 [APPLY_INLINE_STYLE] Applying ${property}: ${value}`);
+
+      if (!state.currentSelection) {
+        console.warn("❌ Cannot apply inline style without active selection");
+        console.groupEnd();
+        return state;
+      }
+
+      const { nodeId, start, end } = state.currentSelection;
+
+      const currentContainer = state.history[state.historyIndex];
+      const node = findNodeById(currentContainer, nodeId) as
+        | TextNode
+        | undefined;
+
+      if (!node || !isTextNode(node)) {
+        console.warn("❌ Node not found or not a text node");
+        console.groupEnd();
+        return state;
+      }
+
+      // Convert node to inline children if it's still plain content
+      const children = hasInlineChildren(node)
+        ? node.children!
+        : [{ content: node.content || "" }];
+
+      // Build new children array by splitting segments that overlap with selection
+      const newChildren: typeof node.children = [];
+      let currentPos = 0;
+
+      for (const child of children) {
+        const childLength = (child.content || "").length;
+        const childStart = currentPos;
+        const childEnd = currentPos + childLength;
+
+        // Check overlap with selection [start, end)
+        if (childEnd <= start || childStart >= end) {
+          // No overlap - keep as is
+          newChildren.push({ ...child });
+        } else {
+          // There's overlap - need to split this child
+          const overlapStart = Math.max(childStart, start);
+          const overlapEnd = Math.min(childEnd, end);
+
+          // Before overlap (within this child)
+          if (childStart < overlapStart) {
+            newChildren.push({
+              ...child,
+              content: child.content!.substring(0, overlapStart - childStart),
+            });
+          }
+
+          // Overlapping part - merge inline styles
+          const mergedStyles = {
+            ...child.styles,
+            [property]: value,
+          };
+          
+          newChildren.push({
+            ...child,
+            content: child.content!.substring(
+              overlapStart - childStart,
+              overlapEnd - childStart
+            ),
+            styles: mergedStyles,
+          });
+
+          // After overlap (within this child)
+          if (childEnd > overlapEnd) {
+            newChildren.push({
+              ...child,
+              content: child.content!.substring(overlapEnd - childStart),
+            });
+          }
+        }
+
+        currentPos = childEnd;
+      }
+
+      // Update the node in the tree
+      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
+        content: undefined, // Clear simple content
+        children: newChildren, // Set inline children
+      })) as ContainerNode;
+
+      console.groupEnd();
+
+      return addToHistory(
+        {
+          ...state,
+          metadata: {
+            ...state.metadata,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+        newContainer
+      );
+    }
+
+    case "APPLY_LINK": {
+      const { href } = action.payload;
+
+      console.group("🔗 [APPLY_LINK] Reducer executing");
+
+      if (!state.currentSelection) {
+        console.warn("❌ Cannot apply link without active selection");
+        console.groupEnd();
+        return state;
+      }
+
+      const { nodeId, start, end } = state.currentSelection;
+
+      const currentContainer = state.history[state.historyIndex];
+      const node = findNodeById(currentContainer, nodeId) as
+        | TextNode
+        | undefined;
+
+      if (!node || !isTextNode(node)) {
+        console.warn("❌ Node not found or not a text node");
+        console.groupEnd();
+        return state;
+      }
+
+      // Convert node to inline children if it's still plain content
+      const children = hasInlineChildren(node)
+        ? node.children!
+        : [{ content: node.content || "" }];
+
+      // Build new children array by splitting segments that overlap with selection
+      const newChildren: typeof node.children = [];
+      let currentPos = 0;
+
+      for (const child of children) {
+        const childLength = (child.content || "").length;
+        const childStart = currentPos;
+        const childEnd = currentPos + childLength;
+
+        // Check overlap with selection [start, end)
+        if (childEnd <= start || childStart >= end) {
+          // No overlap - keep as is
+          newChildren.push({ ...child });
+        } else {
+          // There's overlap - need to split this child
+          const overlapStart = Math.max(childStart, start);
+          const overlapEnd = Math.min(childEnd, end);
+
+          // Before overlap (within this child)
+          if (childStart < overlapStart) {
+            newChildren.push({
+              ...child,
+              content: child.content!.substring(0, overlapStart - childStart),
+            });
+          }
+
+          // Overlapping part - apply the link
+          newChildren.push({
+            ...child,
+            content: child.content!.substring(
+              overlapStart - childStart,
+              overlapEnd - childStart
+            ),
+            href: href,
+          });
+
+          // After overlap (within this child)
+          if (childEnd > overlapEnd) {
+            newChildren.push({
+              ...child,
+              content: child.content!.substring(overlapEnd - childStart),
+            });
+          }
+        }
+
+        currentPos = childEnd;
+      }
+
+      // Update the node in the tree
+      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
+        content: undefined, // Clear simple content
+        children: newChildren, // Set inline children
+      })) as ContainerNode;
+
+      console.groupEnd();
+
+      return addToHistory(
+        {
+          ...state,
+          metadata: {
+            ...state.metadata,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+        newContainer
+      );
+    }
+
+    case "REMOVE_LINK": {
+      console.group("🔗 [REMOVE_LINK] Reducer executing");
+
+      if (!state.currentSelection) {
+        console.warn("❌ Cannot remove link without active selection");
+        console.groupEnd();
+        return state;
+      }
+
+      const { nodeId, start, end } = state.currentSelection;
+
+      const currentContainer = state.history[state.historyIndex];
+      const node = findNodeById(currentContainer, nodeId) as
+        | TextNode
+        | undefined;
+
+      if (!node || !isTextNode(node)) {
+        console.warn("❌ Node not found or not a text node");
+        console.groupEnd();
+        return state;
+      }
+
+      // Convert node to inline children if it's still plain content
+      const children = hasInlineChildren(node)
+        ? node.children!
+        : [{ content: node.content || "" }];
+
+      // Build new children array by splitting segments that overlap with selection
+      const newChildren: typeof node.children = [];
+      let currentPos = 0;
+
+      for (const child of children) {
+        const childLength = (child.content || "").length;
+        const childStart = currentPos;
+        const childEnd = currentPos + childLength;
+
+        // Check overlap with selection [start, end)
+        if (childEnd <= start || childStart >= end) {
+          // No overlap - keep as is
+          newChildren.push({ ...child });
+        } else {
+          // There's overlap - need to split this child
+          const overlapStart = Math.max(childStart, start);
+          const overlapEnd = Math.min(childEnd, end);
+
+          // Before overlap (within this child)
+          if (childStart < overlapStart) {
+            newChildren.push({
+              ...child,
+              content: child.content!.substring(0, overlapStart - childStart),
+            });
+          }
+
+          // Overlapping part - remove the link
+          newChildren.push({
+            ...child,
+            content: child.content!.substring(
+              overlapStart - childStart,
+              overlapEnd - childStart
+            ),
+            href: undefined, // Remove the href
+          });
+
+          // After overlap (within this child)
+          if (childEnd > overlapEnd) {
+            newChildren.push({
+              ...child,
+              content: child.content!.substring(overlapEnd - childStart),
             });
           }
         }

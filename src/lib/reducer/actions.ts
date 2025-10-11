@@ -7,7 +7,7 @@
  * @packageDocumentation
  */
 
-import { EditorNode, NodeAttributes, ContainerNode, SelectionInfo } from '../types';
+import { EditorNode, NodeAttributes, ContainerNode, SelectionInfo, EditorState } from '../types';
 import { InsertPosition } from '../utils/tree-operations';
 
 /**
@@ -202,6 +202,25 @@ export interface ResetAction {
 }
 
 /**
+ * Sets the entire editor state at once.
+ * Useful for loading saved documents or replacing the entire state.
+ * 
+ * @example
+ * ```typescript
+ * dispatch({
+ *   type: 'SET_STATE',
+ *   payload: { state: loadedState }
+ * });
+ * ```
+ */
+export interface SetStateAction {
+  type: 'SET_STATE';
+  payload: {
+    state: EditorState;
+  };
+}
+
+/**
  * Batch multiple actions into a single update.
  * Useful for performance when making multiple changes at once.
  * 
@@ -278,7 +297,7 @@ export interface ToggleFormatAction {
 export interface ApplyInlineElementTypeAction {
   type: 'APPLY_INLINE_ELEMENT_TYPE';
   payload: {
-    elementType: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote' | null;
+    elementType: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote';
   };
 }
 
@@ -290,6 +309,34 @@ export interface ApplyCustomClassAction {
   payload: {
     className: string;
   };
+}
+
+/**
+ * APPLY_INLINE_STYLE action - applies inline CSS style to selected text
+ */
+export interface ApplyInlineStyleAction {
+  type: 'APPLY_INLINE_STYLE';
+  payload: {
+    property: string; // e.g., 'fontSize', 'color'
+    value: string;    // e.g., '24px', '#ff0000'
+  };
+}
+
+/**
+ * APPLY_LINK action - applies link href to selected text
+ */
+export interface ApplyLinkAction {
+  type: 'APPLY_LINK';
+  payload: {
+    href: string;
+  };
+}
+
+/**
+ * REMOVE_LINK action - removes link from selected text
+ */
+export interface RemoveLinkAction {
+  type: 'REMOVE_LINK';
 }
 
 /**
@@ -340,6 +387,7 @@ export type EditorAction =
   | DuplicateNodeAction
   | ReplaceContainerAction
   | ResetAction
+  | SetStateAction
   | BatchAction
   | SetActiveNodeAction
   | SetSelectionAction
@@ -348,6 +396,9 @@ export type EditorAction =
   | ToggleFormatAction
   | ApplyInlineElementTypeAction
   | ApplyCustomClassAction
+  | ApplyInlineStyleAction
+  | ApplyLinkAction
+  | RemoveLinkAction
   | SelectAllBlocksAction
   | ClearBlockSelectionAction
   | DeleteSelectedBlocksAction
@@ -442,6 +493,14 @@ export const EditorActions = {
   }),
 
   /**
+   * Creates a SET_STATE action.
+   */
+  setState: (state: EditorState): SetStateAction => ({
+    type: 'SET_STATE',
+    payload: { state },
+  }),
+
+  /**
    * Creates a BATCH action.
    */
   batch: (actions: EditorAction[]): BatchAction => ({
@@ -491,7 +550,7 @@ export const EditorActions = {
   /**
    * Creates an APPLY_INLINE_ELEMENT_TYPE action.
    */
-  applyInlineElementType: (elementType: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote' | null): ApplyInlineElementTypeAction => ({
+  applyInlineElementType: (elementType: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote'): ApplyInlineElementTypeAction => ({
     type: 'APPLY_INLINE_ELEMENT_TYPE',
     payload: { elementType },
   }),
@@ -502,6 +561,29 @@ export const EditorActions = {
   applyCustomClass: (className: string): ApplyCustomClassAction => ({
     type: 'APPLY_CUSTOM_CLASS',
     payload: { className },
+  }),
+
+  /**
+   * Creates an APPLY_INLINE_STYLE action.
+   */
+  applyInlineStyle: (property: string, value: string): ApplyInlineStyleAction => ({
+    type: 'APPLY_INLINE_STYLE',
+    payload: { property, value },
+  }),
+
+  /**
+   * Creates an APPLY_LINK action.
+   */
+  applyLink: (href: string): ApplyLinkAction => ({
+    type: 'APPLY_LINK',
+    payload: { href },
+  }),
+
+  /**
+   * Creates a REMOVE_LINK action.
+   */
+  removeLink: (): RemoveLinkAction => ({
+    type: 'REMOVE_LINK',
   }),
 
   /**

@@ -1,24 +1,25 @@
 /**
- * CustomClassPopover Component
+ * LinkPopover Component
  * 
- * A floating popover that appears on text selection, allowing users to apply custom Tailwind classes
+ * A floating popover that appears on text selection, allowing users to add/edit/remove links
  * Uses useEditor internally to access and modify the editor state
  */
 
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Pencil } from 'lucide-react';
+import { Link as LinkIcon, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { Label } from './ui/label';
 import { useEditor, EditorActions } from '../lib';
 import { useToast } from '@/hooks/use-toast';
 
-export function CustomClassPopover() {
+export function LinkPopover() {
   const [state, dispatch] = useEditor();
   const { toast } = useToast();
-  const [customClassInput, setCustomClassInput] = useState('');
+  const [hrefInput, setHrefInput] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   
@@ -28,6 +29,14 @@ export function CustomClassPopover() {
     start: number;
     end: number;
     text: string;
+    href?: string | null;
+    formats: {
+      bold: boolean;
+      italic: boolean;
+      underline: boolean;
+    };
+    elementType?: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote' | null;
+    className?: string | null;
   } | null>(null);
 
   // Track selection and position the floating icon
@@ -39,7 +48,16 @@ export function CustomClassPopover() {
         start: state.currentSelection.start,
         end: state.currentSelection.end,
         text: state.currentSelection.text,
+        href: state.currentSelection.href,
+        formats: state.currentSelection.formats,
+        elementType: state.currentSelection.elementType,
+        className: state.currentSelection.className,
       };
+      
+      // Pre-fill the href input if selection has an existing link
+      if (state.currentSelection.href && !isOpen) {
+        setHrefInput(state.currentSelection.href);
+      }
       
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
@@ -47,10 +65,10 @@ export function CustomClassPopover() {
         const rect = range.getBoundingClientRect();
         
         // Calculate position relative to viewport (fixed positioning)
-        // Position the icon above the selection, centered
+        // Position the icon above the selection, offset to the right of custom class icon
         setPosition({
           top: rect.top - 45, // 45px above the selection
-          left: rect.left + (rect.width / 2) - 16, // Centered on selection
+          left: rect.left + (rect.width / 2) + 16, // Offset to the right
         });
       }
     } else {
@@ -62,53 +80,48 @@ export function CustomClassPopover() {
     }
   }, [state.currentSelection, state.selectionKey, isOpen]);
 
-  // Handle custom class application
-  const handleApplyCustomClass = () => {
+  // Handle link application
+  const handleApplyLink = () => {
     // Use saved selection from ref instead of state
-    if (!savedSelectionRef.current || !customClassInput.trim()) return;
+    if (!savedSelectionRef.current || !hrefInput.trim()) return;
 
     // Temporarily restore the selection in state for the action
-    dispatch(EditorActions.setCurrentSelection({
-      ...savedSelectionRef.current,
-      formats: { bold: false, italic: false, underline: false },
-    }));
+    dispatch(EditorActions.setCurrentSelection(savedSelectionRef.current));
 
-    // Apply the custom class
+    // Apply the link
     setTimeout(() => {
-      dispatch(EditorActions.applyCustomClass(customClassInput.trim()));
+      dispatch(EditorActions.applyLink(hrefInput.trim()));
       
       toast({
-        title: 'Custom Class Applied',
-        description: `Applied class: ${customClassInput}`,
+        title: 'Link Applied',
+        description: `Linked to: ${hrefInput}`,
       });
 
-      setCustomClassInput('');
+      setHrefInput('');
       setIsOpen(false);
       setPosition(null);
       savedSelectionRef.current = null;
     }, 0);
   };
 
-  // Handle quick style application
-  const handleQuickStyle = (className: string) => {
+  // Handle link removal
+  const handleRemoveLink = () => {
     // Use saved selection from ref instead of state
     if (!savedSelectionRef.current) return;
 
     // Temporarily restore the selection in state for the action
-    dispatch(EditorActions.setCurrentSelection({
-      ...savedSelectionRef.current,
-      formats: { bold: false, italic: false, underline: false },
-    }));
+    dispatch(EditorActions.setCurrentSelection(savedSelectionRef.current));
 
-    // Apply the custom class
+    // Remove the link
     setTimeout(() => {
-      dispatch(EditorActions.applyCustomClass(className));
+      dispatch(EditorActions.removeLink());
       
       toast({
-        title: 'Custom Class Applied',
-        description: `Applied class: ${className}`,
+        title: 'Link Removed',
+        description: 'Link has been removed from selection',
       });
 
+      setHrefInput('');
       setIsOpen(false);
       setPosition(null);
       savedSelectionRef.current = null;
@@ -116,6 +129,8 @@ export function CustomClassPopover() {
   };
 
   if (!position) return null;
+
+  const hasExistingLink = savedSelectionRef.current?.href;
 
   return (
     <div
@@ -128,7 +143,11 @@ export function CustomClassPopover() {
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <button
-            className="h-8 w-8 flex items-center justify-center rounded-full shadow-lg hover:scale-110 transition-all bg-background border-2 border-border hover:border-primary"
+            className={`h-8 w-8 flex items-center justify-center rounded-full shadow-lg hover:scale-110 transition-all bg-background border-2 ${
+              hasExistingLink 
+                ? 'border-blue-500 text-blue-500' 
+                : 'border-border hover:border-primary'
+            }`}
             onMouseDown={(e) => {
               // Prevent default to keep the selection
               e.preventDefault();
@@ -141,7 +160,7 @@ export function CustomClassPopover() {
               setIsOpen(true);
             }}
           >
-            <Pencil className="size-4" />
+            <LinkIcon className="size-4" />
           </button>
         </PopoverTrigger>
         <PopoverContent 
@@ -154,57 +173,51 @@ export function CustomClassPopover() {
         >
           <div className="space-y-3">
             <div>
-              <h4 className="font-medium text-sm mb-1">Add Custom Class</h4>
+              <h4 className="font-medium text-sm mb-1">
+                {hasExistingLink ? 'Edit Link' : 'Add Link'}
+              </h4>
               <p className="text-xs text-muted-foreground">
-                Type any custom class or style to apply
+                Selected text: "{savedSelectionRef.current?.text}"
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="href-input" className="text-xs">
+                Link URL
+              </Label>
               <Input
-                placeholder="e.g., text-red-500, bg-blue-100"
-                value={customClassInput}
-                onChange={(e) => setCustomClassInput(e.target.value)}
+                id="href-input"
+                placeholder="https://example.com"
+                value={hrefInput}
+                onChange={(e) => setHrefInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    handleApplyCustomClass();
+                    handleApplyLink();
                   }
                 }}
                 className="flex-1"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               />
-              <Button
-                onClick={handleApplyCustomClass}
-                disabled={!customClassInput.trim()}
-                size="sm"
-              >
-                Save
-              </Button>
             </div>
-            <div className="space-y-2">
-              <p className="text-xs font-medium">Quick Styles:</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  'text-red-500',
-                  'text-blue-500',
-                  'text-green-500',
-                  'bg-yellow-100',
-                  'font-bold',
-                  'underline',
-                  'text-2xl',
-                  'opacity-50',
-                ].map((cls) => (
-                  <Button
-                    key={cls}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleQuickStyle(cls)}
-                    className="text-xs h-7"
-                  >
-                    {cls}
-                  </Button>
-                ))}
-              </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleApplyLink}
+                disabled={!hrefInput.trim()}
+                size="sm"
+                className="flex-1"
+              >
+                <LinkIcon className="size-3.5 mr-1.5" />
+                {hasExistingLink ? 'Update' : 'Add Link'}
+              </Button>
+              {hasExistingLink && (
+                <Button
+                  onClick={handleRemoveLink}
+                  variant="destructive"
+                  size="sm"
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              )}
             </div>
           </div>
         </PopoverContent>

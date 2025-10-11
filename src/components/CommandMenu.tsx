@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Command, 
   CommandEmpty, 
@@ -35,7 +35,7 @@ import {
   ListOrdered,
   Image,
 } from 'lucide-react';
-import { useEditor } from '@/lib';
+import { useEditor, EditorActions } from '@/lib';
 
 export interface CommandOption {
   label: string;
@@ -50,6 +50,8 @@ interface CommandMenuProps {
   onClose: () => void;
   onSelect: (value: string) => void;
   anchorElement: HTMLElement | null;
+  nodeId: string; // ID of the block being transformed
+  onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler
 }
 
 const commands: CommandOption[] = [
@@ -143,14 +145,114 @@ export function CommandMenu({
   isOpen, 
   onClose, 
   onSelect, 
-  anchorElement 
+  anchorElement,
+  nodeId,
+  onUploadImage
 }: CommandMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [search, setSearch] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const commandRef = useRef<HTMLDivElement>(null);
 
-  const [state] = useEditor();
+  const [, dispatch] = useEditor();
 
+  // Handle command selection - for image, we'll use dispatch directly here
+  const handleSelect = useCallback(async (commandValue: string) => {
+    // Special handling for image - trigger file picker and upload
+    if (commandValue === 'img') {
+      // Close the menu first
+      onClose();
+      
+      // Create a hidden file input
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      
+      fileInput.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        
+        // Show loading state immediately
+        setIsUploading(true);
+        
+        // Create placeholder image with loading state
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            dispatch(EditorActions.updateNode(nodeId, {
+              type: 'img',
+              content: '', // Empty caption initially
+              attributes: {
+                src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5VcGxvYWRpbmcuLi48L3RleHQ+PC9zdmc+',
+                alt: 'Uploading...',
+                loading: 'true', // Custom attribute to indicate loading
+              }
+            }));
+          });
+        });
+        
+        try {
+          // Use custom upload handler if provided
+          let imageUrl: string;
+          
+          if (onUploadImage) {
+            imageUrl = await onUploadImage(file);
+          } else {
+            // Fallback: use default upload
+            const { uploadImage } = await import('../lib/utils/image-upload');
+            const result = await uploadImage(file);
+            if (!result.success || !result.url) {
+              throw new Error(result.error || "Upload failed");
+            }
+            imageUrl = result.url;
+          }
+          
+          // Update with actual image URL
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              dispatch(EditorActions.updateNode(nodeId, {
+                type: 'img',
+                content: '', // Empty caption initially
+                attributes: {
+                  src: imageUrl,
+                  alt: file.name,
+                }
+              }));
+            });
+          });
+        } catch (error) {
+          console.error('Image upload failed:', error);
+          // Revert to error state
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              dispatch(EditorActions.updateNode(nodeId, {
+                type: 'img',
+                content: '', 
+                attributes: {
+                  src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2ZlZjJmMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNlZjQ0NDQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5VcGxvYWQgRmFpbGVkPC90ZXh0Pjwvc3ZnPg==',
+                  alt: 'Upload failed',
+                  error: 'true',
+                }
+              }));
+            });
+          });
+        } finally {
+          setIsUploading(false);
+          // Clean up
+          document.body.removeChild(fileInput);
+        }
+      };
+      
+      // Add to DOM and trigger click
+      document.body.appendChild(fileInput);
+      fileInput.click();
+      return;
+    }
+    
+    // For all other commands, call the original onSelect handler AFTER closing menu
+    onClose();
+    onSelect(commandValue);
+  }, [dispatch, nodeId, onSelect, onClose, onUploadImage]);
 
   // Filter commands based on search
   const filteredCommands = search
@@ -185,7 +287,7 @@ export function CommandMenu({
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (filteredCommands[selectedIndex]) {
-          onSelect(filteredCommands[selectedIndex].value);
+          handleSelect(filteredCommands[selectedIndex].value);
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
@@ -195,7 +297,7 @@ export function CommandMenu({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, filteredCommands, onSelect, onClose]);
+  }, [isOpen, selectedIndex, filteredCommands, handleSelect, onClose]);
 
   // Reset search when menu closes
   useEffect(() => {
@@ -256,7 +358,7 @@ export function CommandMenu({
                 <CommandItem
                   key={command.value}
                   value={command.value}
-                  onSelect={() => onSelect(command.value)}
+                  onSelect={() => handleSelect(command.value)}
                   className={`
                     flex items-start gap-3 px-3 py-2 cursor-pointer
                     ${index === selectedIndex ? 'bg-accent' : ''}

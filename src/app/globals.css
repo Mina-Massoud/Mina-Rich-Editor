@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+body {
+  font-family: "DM Sans", sans-serif;
+  letter-spacing: var(--tracking-tight);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -148,4 +153,32 @@ ol[data-list-type="ol"] {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+body:before {
+  content: "";
+  display: block;
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  opacity: .045;
+  background-image: url(/noise.webp);
+  background-size: 200px 200px;
+}
+
+button {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+  scale: 1.02;
+}
+
+button:active {
+  scale: 0.95;
+}
+
+button:focus {
+  outline: none;
 }

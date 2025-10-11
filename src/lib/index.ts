@@ -87,6 +87,8 @@ export {
   useEditor,
   useEditorSelector,
   useNode,
+  useSelectionManager,
+  useSelection,
 } from './context/EditorContext';
 
 export type { EditorProviderProps } from './context/EditorContext';

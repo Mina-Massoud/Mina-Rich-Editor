@@ -85,12 +85,14 @@ export interface InlineText {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
-  // Inline element type (for text that should render as h1, h2, etc. within a paragraph)
-  elementType?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote';
+  // Inline element type (for text that should render as p, h1, h2, etc. within a paragraph)
+  elementType?: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote';
   // Link URL (makes the text a clickable link)
   href?: string;
   // Custom Tailwind CSS classes
   className?: string;
+  // Inline CSS styles (e.g., { fontSize: '24px', color: '#ff0000' })
+  styles?: Record<string, string>;
 }
 
 /**
@@ -213,7 +215,16 @@ export interface SelectionInfo {
   };
   
   /** Active element type on the selection (if all selected text has the same type) */
-  elementType?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote' | null;
+  elementType?: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote' | null;
+  
+  /** Active link href on the selection (if all selected text has the same href) */
+  href?: string | null;
+  
+  /** Active custom class on the selection (if all selected text has the same class) */
+  className?: string | null;
+  
+  /** Active inline styles on the selection (if all selected text has the same styles) */
+  styles?: Record<string, string> | null;
 }
 
 /**

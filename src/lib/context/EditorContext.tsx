@@ -9,8 +9,8 @@
 
 'use client';
 
-import React, { createContext, useReducer, useContext, useMemo } from 'react';
-import { EditorState, ContainerNode } from '../types';
+import React, { createContext, useReducer, useContext, useMemo, useRef, useCallback } from 'react';
+import { EditorState, ContainerNode, SelectionInfo } from '../types';
 import { editorReducer, createInitialState } from '../reducer/editor-reducer';
 import { EditorAction } from '../reducer/actions';
 
@@ -25,6 +25,23 @@ const EditorStateContext = createContext<EditorState | undefined>(undefined);
 const EditorDispatchContext = createContext<
   React.Dispatch<EditorAction> | undefined
 >(undefined);
+
+/**
+ * Interface for selection manager that doesn't cause re-renders
+ */
+interface SelectionManager {
+  /** Get current selection info without triggering re-render */
+  getSelection: () => SelectionInfo | null;
+  /** Set selection info without triggering re-render */
+  setSelection: (selection: SelectionInfo | null) => void;
+  /** Subscribe to selection changes (for toolbar updates only) */
+  subscribe: (callback: (selection: SelectionInfo | null) => void) => () => void;
+}
+
+/**
+ * Context for selection management (optimized to avoid re-renders)
+ */
+const SelectionContext = createContext<SelectionManager | undefined>(undefined);
 
 /**
  * Props for the EditorProvider component.
@@ -94,6 +111,25 @@ export function EditorProvider({
     initialEditorState
   );
 
+  // Create selection manager (doesn't cause re-renders)
+  const selectionRef = useRef<SelectionInfo | null>(null);
+  const selectionSubscribers = useRef<Set<(selection: SelectionInfo | null) => void>>(new Set());
+
+  const selectionManager = useMemo<SelectionManager>(() => ({
+    getSelection: () => selectionRef.current,
+    setSelection: (selection: SelectionInfo | null) => {
+      selectionRef.current = selection;
+      // Notify subscribers (e.g., toolbar) but don't trigger full re-render
+      selectionSubscribers.current.forEach(callback => callback(selection));
+    },
+    subscribe: (callback: (selection: SelectionInfo | null) => void) => {
+      selectionSubscribers.current.add(callback);
+      return () => {
+        selectionSubscribers.current.delete(callback);
+      };
+    },
+  }), []);
+
   // Create wrapped dispatch that includes onChange and debug logging
   const enhancedDispatch = useMemo(() => {
     return (action: EditorAction) => {
@@ -126,7 +162,9 @@ export function EditorProvider({
   return (
     <EditorStateContext.Provider value={state}>
       <EditorDispatchContext.Provider value={enhancedDispatch}>
-        {children}
+        <SelectionContext.Provider value={selectionManager}>
+          {children}
+        </SelectionContext.Provider>
       </EditorDispatchContext.Provider>
     </EditorStateContext.Provider>
   );
@@ -284,5 +322,74 @@ export function useNode(nodeId: string) {
     const currentContainer = state.history[state.historyIndex];
     return findNodeById(currentContainer, nodeId);
   }, [state.history, state.historyIndex, nodeId]);
+}
+
+/**
+ * Hook to access the selection manager.
+ * This provides optimized selection tracking that doesn't cause re-renders.
+ * 
+ * @returns Selection manager
+ * @throws Error if used outside of EditorProvider
+ * 
+ * @example
+ * ```tsx
+ * function MyEditor() {
+ *   const selectionManager = useSelectionManager();
+ *   
+ *   // Get selection without causing re-render
+ *   const selection = selectionManager.getSelection();
+ *   
+ *   // Update selection without causing re-render
+ *   selectionManager.setSelection(newSelection);
+ * }
+ * ```
+ */
+export function useSelectionManager(): SelectionManager {
+  const context = useContext(SelectionContext);
+  
+  if (context === undefined) {
+    throw new Error(
+      'useSelectionManager must be used within an EditorProvider. ' +
+      'Wrap your component tree with <EditorProvider>.'
+    );
+  }
+  
+  return context;
+}
+
+/**
+ * Hook to subscribe to selection changes (for toolbar/UI updates).
+ * Only components that need to react to selection changes should use this.
+ * 
+ * @returns Current selection info (reactive - causes re-renders on change)
+ * 
+ * @example
+ * ```tsx
+ * function FormattingToolbar() {
+ *   const selection = useSelection();
+ *   
+ *   if (!selection) return null;
+ *   
+ *   return (
+ *     <div>
+ *       Selected: {selection.text}
+ *       Bold: {selection.formats.bold ? 'Yes' : 'No'}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useSelection(): SelectionInfo | null {
+  const selectionManager = useSelectionManager();
+  const [selection, setSelection] = React.useState<SelectionInfo | null>(
+    selectionManager.getSelection()
+  );
+
+  React.useEffect(() => {
+    const unsubscribe = selectionManager.subscribe(setSelection);
+    return unsubscribe;
+  }, [selectionManager]);
+
+  return selection;
 }
 

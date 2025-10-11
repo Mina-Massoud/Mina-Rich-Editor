@@ -17,8 +17,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Mina Rich Editor",
-  description: "A powerful, TypeScript-first rich text editor with nested blocks, inline formatting, and read-only mode. Built with React, TypeScript, and Tailwind CSS.",
-  keywords: ["rich text editor", "react", "typescript", "nested blocks", "text editor", "wysiwyg"],
+  description:
+    "A powerful, TypeScript-first rich text editor with nested blocks, inline formatting, and read-only mode. Built with React, TypeScript, and Tailwind CSS.",
+  keywords: [
+    "rich text editor",
+    "react",
+    "typescript",
+    "nested blocks",
+    "text editor",
+    "wysiwyg",
+  ],
   authors: [{ name: "Mina" }],
   creator: "Mina",
   publisher: "Mina",
@@ -31,7 +39,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     title: "Mina Rich Editor",
-    description: "A powerful, TypeScript-first rich text editor with nested blocks, inline formatting, and read-only mode. Built with React, TypeScript, and Tailwind CSS.",
+    description:
+      "A powerful, TypeScript-first rich text editor with nested blocks, inline formatting, and read-only mode. Built with React, TypeScript, and Tailwind CSS.",
     siteName: "Mina Rich Editor",
     images: [
       {
@@ -45,7 +54,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Mina Rich Editor",
-    description: "A powerful, TypeScript-first rich text editor with nested blocks, inline formatting, and read-only mode.",
+    description:
+      "A powerful, TypeScript-first rich text editor with nested blocks, inline formatting, and read-only mode.",
     images: ["/opengraph.png"],
     creator: "@mina",
   },
@@ -74,13 +84,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
-          enableSystem
           disableTransitionOnChange
         >
           {/* <ModeToggle /> */}
