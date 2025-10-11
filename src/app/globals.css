@@ -6,6 +6,9 @@
 body {
   font-family: "DM Sans", sans-serif;
   letter-spacing: var(--tracking-tight);
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 @theme inline {
@@ -79,6 +82,10 @@ ol[data-list-type="ol"] {
 
 html { 
   font-size: 15px;
+  width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 :root {
