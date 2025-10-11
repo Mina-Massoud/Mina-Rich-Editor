@@ -131,7 +131,7 @@ export function CustomClassPopover() {
           </button>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-[500px] max-h-[600px]" 
+          className="lg:w-[500px] max-h-[600px]" 
           align="start"
           onOpenAutoFocus={(e) => {
             // Prevent the popover from stealing focus and losing selection
