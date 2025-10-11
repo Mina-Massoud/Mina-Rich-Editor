@@ -332,13 +332,13 @@ export function SimpleEditor({ readOnly = false }: SimpleEditorProps = {}) {
     if (container.children.length === 0 && !readOnly) {
       const timestamp = Date.now();
 
-      // Create a comprehensive documentation/showcase document
+      // Create a showcase document focused on custom classes and colors
       const demoNodes: EditorNode[] = [
         // Title
         {
           id: `h1-${timestamp}-1`,
           type: "h1",
-          content: "📚 Mina Rich Editor - Complete Documentation",
+          content: "✨ Next-Level Rich Text Editor",
           attributes: {},
         } as TextNode,
 
@@ -347,26 +347,26 @@ export function SimpleEditor({ readOnly = false }: SimpleEditorProps = {}) {
           id: `p-${timestamp}-2`,
           type: "p",
           children: [
-            { content: "A ", bold: false },
-            { content: "powerful", bold: true },
-            { content: ", ", bold: false },
-            { content: "TypeScript-first", italic: true },
-            { content: " rich text editor with ", bold: false },
-            { content: "nested blocks", underline: true },
-            {
-              content:
-                ", inline formatting, and read-only mode. Built with React, TypeScript, and Tailwind CSS.",
-              bold: false,
-            },
+            { content: "The ", bold: false },
+            { content: "first rich text editor", bold: true, className: "text-blue-500" },
+            { content: " built entirely with ", bold: false },
+            { content: "Tailwind CSS", bold: true, className: "text-cyan-500" },
+            { content: " and ", bold: false },
+            { content: "shadcn/ui", bold: true, className: "text-purple-500" },
+            { content: ". Unleash your creativity with ", bold: false },
+            { content: "custom classes", underline: true, className: "text-orange-500" },
+            { content: " and ", bold: false },
+            { content: "unlimited colors", italic: true, className: "text-pink-500" },
+            { content: "!", bold: false },
           ],
           attributes: {},
         } as TextNode,
 
-        // Installation
+        // Custom Classes
         {
           id: `h2-${timestamp}-3`,
           type: "h2",
-          content: "📦 Installation",
+          content: "🎨 Custom Tailwind Classes",
           attributes: {},
         } as TextNode,
 
