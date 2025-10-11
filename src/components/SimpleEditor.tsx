@@ -9,7 +9,7 @@
 
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   useEditor,
   EditorActions,
@@ -1035,7 +1035,100 @@ export function SimpleEditor({
     };
   }, []);
 
-  // Handle global keyboard shortcuts (Ctrl+A, Ctrl+Z, Ctrl+Y)
+  // Helper to restore selection after formatting
+  const restoreSelection = useCallback((
+    element: HTMLElement,
+    start: number,
+    end: number
+  ) => {
+    const range = document.createRange();
+    const sel = window.getSelection();
+
+    let currentPos = 0;
+    let startNode: Node | null = null;
+    let startOffset = 0;
+    let endNode: Node | null = null;
+    let endOffset = 0;
+    let found = false;
+
+    const walk = (node: Node) => {
+      if (found) return;
+
+      if (node.nodeType === Node.TEXT_NODE) {
+        const textLength = node.textContent?.length || 0;
+
+        if (!startNode && currentPos + textLength >= start) {
+          startNode = node;
+          startOffset = start - currentPos;
+        }
+
+        if (!endNode && currentPos + textLength >= end) {
+          endNode = node;
+          endOffset = end - currentPos;
+          found = true;
+        }
+
+        currentPos += textLength;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          walk(node.childNodes[i]);
+          if (found) break;
+        }
+      }
+    };
+
+    walk(element);
+
+    if (startNode && endNode && sel) {
+      try {
+        const startLength = (startNode as Text).textContent?.length || 0;
+        const endLength = (endNode as Text).textContent?.length || 0;
+        range.setStart(startNode, Math.min(startOffset, startLength));
+        range.setEnd(endNode, Math.min(endOffset, endLength));
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } catch (e) {
+        console.warn("Failed to restore selection:", e);
+      }
+    }
+  }, []);
+
+  // Handle format button clicks - completely state-driven!
+  const handleFormat = useCallback((format: "bold" | "italic" | "underline") => {
+    console.group("🔘 [handleFormat] Button clicked");
+
+    // Get fresh selection from ref (more up-to-date than state)
+    const refSelection = selectionManager.getSelection();
+    if (!refSelection) {
+      console.warn("❌ No current selection, aborting");
+      console.groupEnd();
+      return;
+    }
+
+    // Save selection for restoration
+    const { start, end, nodeId, formats } = refSelection;
+
+    // Dispatch toggle format action - reducer handles everything!
+    dispatch(EditorActions.toggleFormat(format));
+
+    // After state updates, check what happened
+    setTimeout(() => {
+      const updatedNode = container.children.find((n) => n.id === nodeId);
+    }, 100);
+
+    // Restore selection after formatting
+    setTimeout(() => {
+      const element = nodeRefs.current.get(nodeId);
+      if (element) {
+        restoreSelection(element, start, end);
+      } else {
+        console.warn("❌ Element not found for selection restoration");
+      }
+      console.groupEnd();
+    }, 0);
+  }, [selectionManager, dispatch, container.children, restoreSelection]);
+
+  // Handle global keyboard shortcuts (Ctrl+A, Ctrl+Z, Ctrl+Y, Ctrl+B, Ctrl+I, Ctrl+U)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -1061,6 +1154,33 @@ export function SimpleEditor({
           range.selectNodeContents(currentBlock);
           selection.removeAllRanges();
           selection.addRange(range);
+        }
+      }
+
+      // Ctrl+B / Cmd+B - Toggle Bold (requires focus and selection)
+      if (isCtrlOrCmd && e.key === "b" && isInEditor) {
+        e.preventDefault();
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) {
+          handleFormat("bold");
+        }
+      }
+
+      // Ctrl+I / Cmd+I - Toggle Italic (requires focus and selection)
+      if (isCtrlOrCmd && e.key === "i" && isInEditor) {
+        e.preventDefault();
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) {
+          handleFormat("italic");
+        }
+      }
+
+      // Ctrl+U / Cmd+U - Toggle Underline (requires focus and selection)
+      if (isCtrlOrCmd && e.key === "u" && isInEditor) {
+        e.preventDefault();
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) {
+          handleFormat("underline");
         }
       }
 
@@ -1104,107 +1224,8 @@ export function SimpleEditor({
     return () => {
       document.removeEventListener("keydown", handleGlobalKeyDown);
     };
-  }, [state.historyIndex, state.history.length, dispatch, toast]);
+  }, [state.historyIndex, state.history.length, dispatch, toast, handleFormat]);
 
-  // Handle format button clicks - completely state-driven!
-  const handleFormat = (format: "bold" | "italic" | "underline") => {
-    console.group("🔘 [handleFormat] Button clicked");
-
-    // Get fresh selection from ref (more up-to-date than state)
-    const refSelection = selectionManager.getSelection();
-    if (!refSelection) {
-      console.warn("❌ No current selection, aborting");
-      console.groupEnd();
-      return;
-    }
-
-    // Save selection for restoration
-    const { start, end, nodeId, formats } = refSelection;
-
-    // Dispatch toggle format action - reducer handles everything!
-    dispatch(EditorActions.toggleFormat(format));
-
-    // After state updates, check what happened
-    setTimeout(() => {
-      const updatedNode = container.children.find((n) => n.id === nodeId);
-    }, 100);
-
-    // Restore selection after formatting
-    setTimeout(() => {
-      const element = nodeRefs.current.get(nodeId);
-      if (element) {
-        restoreSelection(element, start, end);
-      } else {
-        console.warn("❌ Element not found for selection restoration");
-      }
-      console.groupEnd();
-    }, 0);
-  };
-
-  // Helper to restore selection after formatting
-  const restoreSelection = (
-    element: HTMLElement,
-    start: number,
-    end: number
-  ) => {
-    const range = document.createRange();
-    const sel = window.getSelection();
-
-    let currentPos = 0;
-    let startNode: Node | null = null;
-    let startOffset = 0;
-    let endNode: Node | null = null;
-    let endOffset = 0;
-    let found = false;
-
-    // Walk through all text nodes to find the start and end positions
-    const walk = (node: Node) => {
-      if (found) return;
-
-      if (node.nodeType === Node.TEXT_NODE) {
-        const textLength = node.textContent?.length || 0;
-
-        if (!startNode && currentPos + textLength >= start) {
-          startNode = node;
-          startOffset = start - currentPos;
-        }
-
-        if (currentPos + textLength >= end) {
-          endNode = node;
-          endOffset = end - currentPos;
-          found = true;
-          return;
-        }
-
-        currentPos += textLength;
-      } else {
-        for (let i = 0; i < node.childNodes.length; i++) {
-          walk(node.childNodes[i]);
-          if (found) return;
-        }
-      }
-    };
-
-    walk(element);
-
-    if (startNode && endNode) {
-      try {
-        range.setStart(startNode, startOffset);
-        range.setEnd(endNode, endOffset);
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-
-        // IMPORTANT: After restoring selection, we need to update the format detection
-        // This will trigger selectionchange which will re-detect formats correctly
-      } catch (e) {
-        console.warn("Failed to restore selection:", e);
-      }
-    } else {
-      console.warn(
-        "❌ Could not find start/end nodes for selection restoration"
-      );
-    }
-  };
 
   // Handle color selection
   const handleApplyColor = (color: string) => {

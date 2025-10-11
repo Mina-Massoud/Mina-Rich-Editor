@@ -71,7 +71,7 @@ export function createDemoContent(timestamp: number = 1000000000000): EditorNode
           bold: true,
           className: "text-orange-600 dark:text-orange-400",
         },
-        { content: " - a developer who survived 4 years of school and mastered 3 years of frontend sorcery.", italic: true, bold: false },
+     
       ],
       attributes: {},
     } as TextNode,
@@ -88,6 +88,36 @@ export function createDemoContent(timestamp: number = 1000000000000): EditorNode
       ],
       attributes: { 
         style: "background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1)); border-left: 4px solid rgb(59, 130, 246);"
+      },
+    } as TextNode,
+
+    // ========================================
+    // IMPORTANT NOTE
+    // ========================================
+    {
+      id: `blockquote-${timestamp}-9`,
+      type: "blockquote",
+      children: [
+        { content: "⚠️ IMPORTANT NOTE: ", bold: true, className: "text-red-600 dark:text-red-400" },
+        { content: "For transparency, the ", italic: true },
+        { content: "code supports everything", italic: true, bold: true },
+        { content: " mentioned in this document (gradients, shadows, borders, custom styles, etc.), but ", italic: true },
+        { content: "some advanced features don't have a UI interface yet", italic: true, bold: true },
+        { content: ". You can still apply them programmatically through the JSON structure or by typing Tailwind classes in the Custom Class Popover. ", italic: true },
+        { content: "Any collaboration is much appreciated! ", italic: true, bold: true, className: "text-green-600 dark:text-green-400" },
+        { content: "Feel free to contribute UI components for these features on ", italic: true },
+        {
+          content: "GitHub",
+          italic: true,
+          bold: true,
+          underline: true,
+          href: "https://github.com/Mina-Massoud/mina-rich-editor",
+          className: "text-blue-600 dark:text-blue-400",
+        },
+        { content: ".", italic: true },
+      ],
+      attributes: {
+        className: "bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600",
       },
     } as TextNode,
 
@@ -1338,13 +1368,40 @@ function MyComponent() {
           id: `li-${timestamp}-142-5`,
           type: "li",
           children: [
+            { content: "Ctrl/Cmd + B", elementType: "code", bold: true },
+            { content: " - Toggle bold formatting on selected text", bold: false },
+          ],
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-142-6`,
+          type: "li",
+          children: [
+            { content: "Ctrl/Cmd + I", elementType: "code", bold: true },
+            { content: " - Toggle italic formatting on selected text", bold: false },
+          ],
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-142-7`,
+          type: "li",
+          children: [
+            { content: "Ctrl/Cmd + U", elementType: "code", bold: true },
+            { content: " - Toggle underline formatting on selected text", bold: false },
+          ],
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-142-8`,
+          type: "li",
+          children: [
             { content: "Ctrl/Cmd + Z", elementType: "code", bold: true },
             { content: " - Undo last action", bold: false },
           ],
           attributes: {},
         } as TextNode,
         {
-          id: `li-${timestamp}-142-6`,
+          id: `li-${timestamp}-142-9`,
           type: "li",
           children: [
             { content: "Ctrl/Cmd + Shift + Z", elementType: "code", bold: true },

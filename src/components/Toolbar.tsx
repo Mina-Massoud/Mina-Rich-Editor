@@ -25,7 +25,7 @@ export function Toolbar({ readOnly, onReadOnlyChange }: ToolbarProps) {
 
   return (
     <TooltipProvider>
-      <div className="fixed top-4 right-4 z-[100] flex items-center gap-1 bg-background border rounded-lg shadow-lg p-1.5">
+      <div className="fixed top-17 right-4 z-[105] flex items-center gap-1 bg-background border rounded-lg shadow-lg p-1.5">
         {/* Read-only toggle */}
         <Tooltip>
           <TooltipTrigger asChild>

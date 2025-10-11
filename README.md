@@ -1,276 +1,447 @@
-# 📝 Mina Rich Editor
+# ✨ Mina Rich Editor
 
-A modern, TypeScript-first rich text editor library built with React. Features a JSON-based document model, immutable state management, and a clean CRUD API.
+![Mina Rich Editor Demo](./public/image_docs/main-image-demo.png)
 
-## ✨ What's Built
+The **first block-based rich text editor** built entirely with **Tailwind CSS** and **shadcn/ui**. Created by [Mina Massoud](https://mina-massoud.com/) - a 22 years old developer with a lot of passion to change people's lives! 😄
 
-### 🏗️ Core Library (`/src/lib/`)
+[![GitHub stars](https://img.shields.io/github/stars/Mina-Massoud/mina-rich-editor?style=social)](https://github.com/Mina-Massoud/mina-rich-editor)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-A complete editor state management system:
-
-- **JSON Document Model** - Tree-based structure with containers and text nodes
-- **Immutable State** - React `useReducer` with predictable updates
-- **CRUD Operations** - Create, Read, Update, Delete, Move, Duplicate
-- **Type-Safe API** - Full TypeScript support with IntelliSense
-
-### 🎨 Three Demo Modes
-
-1. **⚡ Simple Editor** - Single block with formatting (Bold, Italic, Underline)
-2. **✨ Rich Editor** - Multi-block Linear-style editor with toolbar
-3. **🔧 MVP/Debug** - Full CRUD testing interface with JSON viewer
-
-## 🚀 Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) and switch between modes using the top-right buttons.
-
-## 📚 How It Works
-
-### 1. Document Structure
-
-```typescript
-{
-  "version": "1.0.0",
-  "container": {
-    "id": "root",
-    "type": "container",
-    "children": [
-      {
-        "id": "p-1",
-        "type": "p",
-        "content": "Hello, world!",
-        "attributes": {
-          "className": "font-bold"
-        }
-      }
-    ]
-  }
-}
-```
-
-### 2. Using the Library
-
-```tsx
-import { EditorProvider, useEditor, EditorActions } from '@/lib';
-
-function MyEditor() {
-  const [state, dispatch] = useEditor();
-
-  const makeBold = () => {
-    dispatch(
-      EditorActions.updateAttributes('node-id', {
-        className: 'font-bold',
-      })
-    );
-  };
-
-  return <button onClick={makeBold}>Make Bold</button>;
-}
-
-// Wrap with provider
-<EditorProvider>
-  <MyEditor />
-</EditorProvider>;
-```
-
-### 3. Available Actions
-
-```tsx
-// Create
-EditorActions.insertNode(newNode, targetId, 'append');
-
-// Update
-EditorActions.updateContent(nodeId, 'New text');
-EditorActions.updateAttributes(nodeId, { className: 'font-bold' });
-EditorActions.updateNode(nodeId, { type: 'h1' });
-
-// Delete
-EditorActions.deleteNode(nodeId);
-
-// Move
-EditorActions.moveNode(nodeId, targetId, 'after');
-
-// Duplicate
-EditorActions.duplicateNode(nodeId);
-
-// Batch
-EditorActions.batch([action1, action2, action3]);
-
-// Reset
-EditorActions.reset();
-```
-
-## 🎯 Simple Editor Example
-
-The **Simple Editor** demonstrates the core concept:
-
-1. **Select text** in the editor
-2. **Click Bold/Italic/Underline** buttons
-3. **Watch the console** - you'll see CRUD actions being logged
-4. **Check JSON panel** - see the state update in real-time
-
-This shows how:
-- User interactions trigger dispatch actions
-- Actions flow through the reducer
-- State updates immutably
-- React re-renders with new state
-
-## 📁 Project Structure
-
-```
-src/
-├── lib/                    # Core editor library
-│   ├── types.ts           # TypeScript definitions
-│   ├── utils/
-│   │   └── tree-operations.ts  # Recursive tree functions
-│   ├── reducer/
-│   │   ├── actions.ts     # Action creators
-│   │   └── editor-reducer.ts   # Reducer logic
-│   ├── context/
-│   │   └── EditorContext.tsx   # React context + hooks
-│   └── index.ts           # Public API exports
-├── components/
-│   ├── SimpleEditor.tsx   # Single-block editor
-│   ├── RichTextEditor.tsx # Multi-block editor
-│   └── EditorMVP.tsx      # Debug/testing interface
-└── app/
-    └── page.tsx           # Next.js page with mode switcher
-```
-
-## 🔑 Key Features
-
-### ✅ Implemented
-
-- [x] JSON document model
-- [x] Immutable state management
-- [x] Full CRUD operations
-- [x] Recursive tree operations
-- [x] TypeScript support
-- [x] Context + Hooks API
-- [x] Text formatting (bold, italic, underline)
-- [x] Node type switching (p, h1, h2, h3, etc.)
-- [x] Dynamic attributes
-- [x] Batch operations
-- [x] Debug mode
-- [x] Nested containers
-
-### 🚧 To Be Added
-
-- [ ] Text selection ranges (start/end positions)
-- [ ] Inline marks (separate from block-level formatting)
-- [ ] Link support with popup
-- [ ] Image/video embeds
-- [ ] Drag & drop reordering
-- [ ] Undo/redo history
-- [ ] Copy/paste handling
-- [ ] Markdown shortcuts (e.g., `# ` for h1)
-- [ ] Slash commands (e.g., `/image`)
-- [ ] Plugin system
-- [ ] Collaboration (CRDT/OT)
-- [ ] Export to HTML/Markdown
-
-## 🎓 Learning Resources
-
-- **LIBRARY_README.md** - Complete API documentation
-- **Console logs** - All CRUD operations are logged (check browser console)
-- **JSON viewer** - Real-time state visualization in MVP mode
-
-## 🧪 Testing the Library
-
-### Test CRUD Operations (MVP Mode)
-
-1. Switch to **🔧 MVP** mode
-2. Use the left panel to add nodes
-3. Use the visual editor to edit/delete/duplicate
-4. Watch the JSON panel update in real-time
-
-### Test Formatting (Simple Mode)
-
-1. Switch to **⚡ Simple** mode
-2. Select text in the editor
-3. Click **B** (Bold), **I** (Italic), or **U** (Underline)
-4. See the JSON update with new `className` attribute
-5. Check console for CRUD action logs
-
-### Test Multi-Block (Rich Mode)
-
-1. Switch to **✨ Rich** mode
-2. Type content and press Enter to create new blocks
-3. Use toolbar to change block types
-4. Hover over blocks to see quick actions
-
-## 🤝 Using as a Library
-
-You can import and use the core library in any React project:
-
-```tsx
-// Import core functionality
-import {
-  EditorProvider,
-  useEditor,
-  useEditorState,
-  useEditorDispatch,
-  EditorActions,
-  findNodeById,
-  traverseTree,
-  validateTree,
-} from './lib';
-
-// Build your custom editor UI
-function CustomEditor() {
-  const [state, dispatch] = useEditor();
-
-  // Your custom logic here
-}
-```
-
-## 📖 API Reference
-
-See **LIBRARY_README.md** for complete API documentation including:
-- All hooks
-- All actions
-- Tree operations
-- Type definitions
-- Advanced usage examples
-
-## 🐛 Known Issues
-
-- **Rich Editor**: Cursor management in contentEditable needs refinement
-- **Performance**: Large documents (>1000 nodes) not yet optimized
-- **Mobile**: Touch interactions not fully tested
-
-## 💡 Architecture Highlights
-
-### Why this approach?
-
-1. **JSON as source of truth** - Easy to save, load, and transmit
-2. **Immutable updates** - Predictable state changes, easy debugging
-3. **Recursive tree** - Supports unlimited nesting
-4. **Reducer pattern** - Familiar to Redux users, testable
-5. **Context API** - No external dependencies, React native
-
-### Inspired by:
-
-- **Quill** - Delta format concept
-- **Draft.js** - Block-based model
-- **Slate** - Tree structure
-- **ProseMirror** - State management patterns
-- **Notion/Linear** - UX and interaction patterns
-
-## 📄 License
-
-MIT
+> ⚠️ **IMPORTANT NOTE:** For transparency, the **code supports everything** mentioned in this document (gradients, shadows, borders, custom styles, etc.), but **some advanced features don't have a UI interface yet**. You can still apply them programmatically through the JSON structure or by typing Tailwind classes in the Custom Class Popover. **Any collaboration is much appreciated!** Feel free to contribute UI components for these features.
 
 ---
 
-**Built with ❤️ by Mina**
+## 🚀 Quick Start
 
-Start with the **Simple Editor** to understand the basics, then explore **Rich Editor** and **MVP** modes!
-# Mina-Rich-Editor
+### Installation
+
+```bash
+# Clone the repository      
+git clone https://github.com/Mina-Massoud/mina-rich-editor.git
+
+# Install and run
+npm install
+npm run dev
+```
+
+### Basic Usage
+
+```tsx
+import { EditorProvider } from '@/lib';
+import { SimpleEditor } from '@/components/SimpleEditor';
+
+export default function App() {
+  return (
+    <EditorProvider>
+      <SimpleEditor />
+    </EditorProvider>
+  );
+}
+```
+
+### Read-Only Mode
+
+```tsx
+// Display content without editing
+<SimpleEditor readOnly={true} />
+```
+
+### With Initial Content
+
+```tsx
+import { createDemoContent } from '@/lib/demo-content';
+
+const initialContent = {
+  id: 'root',
+  type: 'container',
+  children: createDemoContent(),
+  attributes: {}
+};
+
+<EditorProvider initialContainer={initialContent}>
+  <SimpleEditor />
+</EditorProvider>
+```
+
+---
+
+## ✨ Text Formatting
+
+Select any text and use the toolbar to apply rich formatting. The editor supports all standard text styles:
+
+![Text Formatting Toolbar](./public/image_docs/block-bold-italic-underline-color.png)
+
+You can make text **bold**, *italic*, <u>underlined</u>, or even ***combine all three styles*** together! Mix and match formatting to create beautiful content.
+
+---
+
+## 📋 Block Types
+
+The editor supports multiple block types. Each block can be changed using the type selector in the toolbar:
+
+- **Heading 1** - The largest heading
+- **Heading 2** - Major sections
+- **Heading 3** - Subsections
+- **Paragraph** - The standard block type for regular text content
+- **Blockquote** - Perfect for quotes, tips, and callouts
+- **Code Block** - For displaying code with proper formatting
+- **List Item** - Ordered and unordered lists
+
+---
+
+## 📝 Lists - Ordered & Unordered
+
+Create ordered lists (numbered) or unordered lists (bullet points) for organized content:
+
+**Ordered List Example (ol)**
+1. First item - Automatically numbered
+2. Second item - Numbers increment automatically
+3. Third item - Perfect for step-by-step instructions
+4. You can even add **formatting** to *list items*!
+
+**Unordered List Example (ul)**
+- Bullet point item
+- Another bullet point
+- Great for feature lists
+- Supports **rich text formatting** too!
+
+```typescript
+// List structure in the editor
+const orderedList = {
+  id: 'container-1',
+  type: 'container',
+  attributes: {
+    listType: 'ol'  // 'ol' for ordered, 'ul' for unordered
+  },
+  children: [
+    { id: 'li-1', type: 'li', content: 'First item' },
+    { id: 'li-2', type: 'li', content: 'Second item' },
+    { 
+      id: 'li-3',
+      type: 'li',
+      children: [
+        { content: 'Formatted ', bold: false },
+        { content: 'item', bold: true }
+      ]
+    }
+  ]
+};
+```
+
+---
+
+## 🎨 Inline Element Types
+
+Apply heading styles inline within paragraphs. Select text and choose from the element type dropdown to mix different text sizes and styles:
+
+![Element Type Selector](./public/image_docs/element-type-select.png)
+
+This paragraph contains **H1 styled text** and **H2 styled text** and **H3 styled text** all mixed together, plus `inline code` support for technical content!
+
+```typescript
+// Inline element types structure
+const richParagraph = {
+  type: 'p',
+  children: [
+    { content: 'Regular text ' },
+    { content: 'Large heading', elementType: 'h1' },
+    { content: ' and ' },
+    { content: 'inline code', elementType: 'code', bold: true }
+  ]
+};
+```
+
+---
+
+## ✏️ Custom Tailwind Classes
+
+> 🤔 Wait, the block above looks a bit weird, right? Oh! I wish I could add custom classes using normal Tailwind... **Actually, you can!** Select your text, then click the **pencil ✏️ smart icon**, and type your class or select from preset classes!
+
+### Custom Class Smart Icon
+
+After selecting text, you'll see a smart pencil icon appear. Click it to access the Custom Class Popover where you can apply any Tailwind CSS class or choose from presets:
+
+![Custom Class Icon](./public/image_docs/custom-class.png)
+
+### Custom Class Popover
+
+The Custom Class Popover gives you complete control over text styling with preset Tailwind classes organized by category:
+
+![Custom Class Popover](./public/image_docs/custom-class-2-popver-opened-state.png)
+
+**Features:**
+- **Text Colors** - All Tailwind color shades (red, blue, green, etc.)
+- **Background Colors** - Full palette of background colors
+- **Font Sizes** - From xs to 9xl
+- **Search Functionality** - Quick class lookup (e.g., 'text', 'bg', 'flex')
+- **Custom Input** - Type any Tailwind class manually
+
+### Much Better Results!
+
+With custom classes, you can create stunning text effects and perfect typography:
+
+![Beautiful Results](./public/image_docs/much-better-result.png)
+
+```typescript
+// Custom classes with inline element types
+const styledText = {
+  type: 'p',
+  children: [
+    { 
+      content: 'Gradient heading',
+      elementType: 'h1',
+      className: 'bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent'
+    },
+    { content: ' and ' },
+    { 
+      content: 'custom code',
+      elementType: 'code',
+      className: 'bg-yellow-100 text-yellow-800 px-2 rounded'
+    }
+  ]
+};
+```
+
+> 💡 **Pro Tip:** You can apply **any Tailwind class** including gradients, shadows, borders, spacing, and more! The Custom Class Popover is your gateway to **unlimited styling possibilities**.
+
+---
+
+## 🎨 Color Customization
+
+The editor includes a powerful color picker with preset colors and custom color selection. Apply colors to any selected text:
+
+![Color Picker](./public/image_docs/color-picker.png)
+
+### Preset Colors
+
+<span style="color: #dc2626;">Red</span> <span style="color: #ea580c;">Orange</span> <span style="color: #f59e0b;">Amber</span> <span style="color: #eab308;">Yellow</span> <span style="color: #84cc16;">Lime</span> <span style="color: #22c55e;">Green</span> <span style="color: #10b981;">Emerald</span> <span style="color: #14b8a6;">Teal</span> <span style="color: #06b6d4;">Cyan</span> <span style="color: #0ea5e9;">Sky</span> <span style="color: #3b82f6;">Blue</span> <span style="color: #6366f1;">Indigo</span> <span style="color: #8b5cf6;">Violet</span> <span style="color: #a855f7;">Purple</span> <span style="color: #d946ef;">Fuchsia</span> <span style="color: #ec4899;">Pink</span> <span style="color: #f43f5e;">Rose</span>
+
+### Custom Colors
+
+You can also use custom hex colors or RGB values or even gradient effects by using the color picker!
+
+---
+
+## 📏 Font Size Control
+
+Adjust font sizes for any selected text. Choose from preset sizes or enter a custom value:
+
+![Font Size Controller](./public/image_docs/font-size-controller.png)
+
+---
+
+## 🎨 Background Colors
+
+Apply background colors to entire blocks using preset Tailwind colors or custom colors. Perfect for highlighting important sections!
+
+---
+
+## 🔗 Link Support
+
+Create beautiful, clickable links with the modern link popover. Select text and add a URL to make it interactive:
+
+![Link Popover](./public/image_docs/modern-link-popover.png)
+
+---
+
+## 🖼️ Image Support
+
+Upload and manage images with ease. The editor supports single images, grid layouts, and drag-and-drop reordering:
+
+### Single Image
+
+![HTML Export Preview](./public/image_docs/preview-export-code.png)
+
+### Image Grid Layout
+
+Create beautiful image galleries with automatic grid layout. Drag and drop images to reorder them:
+
+![Image Grid](./public/image_docs/image-grid.png)
+
+> 💡 **Image Features:** Drag to reorder • Click to upload • Add captions • Responsive grid layout • Support for multiple formats (jpg, png, gif, webp)
+
+---
+
+## 🪆 Nested Blocks
+
+Press **Shift+Enter** to create nested blocks. Maximum nesting level is 1. Great for grouping related content together!
+
+```typescript
+// Nested blocks structure
+{
+  type: 'container',
+  children: [
+    { type: 'p', content: 'First nested block' },
+    { type: 'p', content: 'Second nested block' },
+    { type: 'code', content: 'Code in nested block' }
+  ]
+}
+```
+
+---
+
+## 🎯 Drag & Drop
+
+Every block has a drag handle (⋮⋮). Click and drag to reorder blocks, swap images in grids, or reorganize your entire document.
+
+**Drag & Drop Features:**
+- Reorder any block
+- Swap images in grids
+- Move blocks in and out of containers
+- Visual feedback during drag
+- Auto-scroll support
+
+---
+
+## 📤 HTML Export
+
+Export your entire document to clean, semantic HTML with all Tailwind classes preserved. Perfect for blogs, documentation, and content management:
+
+![Export Code](./public/image_docs/preview-export-code.png)
+
+```typescript
+import { serializeToHtml } from '@/lib/utils/serialize-to-html';
+import { useEditor } from '@/lib';
+
+function MyComponent() {
+  const { state } = useEditor();
+  
+  // Export to HTML
+  const html = serializeToHtml(state.history[state.historyIndex]);
+  
+  // Returns formatted HTML like:
+  // <h1>Title</h1>
+  // <p>This is <strong>bold</strong> and <em>italic</em> text.</p>
+  // <div class="bg-blue-100 p-4">Custom styled block</div>
+  
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+}
+```
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+Master these keyboard shortcuts for a blazing-fast editing experience:
+
+- **Enter** - Create new block after current one
+- **Shift + Enter** - Create nested block or add to existing container
+- **Ctrl/Cmd + A** - Select all content for copying
+- **Backspace/Delete** - Delete current block (when empty)
+- **Ctrl/Cmd + B** - Toggle bold formatting on selected text
+- **Ctrl/Cmd + I** - Toggle italic formatting on selected text
+- **Ctrl/Cmd + U** - Toggle underline formatting on selected text
+- **Ctrl/Cmd + Z** - Undo last action
+- **Ctrl/Cmd + Shift + Z** - Redo last undone action
+
+---
+
+## 🎯 Complete Feature List
+
+- ✅ **Block-Based Architecture** - Each element is an independent, draggable block
+- ✅ **Rich Text Formatting** - Bold, italic, underline, and combinations
+- ✅ **Multiple Block Types** - h1-h6, paragraph, code, blockquote, lists (ol/ul)
+- ✅ **Inline Element Types** - Mix heading styles within paragraphs
+- ✅ **Color Support** - Preset Tailwind colors + custom hex/RGB colors
+- ✅ **Font Size Control** - Preset sizes + custom pixel values
+- ✅ **Background Colors** - Apply backgrounds to any block with presets or custom colors
+- ✅ **Link Support** - Beautiful link popover with URL management
+- ✅ **Image Upload** - Single images and grid layouts with drag-to-reorder
+- ✅ **Nested Blocks** - Create containers for organizing related content
+- ✅ **Drag & Drop** - Reorder blocks, swap images, reorganize everything
+- ✅ **Custom Tailwind Classes** - Unlimited styling possibilities with full Tailwind support
+- ✅ **HTML Export** - Clean, semantic HTML with preserved styling
+- ✅ **TypeScript-First** - Fully typed API with excellent IntelliSense
+- ✅ **Immutable State** - Built with reducers for predictable updates
+- ✅ **Undo/Redo** - Full history management for all actions
+- ✅ **Read-Only Mode** - Perfect for displaying published content
+- ✅ **Dark Mode** - Beautiful themes that work everywhere
+- ✅ **Keyboard Shortcuts** - Efficient editing with common shortcuts
+- ✅ **Context Menu** - Right-click for quick actions (duplicate, delete, move)
+
+---
+
+## 👨‍💻 About the Creator
+
+Built with ❤️ by **Mina Massoud** - Frontend Developer based in Cairo, Egypt 🇪🇬
+
+> "22 years old guy with a lot of passion to change people's lives! 😄"
+
+### Connect with Me
+
+- 🌐 **Portfolio:** [mina-massoud.com](https://mina-massoud.com/)
+- 💼 **LinkedIn:** [linkedin.com/in/mina-melad](https://linkedin.com/in/mina-melad/)
+- 💻 **GitHub:** [github.com/Mina-Massoud](https://github.com/Mina-Massoud)
+
+---
+
+## 📅 Discover Mina Scheduler
+
+If you love this Rich Editor, check out my other powerful library - a fully customizable calendar scheduler for React!
+
+- ⭐ **560+ Stars on GitHub** - Trusted by developers worldwide
+- 🎨 Built with Next UI & shadcn/ui
+- 📆 Day, Week, Month Views
+- 🎯 Drag & Drop Events
+- 💾 State Management with Reducers
+- ✨ TypeScript-First with Full Type Safety
+
+**Links:**
+- 🔗 **GitHub:** [github.com/Mina-Massoud/mina-scheduler](https://github.com/Mina-Massoud/mina-scheduler)
+- 🌐 **Live Demo:** [mina-scheduler.vercel.app](https://mina-scheduler.vercel.app/)
+
+```bash
+# Install Mina Scheduler
+npm install mina-scheduler
+
+# Use in your React app
+import { Scheduler } from 'mina-scheduler';
+
+function App() {
+  return <Scheduler events={events} />;
+}
+```
+
+> 💡 Both libraries share the same philosophy: **beautiful UI, clean code, TypeScript-first, and developer-friendly APIs**. If you enjoy this Rich Editor, you'll love Mina Scheduler!
+
+---
+
+## 🎨 Try It Out!
+
+👉 **Select any text** and use the toolbar above to format it with bold, italic, colors, fonts, and more
+
+👉 Press **Enter** to create new blocks at any time
+
+👉 Press **Shift+Enter** for nested blocks and hierarchical content
+
+👉 Use the **drag handles (⋮⋮)** to reorder blocks and reorganize your document
+
+👉 Toggle **View Only** mode in the top-right to see the read-only version
+
+👉 Switch to **Dark Mode** using the theme toggle for a different experience
+
+👉 Check the **debug panel below** to see JSON structure and export HTML
+
+> 🚀 **Pro Tip:** This is your living documentation! Feel free to edit, experiment, delete sections, add your own content, and explore all features. The editor is designed to be intuitive and powerful - discover features as you use it!
+
+---
+
+## 💖 Thank You!
+
+Thank you for trying **Mina Rich Editor**! This is the **first block-based rich text editor** built entirely with **Tailwind CSS** and **shadcn/ui**. If you find it useful, please star the repository on GitHub and share it with other developers!
+
+⭐ **Star on GitHub:** [github.com/Mina-Massoud/mina-rich-editor](https://github.com/Mina-Massoud/mina-rich-editor)
+
+---
+
+## 📄 License
+
+MIT License - feel free to use in your projects!
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ in Cairo, Egypt 🇪🇬 by <a href="https://mina-massoud.com/">Mina Massoud</a></sub>
+</div>
