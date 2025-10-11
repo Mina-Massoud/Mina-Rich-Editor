@@ -403,7 +403,7 @@ export default function Hero({
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
       
-      <div className="absolute inset-x-0 bottom-6 flex justify-center pointer-events-auto">
+      <div className="inset-x-0 bottom-6 flex justify-center pointer-events-auto">
         <div className="text-center text-xs text-white/50 font-light tracking-tight">
           <p className="mb-2">Under MIT License • Structure and idea developed by mina-massoud @2025</p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
