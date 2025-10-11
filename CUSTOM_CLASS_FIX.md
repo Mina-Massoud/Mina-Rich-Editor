@@ -77,3 +77,4 @@ To verify the fix:
 - ✅ Maintains backward compatibility with fallback logic
 - ✅ Properly handles container vs text node distinction
 
+

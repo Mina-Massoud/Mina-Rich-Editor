@@ -703,3 +703,4 @@ export function getAllClasses(): string[] {
   return tailwindClasses.flatMap((group) => group.classes);
 }
 
+
