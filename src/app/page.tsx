@@ -31,15 +31,7 @@ export default function Home() {
               <Zap className="w-4 h-4 mr-1" />
               Simple
             </Button>
-            <Button
-              variant={mode === "mvp" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setMode("mvp")}
-              className="flex-1"
-            >
-              <Wrench className="w-4 h-4 mr-1" />
-              MVP
-            </Button>
+           
           </div>
 
           <Separator />
