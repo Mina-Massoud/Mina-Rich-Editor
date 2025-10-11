@@ -77,6 +77,10 @@ ol[data-list-type="ol"] {
   padding-left: 1.5rem;
 }
 
+html { 
+  font-size: 15px;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
