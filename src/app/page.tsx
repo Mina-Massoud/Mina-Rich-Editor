@@ -5,6 +5,7 @@ import { EditorProvider } from "@/lib";
 import { SimpleEditor } from "@/components/SimpleEditor";
 import { createDemoContent } from "@/lib/demo-content";
 import { ContainerNode } from "@/lib/types";
+import { Editor } from "@/components/Editor";
 
 export default function Home() {
   const [readOnly, setReadOnly] = useState(false);
@@ -49,7 +50,7 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1">
       <EditorProvider initialContainer={initialContainer} debug={true}>
-        <SimpleEditor 
+        <Editor
           readOnly={readOnly} 
           onUploadImage={handleImageUpload}
         />

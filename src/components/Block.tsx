@@ -66,7 +66,6 @@ export function Block({
   onUploadImage,
   onBlockDragStart,
 }: BlockProps) {
-  console.log("node", node);
   const localRef = useRef<HTMLElement>(null);
   const isComposingRef = useRef(false); // Track IME composition
   const shouldPreserveSelectionRef = useRef(false);
@@ -188,8 +187,6 @@ export function Block({
   // Cast to TextNode for remaining cases
   const textNode = node as TextNode;
 
-  console.log("textNode", textNode);
-
   // BR elements render as empty space
   if (textNode.type === "br") {
     return (
@@ -221,8 +218,6 @@ export function Block({
   // Check if node has multiple lines
   const hasLines = Array.isArray(textNode.lines) && textNode.lines.length > 0;
 
-  console.log("hasChildren", hasChildren);
-  console.log("hasLines", hasLines);
   // Helper function to escape HTML entities
   const escapeHTML = useCallback((text: string): string => {
     const div = document.createElement("div");
@@ -510,7 +505,6 @@ export function Block({
     const element = localRef.current;
     const newHTML = buildHTML();
 
-    console.log("newHTML", newHTML);
     // Only update if content actually changed
     if (element.innerHTML !== newHTML) {
       const hadFocus = document.activeElement === element;
@@ -653,14 +647,6 @@ export function Block({
 
       // Handle Shift+Enter for list items - add line break within item
       if (e.key === "Enter" && e.shiftKey && isListItem) {
-        console.log(
-          "🔷 [Block.tsx] Shift+Enter in list item - adding line break",
-          {
-            nodeId: textNode.id,
-            nodeType: textNode.type,
-          }
-        );
-
         e.preventDefault();
         e.stopPropagation();
 
@@ -671,9 +657,6 @@ export function Block({
 
       // Handle Shift+Enter for non-list items - create nested block
       if (e.key === "Enter" && e.shiftKey && !isListItem && onCreateNested) {
-        console.log(
-          "🔷 [Block.tsx] Shift+Enter in non-list item - creating nested block"
-        );
         e.preventDefault();
         onCreateNested(textNode.id);
         return;
@@ -681,14 +664,6 @@ export function Block({
 
       // Handle regular Enter for list items - create new list item at same level
       if (e.key === "Enter" && !e.shiftKey && isListItem) {
-        console.log(
-          "🔷 [Block.tsx] Regular Enter in list item - creating new list item",
-          {
-            nodeId: textNode.id,
-            nodeType: textNode.type,
-          }
-        );
-
         e.preventDefault();
         e.stopPropagation();
 
@@ -696,8 +671,6 @@ export function Block({
         const parent = findParentById(currentContainer, textNode.id);
 
         if (parent) {
-          console.log("🔷 [Block.tsx] Found parent container:", parent.id);
-
           // Create a new list item with the same type
           const newListItem: TextNode = {
             id: `li-${Date.now()}`,
@@ -837,8 +810,6 @@ export function Block({
   const handleBlockDragEnd = useCallback((e: React.DragEvent) => {
     e.stopPropagation();
   }, []);
-
-  console.log("textNode.id", textNode.id);
 
   // Common props for all elements
   const commonProps = {
