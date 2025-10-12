@@ -226,20 +226,27 @@ export function editorReducer(
     case "SWAP_NODES": {
       const { nodeId1, nodeId2 } = action.payload;
       const currentContainer = state.history[state.historyIndex];
-      
+
       // Find indices of both nodes
-      const index1 = currentContainer.children.findIndex(n => n.id === nodeId1);
-      const index2 = currentContainer.children.findIndex(n => n.id === nodeId2);
-      
+      const index1 = currentContainer.children.findIndex(
+        (n) => n.id === nodeId1
+      );
+      const index2 = currentContainer.children.findIndex(
+        (n) => n.id === nodeId2
+      );
+
       // If either node not found, return current state
       if (index1 === -1 || index2 === -1) {
         return state;
       }
-      
+
       // Clone container and swap positions
       const newChildren = [...currentContainer.children];
-      [newChildren[index1], newChildren[index2]] = [newChildren[index2], newChildren[index1]];
-      
+      [newChildren[index1], newChildren[index2]] = [
+        newChildren[index2],
+        newChildren[index1],
+      ];
+
       const newContainer: ContainerNode = {
         ...currentContainer,
         children: newChildren,
@@ -1062,8 +1069,20 @@ export function createInitialState(
   container?: Partial<ContainerNode>
 ): EditorState {
   // If container is provided, use it; otherwise create with at least one empty block
-  const defaultChildren =
-    container?.children !== undefined ? container.children : [];
+  let defaultChildren = container?.children;
+  
+  // If no children provided or empty array, create a default empty paragraph
+  if (!defaultChildren || defaultChildren.length === 0) {
+    const timestamp = Date.now();
+    const defaultNode: TextNode = {
+      id: `p-${timestamp}`,
+      type: "p",
+      content: "",
+      attributes: {},
+    };
+    defaultChildren = [defaultNode];
+  }
+  
   const initialContainer: ContainerNode = {
     id: "root",
     type: "container",
@@ -1074,16 +1093,11 @@ export function createInitialState(
   // Clone the container first, then get the activeNodeId from the cloned version
   const clonedContainer = deepCloneContainer(initialContainer);
 
-  console.log("clonedContainer", clonedContainer);
-
   return {
     version: "1.0.0",
     history: [clonedContainer],
     historyIndex: 0,
-    activeNodeId:
-      clonedContainer.children.length > 0
-        ? clonedContainer.children[0].id
-        : null,
+    activeNodeId: clonedContainer.children[0].id,
     hasSelection: false,
     selectionKey: 0,
     currentSelection: null,

@@ -33,6 +33,12 @@ export type NodeType =
   | 'div'
   | 'hr'
   | 'br'
+  | 'table'
+  | 'thead'
+  | 'tbody'
+  | 'tr'
+  | 'th'
+  | 'td'
   | 'container'
   | 'text';
 
@@ -187,9 +193,20 @@ export interface ContainerNode extends BaseNode {
 }
 
 /**
+ * Structural node - similar to container but for specific structures like tables
+ * Can have children nodes for table elements (thead, tbody, tr)
+ */
+export interface StructuralNode extends BaseNode {
+  type: 'table' | 'thead' | 'tbody' | 'tr';
+  
+  /** Child nodes */
+  children: EditorNode[];
+}
+
+/**
  * Union type representing any node in the editor.
  */
-export type EditorNode = TextNode | ContainerNode;
+export type EditorNode = TextNode | ContainerNode | StructuralNode;
 
 /**
  * Information about the current text selection
@@ -282,6 +299,16 @@ export function isContainerNode(node: EditorNode): node is ContainerNode {
 }
 
 /**
+ * Type guard to check if a node is a StructuralNode (table, thead, tbody, tr).
+ * 
+ * @param node - The node to check
+ * @returns True if node is a StructuralNode
+ */
+export function isStructuralNode(node: EditorNode): node is StructuralNode {
+  return node.type === 'table' || node.type === 'thead' || node.type === 'tbody' || node.type === 'tr';
+}
+
+/**
  * Type guard to check if a node is a TextNode.
  * 
  * @param node - The node to check
@@ -295,7 +322,7 @@ export function isContainerNode(node: EditorNode): node is ContainerNode {
  * ```
  */
 export function isTextNode(node: EditorNode): node is TextNode {
-  return node.type !== 'container';
+  return node.type !== 'container' && !isStructuralNode(node);
 }
 
 /**

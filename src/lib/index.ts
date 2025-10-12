@@ -44,6 +44,7 @@ export type {
   BaseNode,
   TextNode,
   ContainerNode,
+  StructuralNode,
   EditorNode,
   EditorState,
   SelectionInfo,
@@ -51,7 +52,7 @@ export type {
   BlockLine,
 } from './types';
 
-export { isContainerNode, isTextNode, hasInlineChildren, getNodeTextContent } from './types';
+export { isContainerNode, isStructuralNode, isTextNode, hasInlineChildren, getNodeTextContent } from './types';
 
 // ============================================================================
 // Actions
@@ -124,6 +125,18 @@ export {
   serializeToHtmlFragment,
   serializeToHtmlWithClass,
 } from './utils/serialize-to-html';
+
+export {
+  parseMarkdownTable,
+  isMarkdownTable,
+} from './utils/markdown-table-parser';
+
+export {
+  setupDragAutoScroll,
+  useDragAutoScroll,
+} from './utils/drag-auto-scroll';
+
+export type { AutoScrollConfig } from './utils/drag-auto-scroll';
 
 // ============================================================================
 // Tailwind Classes Utilities

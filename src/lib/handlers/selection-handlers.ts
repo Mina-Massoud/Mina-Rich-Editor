@@ -81,16 +81,6 @@ export function createHandleSelectionChange(
             | TextNode
             | undefined;
 
-          console.log("🎯 [handleSelectionChange] Found node:", {
-            nodeId: actualNodeId,
-            nodeType: actualNode?.type,
-            isTextNode: actualNode ? isTextNode(actualNode) : false,
-            hasChildren:
-              actualNode && "children" in actualNode
-                ? actualNode.children?.length
-                : 0,
-          });
-
           if (actualNode && isTextNode(actualNode)) {
             const preSelectionRange = range.cloneRange();
             preSelectionRange.selectNodeContents(currentElement);
@@ -100,15 +90,32 @@ export function createHandleSelectionChange(
 
             // Get the selected text
             const selectedText = selection.toString();
-            
+
             // Trim trailing whitespace from the selection range
             // This fixes the issue where double-clicking selects an extra space
             const trimmedText = selectedText.trimEnd();
             const trimmedLength = selectedText.length - trimmedText.length;
-            
+
             // Adjust end position to exclude trailing whitespace
             if (trimmedLength > 0) {
               end = end - trimmedLength;
+
+              // Also adjust the actual browser selection to exclude trailing space
+              // This makes the visual selection match what we're tracking
+              try {
+                const newRange = document.createRange();
+                const endContainer = range.endContainer;
+                const endOffset = range.endOffset - trimmedLength;
+
+                newRange.setStart(range.startContainer, range.startOffset);
+                newRange.setEnd(endContainer, endOffset);
+
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+              } catch (e) {
+                // If adjusting the selection fails, just continue with the original
+                console.warn("Failed to adjust selection:", e);
+              }
             }
 
             // Detect active formats in the selected range

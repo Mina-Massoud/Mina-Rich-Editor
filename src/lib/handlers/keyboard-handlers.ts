@@ -19,6 +19,7 @@ export interface KeyboardHandlerParams {
   dispatch: React.Dispatch<any>;
   nodeRefs: React.MutableRefObject<Map<string, HTMLElement>>;
   lastEnterTime: React.MutableRefObject<number>;
+  onToggleImageSelection?: (nodeId: string) => void;
 }
 
 /**
@@ -113,6 +114,33 @@ export function createHandleContentChange(
 
       // Store the timer reference
       contentUpdateTimers.current.set(nodeId, timer);
+    }
+  };
+}
+
+/**
+ * Handle click events with modifier keys (Ctrl/Cmd + Click)
+ */
+export function createHandleClickWithModifier(params: KeyboardHandlerParams) {
+  return (e: React.MouseEvent, nodeId: string) => {
+    const { container, onToggleImageSelection } = params;
+    
+    // Check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    
+    if (isCtrlOrCmd && onToggleImageSelection) {
+      // Find the node to check if it's an image
+      const result = findNodeInTree(nodeId, container);
+      if (result && isTextNode(result.node)) {
+        const node = result.node as TextNode;
+        
+        // Only toggle selection for image nodes
+        if (node.type === 'img') {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleImageSelection(nodeId);
+        }
+      }
     }
   };
 }
@@ -426,6 +454,23 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
 
         // Don't delete if it's the only node in the container
         if (siblings.length === 1) {
+          // Just clear the content instead
+          if (hasInlineChildren(node)) {
+            dispatch(EditorActions.updateNode(node.id, { children: [] }));
+          } else if (node.content) {
+            dispatch(EditorActions.updateContent(node.id, ""));
+          }
+          return;
+        }
+
+        // Count non-image blocks
+        const nonImageBlocks = siblings.filter((n) => {
+          if (!isTextNode(n)) return true; // Container nodes are not images
+          return (n as TextNode).type !== "img";
+        });
+
+        // Don't delete if this is the last non-image block
+        if (nonImageBlocks.length === 1 && node.type !== "img") {
           // Just clear the content instead
           if (hasInlineChildren(node)) {
             dispatch(EditorActions.updateNode(node.id, { children: [] }));

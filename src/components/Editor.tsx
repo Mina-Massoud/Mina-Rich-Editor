@@ -27,14 +27,17 @@ import {
   useSelection,
   findNodeById,
 } from "../lib";
-import { Block } from "./Block";
 import { AddBlockButton } from "./AddBlockButton";
 import { CustomClassPopover } from "./CustomClassPopover";
 import { LinkPopover } from "./LinkPopover";
 import { EditorToolbar } from "./EditorToolbar";
+import { TableDialog } from "./TableDialog";
+import { TableBuilder } from "./TableBuilder";
 import { Card, CardContent } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Toolbar } from "./Toolbar";
+import { QuickModeToggle } from "./QuickModeToggle";
+import { useDragAutoScroll } from "../lib/utils/drag-auto-scroll";
+import { GroupImagesButton } from "./GroupImagesButton";
 
 // Import all handlers
 import {
@@ -48,6 +51,7 @@ import {
 import {
   createHandleKeyDown,
   createHandleContentChange,
+  createHandleClickWithModifier,
 } from "../lib/handlers/keyboard-handlers";
 
 import {
@@ -76,9 +80,27 @@ import {
   createHandleCreateList,
   createHandleCreateListFromCommand,
   createHandleCreateLink,
+  createHandleCreateTable,
   createHandleCopyHtml,
   createHandleCopyJson,
 } from "../lib/handlers/node-operation-handlers";
+
+import {
+  createHandleToggleImageSelection,
+  createHandleClearImageSelection,
+  createHandleGroupSelectedImages,
+  checkImagesInSameFlex,
+  createHandleReverseImagesInFlex,
+  createHandleExtractFromFlex,
+} from "../lib/handlers/image-selection-handlers";
+
+import {
+  createHandleFlexContainerDragOver,
+  createHandleFlexContainerDragLeave,
+  createHandleFlexContainerDrop,
+} from "../lib/handlers/flex-container-handlers";
+
+import { Block } from "./Block";
 
 /**
  * Editor Component Props
@@ -102,6 +124,15 @@ export function Editor({
   const multipleFileInputRef = useRef<HTMLInputElement>(null);
   const editorContentRef = useRef<HTMLDivElement>(null);
   const [readOnly, setReadOnly] = useState(initialReadOnly);
+
+  // Enable auto-scroll when dragging near viewport edges
+  useDragAutoScroll(editorContentRef, {
+    scrollZone: 100,
+    scrollSpeed: 15,
+    enableVertical: true,
+    enableHorizontal: false,
+  });
+
   const [isUploading, setIsUploading] = useState(false);
   const [copiedHtml, setCopiedHtml] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
@@ -112,6 +143,10 @@ export function Editor({
   >(null);
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>("");
+  const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
+  const [dragOverFlexId, setDragOverFlexId] = useState<string | null>(null);
+  const [flexDropPosition, setFlexDropPosition] = useState<"left" | "right" | null>(null);
+  const [tableDialogOpen, setTableDialogOpen] = useState(false);
 
   // Get the current container from history
   const container = state.history[state.historyIndex];
@@ -134,12 +169,7 @@ export function Editor({
     nodeRefs,
   };
 
-  const keyboardParams = {
-    container,
-    dispatch,
-    nodeRefs,
-    lastEnterTime,
-  };
+  // keyboardParams will be created dynamically with the handlers
 
   const nodeOperationParams = {
     container,
@@ -199,17 +229,40 @@ export function Editor({
     [currentNode, dispatch, selectionManager, handleSelectionChange]
   );
 
-  const handleContentChange = useCallback(
-    createHandleContentChange(keyboardParams, contentUpdateTimers),
-    [container, dispatch]
+  const handleToggleImageSelection = useCallback(
+    createHandleToggleImageSelection(selectedImageIds, setSelectedImageIds),
+    [selectedImageIds]
   );
 
-  const handleKeyDown = useCallback(createHandleKeyDown(keyboardParams), [
-    container,
-    dispatch,
-    nodeRefs,
-    lastEnterTime,
-  ]);
+  const handleContentChange = useCallback(
+    createHandleContentChange(
+      { container, dispatch, nodeRefs, lastEnterTime, onToggleImageSelection: handleToggleImageSelection },
+      contentUpdateTimers
+    ),
+    [container, dispatch, handleToggleImageSelection]
+  );
+
+  const handleKeyDown = useCallback(
+    createHandleKeyDown({
+      container,
+      dispatch,
+      nodeRefs,
+      lastEnterTime,
+      onToggleImageSelection: handleToggleImageSelection,
+    }),
+    [container, dispatch, nodeRefs, lastEnterTime, handleToggleImageSelection]
+  );
+
+  const handleClickWithModifier = useCallback(
+    createHandleClickWithModifier({
+      container,
+      dispatch,
+      nodeRefs,
+      lastEnterTime,
+      onToggleImageSelection: handleToggleImageSelection,
+    }),
+    [container, handleToggleImageSelection]
+  );
 
   const handleNodeClick = useCallback(
     createHandleNodeClick({ container, dispatch }),
@@ -253,6 +306,62 @@ export function Editor({
 
   const handleCreateLink = useCallback(
     createHandleCreateLink(nodeOperationParams),
+    [container, dispatch, toast, editorContentRef]
+  );
+
+  const handleCreateTable = useCallback(
+    createHandleCreateTable(nodeOperationParams),
+    [container, dispatch, toast, editorContentRef]
+  );
+
+  const handleImportMarkdownTable = useCallback(
+    (table: any) => {
+      const timestamp = Date.now();
+      
+      // Wrap table in a container for consistent handling
+      const tableWrapper: ContainerNode = {
+        id: `table-wrapper-${timestamp}`,
+        type: "container",
+        children: [table],
+        attributes: {},
+      };
+
+      // Insert the table at the end
+      const lastNode = container.children[container.children.length - 1];
+      if (lastNode) {
+        dispatch(EditorActions.insertNode(tableWrapper, lastNode.id, "after"));
+      } else {
+        // If no nodes exist, replace the container
+        dispatch(
+          EditorActions.replaceContainer({
+            ...container,
+            children: [tableWrapper],
+          })
+        );
+      }
+
+      toast({
+        title: "Table Imported",
+        description: "Markdown table has been imported successfully",
+      });
+
+      // Smooth scroll to the newly created table
+      setTimeout(() => {
+        const editorContent = editorContentRef.current;
+        if (editorContent) {
+          const lastChild = editorContent.querySelector(
+            "[data-editor-content]"
+          )?.lastElementChild;
+          if (lastChild) {
+            lastChild.scrollIntoView({
+              behavior: "smooth",
+              block: "end",
+              inline: "nearest",
+            });
+          }
+        }
+      }, 150);
+    },
     [container, dispatch, toast, editorContentRef]
   );
 
@@ -319,6 +428,76 @@ export function Editor({
   const handleMultipleImagesUploadClick = useCallback(
     createHandleMultipleImagesUploadClick(multipleFileInputRef),
     []
+  );
+
+  const handleClearImageSelection = useCallback(
+    createHandleClearImageSelection(setSelectedImageIds),
+    []
+  );
+
+  const handleGroupSelectedImages = useCallback(
+    createHandleGroupSelectedImages(
+      { container, dispatch, toast },
+      selectedImageIds,
+      handleClearImageSelection
+    ),
+    [container, dispatch, toast, selectedImageIds, handleClearImageSelection]
+  );
+
+  // Check if selected images are in same flex container
+  const flexInfo = React.useMemo(() => {
+    if (selectedImageIds.size < 2) {
+      return { inSameFlex: false, flexParentId: null };
+    }
+    return checkImagesInSameFlex({ container, dispatch, toast }, selectedImageIds);
+  }, [container, selectedImageIds, dispatch, toast]);
+
+  const handleReverseImagesInFlex = useCallback(
+    createHandleReverseImagesInFlex(
+      { container, dispatch, toast },
+      selectedImageIds,
+      flexInfo.flexParentId || ''
+    ),
+    [container, dispatch, toast, selectedImageIds, flexInfo.flexParentId]
+  );
+
+  const handleExtractFromFlex = useCallback(
+    createHandleExtractFromFlex(
+      { container, dispatch, toast },
+      selectedImageIds,
+      flexInfo.flexParentId || '',
+      handleClearImageSelection
+    ),
+    [container, dispatch, toast, selectedImageIds, flexInfo.flexParentId, handleClearImageSelection]
+  );
+
+  const handleFlexContainerDragOver = useCallback(
+    createHandleFlexContainerDragOver({
+      container,
+      dispatch,
+      toast,
+      draggingNodeId,
+      setDragOverFlexId,
+      setFlexDropPosition,
+    }),
+    [container, dispatch, toast, draggingNodeId]
+  );
+
+  const handleFlexContainerDragLeave = useCallback(
+    createHandleFlexContainerDragLeave(setDragOverFlexId, setFlexDropPosition),
+    []
+  );
+
+  const handleFlexContainerDrop = useCallback(
+    createHandleFlexContainerDrop({
+      container,
+      dispatch,
+      toast,
+      draggingNodeId,
+      setDragOverFlexId,
+      setFlexDropPosition,
+    }),
+    [container, dispatch, toast, draggingNodeId]
   );
 
   // Selection change listener
@@ -454,26 +633,11 @@ export function Editor({
     };
   }, [state.historyIndex, state.history.length, dispatch, toast, handleFormat]);
 
-  // Initialize with an empty paragraph block if needed
-  useEffect(() => {
-    if (container.children.length === 0) {
-      const newNode: TextNode = {
-        id: "p-" + Date.now(),
-        type: "p",
-        content: "",
-        attributes: {},
-      };
-
-      dispatch(EditorActions.insertNode(newNode, container.id, "append"));
-      dispatch(EditorActions.setActiveNode(newNode.id));
-    }
-  }, []); // Empty dependency array - only run once on mount
-
   return (
     <div className="bg-background transition-colors flex flex-col flex-1 duration-300">
       {/* Editor with integrated toolbar */}
       <div className="mx-auto flex flex-col flex-1 w-full">
-        <Toolbar readOnly={readOnly} onReadOnlyChange={setReadOnly} />
+        <QuickModeToggle readOnly={readOnly} onReadOnlyChange={setReadOnly} />
         <Card className="shadow-2xl flex flex-col flex-1 pt-0 rounded-none border-2 gap-3 transition-all duration-300">
           {/* Toolbar - hidden in readOnly mode */}
           {!readOnly && (
@@ -494,11 +658,20 @@ export function Editor({
               onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
               onCreateList={handleCreateList}
               onCreateLink={handleCreateLink}
+              onCreateTable={() => setTableDialogOpen(true)}
               onCopyHtml={handleCopyHtml}
               onCopyJson={handleCopyJson}
               onEnhanceSpacesChange={setEnhanceSpaces}
             />
           )}
+
+          {/* Table Dialog */}
+          <TableDialog
+            open={tableDialogOpen}
+            onOpenChange={setTableDialogOpen}
+            onCreateTable={handleCreateTable}
+            onImportMarkdown={handleImportMarkdownTable}
+          />
 
           {/* Hidden file inputs for image uploads */}
           {!readOnly && (
@@ -657,6 +830,14 @@ export function Editor({
                           onInsertImage={handleInsertImageFromCommand}
                           onCreateList={handleCreateListFromCommand}
                           onUploadImage={onUploadImage}
+                          selectedImageIds={selectedImageIds}
+                          onToggleImageSelection={handleToggleImageSelection}
+                          onClickWithModifier={handleClickWithModifier}
+                          onFlexContainerDragOver={handleFlexContainerDragOver}
+                          onFlexContainerDragLeave={handleFlexContainerDragLeave}
+                          onFlexContainerDrop={handleFlexContainerDrop}
+                          dragOverFlexId={dragOverFlexId}
+                          flexDropPosition={flexDropPosition}
                         />
                       </div>
 
@@ -677,10 +858,26 @@ export function Editor({
       </div>
 
       {/* Custom Class Popover - Floats on text selection */}
-      {!readOnly && <CustomClassPopover />}
+      <div className={`${readOnly ? "opacity-0" : ""}`}>
+        <CustomClassPopover />
+      </div>
 
       {/* Link Popover - Floats on text selection */}
-      {!readOnly && <LinkPopover />}
+      <div className={`${readOnly ? "opacity-0" : ""}`}>
+        <LinkPopover />
+      </div>
+
+      {/* Group Images Button - Floats when multiple images selected */}
+      {!readOnly && (
+        <GroupImagesButton
+          selectedCount={selectedImageIds.size}
+          inSameFlex={flexInfo.inSameFlex}
+          onGroup={handleGroupSelectedImages}
+          onReverse={flexInfo.inSameFlex ? handleReverseImagesInFlex : undefined}
+          onExtract={flexInfo.inSameFlex ? handleExtractFromFlex : undefined}
+          onClear={handleClearImageSelection}
+        />
+      )}
     </div>
   );
 }

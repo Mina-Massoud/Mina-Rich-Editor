@@ -80,10 +80,10 @@ export function FontSizePicker({
         size="icon"
         onClick={handleDecrement}
         disabled={disabled || fontSize <= 8}
-        className="h-8 w-7 rounded-r-none hover:bg-muted"
+        className="h-7 w-6 md:h-8 md:w-7 rounded-r-none hover:bg-muted"
         title="Decrease font size"
       >
-        <Minus className="size-3.5" />
+        <Minus className="size-3 md:size-3.5" />
       </Button>
 
       <Input
@@ -95,7 +95,7 @@ export function FontSizePicker({
         disabled={disabled}
         min={8}
         max={128}
-        className="h-8 w-14 text-center border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="h-7 w-10 md:h-8 md:w-14 text-center text-xs md:text-sm border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0.5 md:px-1 rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         title="Font size in pixels"
       />
 
@@ -104,10 +104,10 @@ export function FontSizePicker({
         size="icon"
         onClick={handleIncrement}
         disabled={disabled || fontSize >= 128}
-        className="h-8 w-7 rounded-l-none hover:bg-muted"
+        className="h-7 w-6 md:h-8 md:w-7 rounded-l-none hover:bg-muted"
         title="Increase font size"
       >
-        <Plus className="size-3.5" />
+        <Plus className="size-3 md:size-3.5" />
       </Button>
     </div>
   );

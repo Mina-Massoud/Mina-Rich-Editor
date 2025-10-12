@@ -6,7 +6,7 @@
  * Supports recursive rendering of nested containers
  */
 
-import { ContainerNode, TextNode, EditorNode, isTextNode, isContainerNode, hasInlineChildren } from '../types';
+import { ContainerNode, StructuralNode, TextNode, EditorNode, isTextNode, isContainerNode, isStructuralNode, hasInlineChildren } from '../types';
 
 /**
  * Get Tailwind CSS classes for block-level element types
@@ -174,7 +174,7 @@ function serializeTextNode(node: TextNode, indent: string = ''): string {
     const caption = node.content || '';
     
     let html = `${indent}<figure class="mb-4">\n`;
-    html += `${indent}  <img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="w-full h-auto rounded-lg object-cover max-h-[600px]" />\n`;
+    html += `${indent}  <img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="h-auto rounded-lg object-cover max-h-[600px]" style="width: auto; margin: auto;" />\n`;
     
     if (caption) {
       html += `${indent}  <figcaption class="text-sm text-muted-foreground text-center mt-3 italic">${escapeHtml(caption)}</figcaption>\n`;
@@ -186,6 +186,33 @@ function serializeTextNode(node: TextNode, indent: string = ''): string {
   
   // Get block-level classes
   const blockClasses = getBlockTypeClasses(type);
+  
+  // Get custom className from attributes
+  const customClassName = attributes?.className as string || '';
+  
+  // Check if className is a hex color (starts with #)
+  const isHexColor = typeof customClassName === 'string' && customClassName.startsWith('#');
+  const textColor = isHexColor ? customClassName : '';
+  const className = isHexColor ? '' : customClassName;
+  
+  // Combine all classes
+  const allClasses = [blockClasses, className]
+    .filter(Boolean)
+    .join(' ');
+  
+  // Get backgroundColor from attributes
+  const backgroundColor = attributes?.backgroundColor as string | undefined;
+  
+  // Build inline styles
+  const styles: string[] = [];
+  if (backgroundColor) {
+    styles.push(`background-color: ${backgroundColor}`);
+  }
+  if (textColor) {
+    styles.push(`color: ${textColor}`);
+  }
+  
+  const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')};"` : '';
   
   // Get content (with inline formatting if present)
   const content = serializeInlineChildren(node);
@@ -199,18 +226,93 @@ function serializeTextNode(node: TextNode, indent: string = ''): string {
   }
   
   // Build the HTML element
-  const classAttr = blockClasses ? ` class="${blockClasses}"` : '';
+  const classAttr = allClasses ? ` class="${allClasses}"` : '';
   
   // Use appropriate HTML tag
   const tag = type === 'code' ? 'code' : type;
   
-  return `${indent}<${tag}${classAttr}>${content}</${tag}>\n`;
+  return `${indent}<${tag}${classAttr}${styleAttr}>${content}</${tag}>\n`;
+}
+
+/**
+ * Serialize a table node to HTML
+ */
+function serializeTableNode(node: StructuralNode | ContainerNode, indent: string = ''): string {
+  // This function handles table, thead, tbody, tr, th, td nodes
+  const tag = node.type;
+  
+  if (tag === 'table') {
+    let html = `${indent}<table class="border-collapse border border-border w-full">\n`;
+    
+    // Serialize children (thead, tbody)
+    for (const child of node.children) {
+      if (isStructuralNode(child)) {
+        html += serializeTableNode(child, indent + '  ');
+      }
+    }
+    
+    html += `${indent}</table>\n`;
+    return html;
+  } else if (tag === 'thead') {
+    let html = `${indent}<thead>\n`;
+    
+    // Serialize children (tr)
+    for (const child of node.children) {
+      if (isStructuralNode(child)) {
+        html += serializeTableNode(child, indent + '  ');
+      }
+    }
+    
+    html += `${indent}</thead>\n`;
+    return html;
+  } else if (tag === 'tbody') {
+    let html = `${indent}<tbody>\n`;
+    
+    // Serialize children (tr)
+    for (const child of node.children) {
+      if (isStructuralNode(child)) {
+        html += serializeTableNode(child, indent + '  ');
+      }
+    }
+    
+    html += `${indent}</tbody>\n`;
+    return html;
+  } else if (tag === 'tr') {
+    let html = `${indent}<tr>\n`;
+    
+    // Serialize children (th, td)
+    for (const child of node.children) {
+      if (isTextNode(child)) {
+        const cellNode = child as TextNode;
+        const cellTag = cellNode.type; // 'th' or 'td'
+        const content = escapeHtml(cellNode.content || '');
+        const cellClass = cellTag === 'th' 
+          ? 'border border-border bg-muted/50 p-2 font-semibold text-left min-w-[100px]'
+          : 'border border-border p-2';
+        html += `${indent}  <${cellTag} class="${cellClass}">${content}</${cellTag}>\n`;
+      }
+    }
+    
+    html += `${indent}</tr>\n`;
+    return html;
+  }
+  
+  return '';
 }
 
 /**
  * Serialize a container node to HTML (recursive)
  */
 function serializeContainerNode(node: ContainerNode, indent: string = ''): string {
+  // Check if this is a table wrapper container
+  const firstChild = node.children[0];
+  const isTableWrapper = firstChild?.type === 'table';
+  
+  if (isTableWrapper && isStructuralNode(firstChild)) {
+    // Serialize the table directly
+    return serializeTableNode(firstChild, indent);
+  }
+
   // Check if this is a flex container for images
   const layoutType = node.attributes?.layoutType as string | undefined;
   const isFlexContainer = layoutType === 'flex';
@@ -218,23 +320,41 @@ function serializeContainerNode(node: ContainerNode, indent: string = ''): strin
   const flexWrap = node.attributes?.flexWrap as string | undefined;
   
   // Determine container type and classes
-  const firstChild = node.children[0];
   const listTypeFromAttribute = node.attributes?.listType as string | undefined;
   const listType = listTypeFromAttribute || 
     (isTextNode(firstChild) && (firstChild as TextNode).type === 'li' ? 'ol' : undefined);
   const isListContainer = !!listType;
   
+  // Get custom className from attributes
+  const customClassName = node.attributes?.className as string || '';
+  
   // Build container classes matching the preview
-  const containerClasses = isFlexContainer
+  let containerClasses = isFlexContainer
     ? `flex flex-row gap-${gap || '4'} items-start ${flexWrap === 'wrap' ? 'flex-wrap items-center' : ''}`
     : isListContainer
     ? `list-none pl-0 ml-6`
     : `nested-container border-l-2 border-border/50 pl-4 ml-2`;
   
+  // Add custom classes
+  if (customClassName) {
+    containerClasses = `${containerClasses} ${customClassName}`.trim();
+  }
+  
+  // Get backgroundColor from attributes
+  const backgroundColor = node.attributes?.backgroundColor as string | undefined;
+  
+  // Build inline styles
+  const styles: string[] = [];
+  if (backgroundColor) {
+    styles.push(`background-color: ${backgroundColor}`);
+  }
+  
+  const styleAttr = styles.length > 0 ? ` style="${styles.join('; ')};"` : '';
+  
   // Use ul/ol for list containers, div for regular/flex containers
   const containerTag = listType === 'ul' ? 'ul' : listType === 'ol' ? 'ol' : 'div';
   
-  let html = `${indent}<${containerTag} class="${containerClasses}">\n`;
+  let html = `${indent}<${containerTag} class="${containerClasses}"${styleAttr}>\n`;
   
   // Recursively serialize children
   let i = 0;

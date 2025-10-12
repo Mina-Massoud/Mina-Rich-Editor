@@ -1,21 +1,21 @@
 /**
  * Mina Rich Editor - Tree Operations Utilities
- * 
+ *
  * Recursive utilities for traversing, searching, and manipulating
  * the document tree structure immutably.
- * 
+ *
  * @packageDocumentation
  */
 
-import { EditorNode, ContainerNode, isContainerNode } from '../types';
+import { EditorNode, ContainerNode, StructuralNode, isContainerNode, isStructuralNode } from "../types";
 
 /**
  * Recursively finds a node by its ID in the tree.
- * 
+ *
  * @param node - The root node to start searching from
  * @param targetId - The ID of the node to find
  * @returns The found node or undefined if not found
- * 
+ *
  * @example
  * ```typescript
  * const found = findNodeById(rootContainer, 'paragraph-123');
@@ -33,8 +33,8 @@ export function findNodeById(
     return node;
   }
 
-  // Recursive case: search children if it's a container
-  if (isContainerNode(node)) {
+  // Recursive case: search children if it's a container or structural node
+  if (isContainerNode(node) || isStructuralNode(node)) {
     for (const child of node.children) {
       const found = findNodeById(child, targetId);
       if (found) {
@@ -49,11 +49,11 @@ export function findNodeById(
 /**
  * Finds the parent container of a node with the given ID.
  * Useful for operations that need to modify the parent.
- * 
+ *
  * @param node - The root node to start searching from
  * @param targetId - The ID of the child node
  * @returns The parent ContainerNode or undefined if not found
- * 
+ *
  * @example
  * ```typescript
  * const parent = findParentById(rootContainer, 'child-node-id');
@@ -65,8 +65,8 @@ export function findNodeById(
 export function findParentById(
   node: EditorNode,
   targetId: string
-): ContainerNode | undefined {
-  if (!isContainerNode(node)) {
+): ContainerNode | StructuralNode | undefined {
+  if (!isContainerNode(node) && !isStructuralNode(node)) {
     return undefined;
   }
 
@@ -79,7 +79,7 @@ export function findParentById(
 
   // Recursively search in children
   for (const child of node.children) {
-    if (isContainerNode(child)) {
+    if (isContainerNode(child) || isStructuralNode(child)) {
       const found = findParentById(child, targetId);
       if (found) {
         return found;
@@ -93,12 +93,12 @@ export function findParentById(
 /**
  * Updates a node immutably by ID with a partial update.
  * Returns a new tree with the updated node.
- * 
+ *
  * @param node - The root node
  * @param targetId - The ID of the node to update
  * @param updater - Function that receives the old node and returns updates
  * @returns A new tree with the node updated, or the original if not found
- * 
+ *
  * @example
  * ```typescript
  * const newTree = updateNodeById(root, 'p-1', (node) => ({
@@ -118,8 +118,8 @@ export function updateNodeById(
     return { ...node, ...updates } as EditorNode;
   }
 
-  // Recursive case: update children if it's a container
-  if (isContainerNode(node)) {
+  // Recursive case: update children if it's a container or structural node
+  if (isContainerNode(node) || isStructuralNode(node)) {
     const newChildren = node.children.map((child) =>
       updateNodeById(child, targetId, updater)
     );
@@ -144,11 +144,11 @@ export function updateNodeById(
 /**
  * Deletes a node by ID immutably.
  * Returns a new tree without the specified node.
- * 
+ *
  * @param node - The root node
  * @param targetId - The ID of the node to delete
  * @returns A new tree without the deleted node
- * 
+ *
  * @example
  * ```typescript
  * const newTree = deleteNodeById(root, 'paragraph-to-remove');
@@ -163,8 +163,8 @@ export function deleteNodeById(
     return null;
   }
 
-  // If it's a container, filter out the target from children
-  if (isContainerNode(node)) {
+  // If it's a container or structural node, filter out the target from children
+  if (isContainerNode(node) || isStructuralNode(node)) {
     const newChildren = node.children
       .map((child) => deleteNodeById(child, targetId))
       .filter((child): child is EditorNode => child !== null);
@@ -184,22 +184,22 @@ export function deleteNodeById(
 /**
  * Position for inserting a node relative to another node.
  */
-export type InsertPosition = 'before' | 'after' | 'prepend' | 'append';
+export type InsertPosition = "before" | "after" | "prepend" | "append";
 
 /**
  * Inserts a new node relative to a target node.
- * 
+ *
  * @param root - The root node
  * @param targetId - The ID of the reference node
  * @param newNode - The node to insert
  * @param position - Where to insert relative to target ('before', 'after', 'prepend', 'append')
  * @returns A new tree with the node inserted
- * 
+ *
  * @example
  * ```typescript
  * // Insert after a specific paragraph
  * const newTree = insertNode(root, 'p-1', newParagraph, 'after');
- * 
+ *
  * // Prepend to a container
  * const newTree = insertNode(root, 'container-1', newHeading, 'prepend');
  * ```
@@ -210,21 +210,17 @@ export function insertNode(
   newNode: EditorNode,
   position: InsertPosition
 ): EditorNode {
-  console.log("root", root);
-  console.log("targetId", targetId);
-  console.log("newNode", newNode);
-  console.log("position", position);
   // For 'prepend' and 'append', insert inside the target container
-  if (position === 'prepend' || position === 'append') {
+  if (position === "prepend" || position === "append") {
     return updateNodeById(root, targetId, (node) => {
-      if (!isContainerNode(node)) {
-        console.warn(`Cannot ${position} to non-container node ${targetId}`);
+      if (!isContainerNode(node) && !isStructuralNode(node)) {
+        console.warn(`Cannot ${position} to non-container/structural node ${targetId}`);
         return {};
       }
 
       return {
         children:
-          position === 'prepend'
+          position === "prepend"
             ? [newNode, ...node.children]
             : [...node.children, newNode],
       };
@@ -244,9 +240,9 @@ function insertNodeRecursive(
   node: EditorNode,
   targetId: string,
   newNode: EditorNode,
-  position: 'before' | 'after'
+  position: "before" | "after"
 ): EditorNode {
-  if (!isContainerNode(node)) {
+  if (!isContainerNode(node) && !isStructuralNode(node)) {
     return node;
   }
 
@@ -256,7 +252,7 @@ function insertNodeRecursive(
   if (targetIndex !== -1) {
     // Found the target, insert the new node
     const newChildren = [...node.children];
-    const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+    const insertIndex = position === "before" ? targetIndex : targetIndex + 1;
     newChildren.splice(insertIndex, 0, newNode);
 
     return {
@@ -287,13 +283,13 @@ function insertNodeRecursive(
 
 /**
  * Moves a node to a new position in the tree.
- * 
+ *
  * @param root - The root node
  * @param nodeId - The ID of the node to move
  * @param targetId - The ID of the reference node
  * @param position - Where to move relative to target
  * @returns A new tree with the node moved
- * 
+ *
  * @example
  * ```typescript
  * // Move paragraph-2 before paragraph-1
@@ -308,7 +304,7 @@ export function moveNode(
 ): EditorNode {
   // Cannot move a node to itself
   if (nodeId === targetId) {
-    console.warn('Cannot move a node to itself');
+    console.warn("Cannot move a node to itself");
     return root;
   }
 
@@ -339,11 +335,11 @@ export function moveNode(
 /**
  * Deep clones a node (and all its children if it's a container).
  * Useful for duplicating content.
- * 
+ *
  * @param node - The node to clone
  * @param newId - Optional new ID for the cloned node
  * @returns A deep clone of the node
- * 
+ *
  * @example
  * ```typescript
  * const clone = cloneNode(originalNode, 'new-unique-id');
@@ -355,7 +351,7 @@ export function cloneNode(node: EditorNode, newId?: string): EditorNode {
     id: newId || `${node.id}-clone-${Date.now()}`,
   };
 
-  if (isContainerNode(cloned) && isContainerNode(node)) {
+  if ((isContainerNode(cloned) || isStructuralNode(cloned)) && (isContainerNode(node) || isStructuralNode(node))) {
     cloned.children = node.children.map((child) => cloneNode(child));
   }
 
@@ -365,18 +361,18 @@ export function cloneNode(node: EditorNode, newId?: string): EditorNode {
 /**
  * Traverses the tree and calls a callback for each node.
  * Useful for analytics, validation, or batch operations.
- * 
+ *
  * @param node - The root node to traverse
  * @param callback - Function called for each node
  * @param depth - Current depth (starts at 0)
- * 
+ *
  * @example
  * ```typescript
  * // Count all nodes
  * let count = 0;
  * traverseTree(root, () => count++);
  *
- * 
+ *
  * // Find all images
  * const images: TextNode[] = [];
  * traverseTree(root, (node) => {
@@ -391,7 +387,7 @@ export function traverseTree(
 ): void {
   callback(node, depth);
 
-  if (isContainerNode(node)) {
+  if (isContainerNode(node) || isStructuralNode(node)) {
     for (const child of node.children) {
       traverseTree(child, callback, depth + 1);
     }
@@ -401,10 +397,10 @@ export function traverseTree(
 /**
  * Validates the tree structure.
  * Checks for duplicate IDs, orphaned nodes, etc.
- * 
+ *
  * @param node - The root node to validate
  * @returns Validation result with errors if any
- * 
+ *
  * @example
  * ```typescript
  * const result = validateTree(root);
@@ -428,13 +424,13 @@ export function validateTree(node: EditorNode): {
     seenIds.add(currentNode.id);
 
     // Check for empty IDs
-    if (!currentNode.id || currentNode.id.trim() === '') {
-      errors.push('Node found with empty or missing ID');
+    if (!currentNode.id || currentNode.id.trim() === "") {
+      errors.push("Node found with empty or missing ID");
     }
 
-    // Check for invalid container children
-    if (isContainerNode(currentNode) && !Array.isArray(currentNode.children)) {
-      errors.push(`Container ${currentNode.id} has invalid children property`);
+    // Check for invalid container/structural node children
+    if ((isContainerNode(currentNode) || isStructuralNode(currentNode)) && !Array.isArray(currentNode.children)) {
+      errors.push(`Container/Structural node ${currentNode.id} has invalid children property`);
     }
   });
 
@@ -443,4 +439,3 @@ export function validateTree(node: EditorNode): {
     errors,
   };
 }
-

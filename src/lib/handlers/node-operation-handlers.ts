@@ -1,12 +1,19 @@
 /**
  * Node Operation Handler Functions
- * 
+ *
  * Functions for handling node operations (add, delete, create nested, etc.)
  */
 
-import { EditorActions } from '../reducer/actions';
-import { ContainerNode, TextNode, EditorNode, isContainerNode, isTextNode } from '../types';
-import { findNodeInTree } from '../utils/editor-helpers';
+import { EditorActions } from "../reducer/actions";
+import {
+  ContainerNode,
+  StructuralNode,
+  TextNode,
+  EditorNode,
+  isContainerNode,
+  isTextNode,
+} from "../types";
+import { findNodeInTree } from "../utils/editor-helpers";
 
 export interface NodeOperationHandlerParams {
   container: ContainerNode;
@@ -19,7 +26,9 @@ export interface NodeOperationHandlerParams {
 /**
  * Handle node click
  */
-export function createHandleNodeClick(params: Pick<NodeOperationHandlerParams, 'container' | 'dispatch'>) {
+export function createHandleNodeClick(
+  params: Pick<NodeOperationHandlerParams, "container" | "dispatch">
+) {
   return (nodeId: string) => {
     const { container, dispatch } = params;
     // Don't set container nodes as active - they're not focusable
@@ -37,14 +46,11 @@ export function createHandleNodeClick(params: Pick<NodeOperationHandlerParams, '
 /**
  * Handle delete node
  */
-export function createHandleDeleteNode(params: Pick<NodeOperationHandlerParams, 'container' | 'dispatch' | 'toast'>) {
+export function createHandleDeleteNode(
+  params: Pick<NodeOperationHandlerParams, "container" | "dispatch" | "toast">
+) {
   return (nodeId: string) => {
     const { container, dispatch, toast } = params;
-    console.log("🗑️ Attempting to delete node:", nodeId);
-    console.log(
-      "📦 Current container children:",
-      container.children.map((c) => ({ id: c.id, type: c.type }))
-    );
 
     // Check if the node is inside a flex container
     const parentContainer = container.children.find(
@@ -54,18 +60,13 @@ export function createHandleDeleteNode(params: Pick<NodeOperationHandlerParams, 
     );
 
     if (parentContainer) {
-      console.log("📦 Node is inside container:", parentContainer.id);
       const containerNode = parentContainer as ContainerNode;
       const remainingChildren = containerNode.children.filter(
         (c) => c.id !== nodeId
       );
 
-      console.log("👶 Remaining children:", remainingChildren.length);
-
       // If only one child left, unwrap it from the container
       if (remainingChildren.length === 1) {
-        console.log("🎁 Unwrapping single child from container");
-
         // Batch: delete container and insert remaining child (single history entry)
         const containerIndex = container.children.findIndex(
           (c) => c.id === parentContainer.id
@@ -90,16 +91,13 @@ export function createHandleDeleteNode(params: Pick<NodeOperationHandlerParams, 
 
         dispatch(EditorActions.batch(actions));
       } else if (remainingChildren.length === 0) {
-        console.log("🧹 No children left, deleting container");
         // No children left, delete the container
         dispatch(EditorActions.deleteNode(parentContainer.id));
       } else {
-        console.log("✂️ Removing child from container");
         // Multiple children remain, just remove this one
         dispatch(EditorActions.deleteNode(nodeId));
       }
     } else {
-      console.log("📄 Node is at root level, deleting directly");
       dispatch(EditorActions.deleteNode(nodeId));
     }
 
@@ -113,11 +111,10 @@ export function createHandleDeleteNode(params: Pick<NodeOperationHandlerParams, 
 /**
  * Handle add block
  */
-export function createHandleAddBlock(params: Pick<NodeOperationHandlerParams, 'dispatch' | 'nodeRefs'>) {
-  return (
-    targetId: string,
-    position: "before" | "after" = "after"
-  ) => {
+export function createHandleAddBlock(
+  params: Pick<NodeOperationHandlerParams, "dispatch" | "nodeRefs">
+) {
+  return (targetId: string, position: "before" | "after" = "after") => {
     const { dispatch, nodeRefs } = params;
     // Create new paragraph node
     const newNode: TextNode = {
@@ -127,7 +124,6 @@ export function createHandleAddBlock(params: Pick<NodeOperationHandlerParams, 'd
       attributes: {},
     };
 
-    console.log("newNode", newNode);
     dispatch(EditorActions.insertNode(newNode, targetId, position));
     dispatch(EditorActions.setActiveNode(newNode.id));
 
@@ -144,7 +140,9 @@ export function createHandleAddBlock(params: Pick<NodeOperationHandlerParams, 'd
 /**
  * Handle create nested block
  */
-export function createHandleCreateNested(params: Pick<NodeOperationHandlerParams, 'container' | 'dispatch' | 'toast'>) {
+export function createHandleCreateNested(
+  params: Pick<NodeOperationHandlerParams, "container" | "dispatch" | "toast">
+) {
   return (nodeId: string) => {
     const { container, dispatch, toast } = params;
     const result = findNodeInTree(nodeId, container);
@@ -232,7 +230,9 @@ export function createHandleCreateNested(params: Pick<NodeOperationHandlerParams
 /**
  * Handle change block type
  */
-export function createHandleChangeBlockType(params: Pick<NodeOperationHandlerParams, 'dispatch' | 'nodeRefs'>) {
+export function createHandleChangeBlockType(
+  params: Pick<NodeOperationHandlerParams, "dispatch" | "nodeRefs">
+) {
   return (nodeId: string, newType: string) => {
     const { dispatch, nodeRefs } = params;
     // Special handling for list items - initialize with empty content
@@ -261,7 +261,7 @@ export function createHandleChangeBlockType(params: Pick<NodeOperationHandlerPar
  * Handle insert image from command
  */
 export function createHandleInsertImageFromCommand(
-  params: Pick<NodeOperationHandlerParams, 'dispatch' | 'nodeRefs'>,
+  params: Pick<NodeOperationHandlerParams, "dispatch" | "nodeRefs">,
   fileInputRef: React.RefObject<HTMLInputElement | null>
 ) {
   return (nodeId: string) => {
@@ -350,7 +350,9 @@ export function createHandleCreateList(params: NodeOperationHandlerParams) {
 /**
  * Handle create list from command menu
  */
-export function createHandleCreateListFromCommand(params: Pick<NodeOperationHandlerParams, 'dispatch' | 'toast' | 'nodeRefs'>) {
+export function createHandleCreateListFromCommand(
+  params: Pick<NodeOperationHandlerParams, "dispatch" | "toast" | "nodeRefs">
+) {
   return (nodeId: string, listType: string) => {
     const { dispatch, toast, nodeRefs } = params;
     const timestamp = Date.now();
@@ -393,9 +395,6 @@ export function createHandleCreateListFromCommand(params: Pick<NodeOperationHand
         // Also set it as active node
         dispatch(EditorActions.setActiveNode(firstItemId));
       } else {
-        console.warn(
-          "⚠️ [Focus Warning] First list item not found yet, retrying..."
-        );
         // Retry after another delay
         setTimeout(() => {
           const retryElement = nodeRefs.current.get(firstItemId);
@@ -469,16 +468,127 @@ export function createHandleCreateLink(params: NodeOperationHandlerParams) {
 }
 
 /**
+ * Handle create table
+ */
+export function createHandleCreateTable(params: NodeOperationHandlerParams) {
+  return (rows: number, cols: number) => {
+    const { container, dispatch, toast, editorContentRef } = params;
+    const timestamp = Date.now();
+
+    // Create header cells
+    const headerCells: TextNode[] = Array.from({ length: cols }, (_, i) => ({
+      id: `th-${timestamp}-${i}`,
+      type: "th",
+      content: `Column ${i + 1}`,
+      attributes: {},
+    }));
+
+    // Create header row
+    const headerRow: StructuralNode = {
+      id: `tr-header-${timestamp}`,
+      type: "tr",
+      children: headerCells,
+      attributes: {},
+    };
+
+    // Create thead
+    const thead: StructuralNode = {
+      id: `thead-${timestamp}`,
+      type: "thead",
+      children: [headerRow],
+      attributes: {},
+    };
+
+    // Create body rows
+    const bodyRows: StructuralNode[] = Array.from({ length: rows }, (_, rowIdx) => {
+      const cells: TextNode[] = Array.from({ length: cols }, (_, colIdx) => ({
+        id: `td-${timestamp}-${rowIdx}-${colIdx}`,
+        type: "td",
+        content: "",
+        attributes: {},
+      }));
+
+      return {
+        id: `tr-${timestamp}-${rowIdx}`,
+        type: "tr",
+        children: cells,
+        attributes: {},
+      };
+    });
+
+    // Create tbody
+    const tbody: StructuralNode = {
+      id: `tbody-${timestamp}`,
+      type: "tbody",
+      children: bodyRows,
+      attributes: {},
+    };
+
+    // Create table
+    const table: StructuralNode = {
+      id: `table-${timestamp}`,
+      type: "table",
+      children: [thead, tbody],
+      attributes: {},
+    };
+
+    // Wrap table in a container for consistent handling
+    const tableWrapper: ContainerNode = {
+      id: `table-wrapper-${timestamp}`,
+      type: "container",
+      children: [table],
+      attributes: {},
+    };
+
+    // Insert the table at the end
+    const lastNode = container.children[container.children.length - 1];
+    if (lastNode) {
+      dispatch(EditorActions.insertNode(tableWrapper, lastNode.id, "after"));
+    } else {
+      // If no nodes exist, replace the container
+      dispatch(
+        EditorActions.replaceContainer({
+          ...container,
+          children: [tableWrapper],
+        })
+      );
+    }
+
+    toast({
+      title: "Table Created",
+      description: `Added a ${rows}×${cols} table`,
+    });
+
+    // Smooth scroll to the newly created table
+    setTimeout(() => {
+      const editorContent = editorContentRef.current;
+      if (editorContent) {
+        const lastChild = editorContent.querySelector(
+          "[data-editor-content]"
+        )?.lastElementChild;
+        if (lastChild) {
+          lastChild.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+            inline: "nearest",
+          });
+        }
+      }
+    }, 150);
+  };
+}
+
+/**
  * Handle copy HTML
  */
 export function createHandleCopyHtml(
-  params: Pick<NodeOperationHandlerParams, 'toast'>,
+  params: Pick<NodeOperationHandlerParams, "toast">,
   enhanceSpaces: boolean,
   setCopiedHtml: (copied: boolean) => void
 ) {
   return async (container: ContainerNode) => {
     const { toast } = params;
-    const { serializeToHtml } = require('../utils/serialize-to-html');
+    const { serializeToHtml } = require("../utils/serialize-to-html");
     let html = serializeToHtml(container);
 
     // Wrap with spacing classes if enhance spaces is enabled
@@ -508,7 +618,7 @@ export function createHandleCopyHtml(
  * Handle copy JSON
  */
 export function createHandleCopyJson(
-  params: Pick<NodeOperationHandlerParams, 'toast'>,
+  params: Pick<NodeOperationHandlerParams, "toast">,
   setCopiedJson: (copied: boolean) => void
 ) {
   return async (container: ContainerNode) => {
@@ -531,4 +641,3 @@ export function createHandleCopyJson(
     }
   };
 }
-

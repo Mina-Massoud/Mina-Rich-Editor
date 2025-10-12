@@ -16,7 +16,7 @@ interface ToolbarProps {
   onReadOnlyChange: (readOnly: boolean) => void;
 }
 
-export function Toolbar({ readOnly, onReadOnlyChange }: ToolbarProps) {
+export function QuickModeToggle({ readOnly, onReadOnlyChange }: ToolbarProps) {
   const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => {
@@ -25,20 +25,20 @@ export function Toolbar({ readOnly, onReadOnlyChange }: ToolbarProps) {
 
   return (
     <TooltipProvider>
-      <div className="fixed top-17 right-4 z-[105] flex items-center gap-1 bg-background border rounded-lg shadow-lg p-1.5">
+      <div className="fixed top-[4.5rem] md:top-20 lg:top-17 right-2 md:right-4 z-[105] flex items-center gap-1 bg-background border rounded-lg shadow-lg p-1 md:p-1.5">
         {/* Read-only toggle */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant={readOnly ? "default" : "ghost"}
               size="icon"
-              className="h-9 w-9"
+              className="h-8 w-8 md:h-9 md:w-9"
               onClick={() => onReadOnlyChange(!readOnly)}
             >
               {readOnly ? (
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
               ) : (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className="h-3.5 w-3.5 md:h-4 md:w-4" />
               )}
               <span className="sr-only">
                 {readOnly ? "View Only Mode" : "Edit Mode"}
@@ -50,7 +50,7 @@ export function Toolbar({ readOnly, onReadOnlyChange }: ToolbarProps) {
           </TooltipContent>
         </Tooltip>
 
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-5 md:h-6" />
 
         {/* Theme toggle */}
         <Tooltip>
@@ -58,11 +58,11 @@ export function Toolbar({ readOnly, onReadOnlyChange }: ToolbarProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9"
+              className="h-8 w-8 md:h-9 md:w-9"
               onClick={toggleTheme}
             >
-              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <Sun className="h-3.5 w-3.5 md:h-4 md:w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-3.5 w-3.5 md:h-4 md:w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Toggle theme</span>
             </Button>
           </TooltipTrigger>

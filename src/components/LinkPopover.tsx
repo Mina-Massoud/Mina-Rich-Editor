@@ -7,6 +7,7 @@
 
 'use client';
 
+import {motion} from 'framer-motion';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link as LinkIcon, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -64,11 +65,11 @@ export function LinkPopover() {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         
-        // Calculate position relative to viewport (fixed positioning)
+        // Calculate position relative to document (absolute positioning)
         // Position the icon above the selection, offset to the right of custom class icon
         setPosition({
-          top: rect.top - 45, // 45px above the selection
-          left: rect.left + (rect.width / 2) + 16, // Offset to the right
+          top: rect.top + window.scrollY - 45, // 45px above the selection + scroll offset
+          left: rect.left + window.scrollX + (rect.width / 2) + 16, // Offset to the right + scroll offset
         });
       }
     } else {
@@ -128,17 +129,18 @@ export function LinkPopover() {
     }, 0);
   };
 
-  if (!position) return null;
+  // if (!position) return null;
 
   const hasExistingLink = savedSelectionRef.current?.href;
 
   return (
-    <div
-      className="fixed z-50 pointer-events-auto"
+    <motion.div
+      className={`${position ? "opacity-100" : "!opacity-0"} transition-opacity duration-300 absolute z-50 pointer-events-auto`}
       style={{
-        top: `${position.top}px`,
-        left: `${position.left}px`,
+        top: `${position?.top || 0}px`,
+        left: `${position?.left || 0}px`,
       }}
+      layoutId='link-popover'
     >
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
@@ -222,7 +224,7 @@ export function LinkPopover() {
           </div>
         </PopoverContent>
       </Popover>
-    </div>
+    </motion.div>
   );
 }
 

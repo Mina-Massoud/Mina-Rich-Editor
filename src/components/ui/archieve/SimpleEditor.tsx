@@ -26,17 +26,17 @@ import {
   useSelectionManager,
   useSelection,
   findNodeById,
-} from "../lib";
+} from "../../../lib";
 import { Block } from "./Block";
-import { AddBlockButton } from "./AddBlockButton";
-import { CustomClassPopover } from "./CustomClassPopover";
-import { LinkPopover } from "./LinkPopover";
-import { EditorToolbar } from "./EditorToolbar";
-import { Badge } from "./ui/badge";
-import { Card, CardContent } from "./ui/card";
-import { uploadImage } from "../lib/utils/image-upload";
+import { AddBlockButton } from "../../AddBlockButton";
+import { CustomClassPopover } from "../../CustomClassPopover";
+import { LinkPopover } from "../../LinkPopover";
+import { EditorToolbar } from "../../EditorToolbar";
+import { Badge } from "../badge";
+import { Card, CardContent } from "../card";
+import { uploadImage } from "../../../lib/utils/image-upload";
 import { useToast } from "@/hooks/use-toast";
-import { Toolbar } from "./Toolbar";
+import { Toolbar } from "../../Toolbar";
 
 /**
  * Parse DOM element back into inline children structure
@@ -2622,8 +2622,8 @@ export function SimpleEditor({
 
           {/* Editor Content */}
           <CardContent
-            className={`p-6 flex flex-col w-full flex-1 transition-all duration-300 max-w-4xl mx-auto ${
-              readOnly ? "py-14 md:py-20" : ""
+            className={`p-3 md:p-6 flex flex-col w-full flex-1 transition-all duration-300 max-w-4xl mx-auto ${
+              readOnly ? "py-10 md:py-14 lg:py-20" : ""
             }`}
           >
             <div ref={editorContentRef}>

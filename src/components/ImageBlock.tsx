@@ -12,6 +12,7 @@ import { Card } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 import { X, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 
 interface ImageBlockProps {
   node: TextNode;
@@ -19,6 +20,9 @@ interface ImageBlockProps {
   onClick: () => void;
   onDelete?: () => void;
   onDragStart?: (nodeId: string) => void;
+  isSelected?: boolean;
+  onToggleSelection?: (nodeId: string) => void;
+  onClickWithModifier?: (e: React.MouseEvent, nodeId: string) => void;
 }
 
 export function ImageBlock({
@@ -27,10 +31,24 @@ export function ImageBlock({
   onClick,
   onDelete,
   onDragStart,
+  isSelected = false,
+  onToggleSelection,
+  onClickWithModifier,
 }: ImageBlockProps) {
   const [imageError, setImageError] = useState(false);
 
-  console.log("image url", node.attributes?.src);
+  const handleClick = (e: React.MouseEvent) => {
+    // Check for Ctrl/Cmd click first
+    if (onClickWithModifier) {
+      onClickWithModifier(e, node.id);
+    }
+    
+    // Only call regular onClick if not a modifier click
+    if (!e.ctrlKey && !e.metaKey) {
+      onClick();
+    }
+  };
+
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
@@ -58,12 +76,7 @@ export function ImageBlock({
   const hasError =
     node.attributes?.error === "true" || node.attributes?.error === true;
 
-  console.log("isUploading", isUploading);
-  console.log("hasError", hasError);
-  console.log("imageUrl", imageUrl);
-  console.log("altText", altText);
-  console.log("caption", caption);
-  console.log("imageError", imageError);
+
 
   const handleImageLoad = () => {
     setImageError(false);
@@ -81,9 +94,28 @@ export function ImageBlock({
       className={`
         relative !border-0 mb-4 p-4 transition-all duration-200 cursor-move group
         ${isActive ? "ring-2 ring-primary/50 bg-accent/5" : "hover:bg-accent/5"}
+        ${isSelected ? "ring-2 ring-blue-500 bg-blue-500/10" : ""}
       `}
-      onClick={onClick}
+      onClick={handleClick}
     >
+      {/* Selection checkbox */}
+      {onToggleSelection && (
+        <div
+          className={`absolute top-2 left-2 z-10 transition-opacity ${
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelection(node.id)}
+            className="h-5 w-5 bg-background border-2"
+          />
+        </div>
+      )}
+
       {/* Delete button */}
       {onDelete && (
         <Button
@@ -148,8 +180,8 @@ export function ImageBlock({
               <img
                 src={imageUrl}
                 alt={altText || caption || "Uploaded image"}
-                className={`
-                  w-full h-auto rounded-lg object-cover max-h-[600px]`}
+                className="h-auto rounded-lg object-cover max-h-[600px]"
+                style={{ width: 'auto', margin: 'auto' }}
                 onLoad={handleImageLoad}
                 onError={handleImageError}
               />

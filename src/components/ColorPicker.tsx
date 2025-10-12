@@ -79,13 +79,13 @@ export function ColorPickerComponent({
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="gap-2"
+          className="gap-1 md:gap-2 h-7 md:h-8 px-2 md:px-3"
         >
-          <Palette className="size-4" />
-          Color
+          <Palette className="size-3 md:size-4" />
+          <span className="text-xs md:text-sm">Color</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96">
+      <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 max-w-96">
         <Tabs defaultValue="preset" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="preset">Preset Colors</TabsTrigger>
