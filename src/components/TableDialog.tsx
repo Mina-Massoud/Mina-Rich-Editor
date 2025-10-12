@@ -115,7 +115,7 @@ export function TableDialog({
 | Cell 4   | Cell 5   | Cell 6   |`}
                   value={markdownText}
                   onChange={(e) => handleMarkdownChange(e.target.value)}
-                  className="font-mono text-xs min-h-[150px]"
+                  className="font-mono text-xs max-h-[400px] min-h-[150px]"
                 />
                 <div className="text-xs text-muted-foreground">
                   Paste your markdown table above. Must include header and separator rows.

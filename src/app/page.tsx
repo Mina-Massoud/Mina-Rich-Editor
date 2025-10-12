@@ -100,7 +100,7 @@ export default function Home() {
             className="w-full min-h-screen flex flex-col"
           >
             <EditorProvider
-              // initialContainer={initialContainer}
+              initialContainer={initialContainer}
               debug={true}
             >
               <Editor readOnly={readOnly} onUploadImage={handleImageUpload} />

@@ -676,6 +676,7 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
       const draggingNodeAtRoot = container.children.find(
         (n) => n.id === draggingNodeId
       );
+      
       if (draggingNodeAtRoot) {
         const targetNodeAtRoot = container.children.find((n) => n.id === nodeId);
         

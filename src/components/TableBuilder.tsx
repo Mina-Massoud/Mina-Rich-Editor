@@ -442,6 +442,15 @@ export function TableBuilder({
   const handleTableDragStart = (e: React.DragEvent) => {
     if (readOnly || !onBlockDragStart) return;
     e.stopPropagation();
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", node.id);
+    e.dataTransfer.setData(
+      "application/json",
+      JSON.stringify({
+        nodeId: node.id,
+        type: "table",
+      })
+    );
     onBlockDragStart(node.id);
   };
 
@@ -488,7 +497,7 @@ export function TableBuilder({
         </div>
       )}
 
-      <div className="relative">
+      <div className="relative w-fit mx-auto">
       {/* Column controls - top */}
       {showColControls && (
         <div className="absolute top-0 left-8 right-0 flex justify-center gap-1 z-10">
@@ -561,7 +570,7 @@ export function TableBuilder({
         </div>
       )}
 
-      <div className="relative w-full py-5 overflow-x-auto">
+      <div className="relative w-fit mx-auto py-5 overflow-x-auto">
         {/* Table */}
         <table
           ref={tableRef}
@@ -607,16 +616,22 @@ export function TableBuilder({
                          </div>
                        )}
                        
-                       <input
-                         type="text"
-                         value={(cell as TextNode).content || ""}
-                         onChange={(e) =>
-                           handleCellChange(0, colIdx, e.target.value, true)
-                         }
-                         readOnly={readOnly}
-                         className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0"
-                         placeholder={`Column ${colIdx + 1}`}
-                       />
+                      <input
+                        type="text"
+                        value={(cell as TextNode).content || ""}
+                        onChange={(e) =>
+                          handleCellChange(0, colIdx, e.target.value, true)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Backspace" && !(cell as TextNode).content && numCols > 1) {
+                            e.preventDefault();
+                            removeColumn(colIdx);
+                          }
+                        }}
+                        readOnly={readOnly}
+                        className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0"
+                        placeholder={`Column ${colIdx + 1}`}
+                      />
                      </div>
 
                      {/* Resize handle */}

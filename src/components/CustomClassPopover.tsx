@@ -10,6 +10,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Pencil, Search, Code2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -19,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { tailwindClasses } from "../lib/tailwind-classes";
 import { getUserFriendlyClasses, searchUserFriendlyClasses } from "../lib/class-mappings";
 import { motion } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function CustomClassPopover() {
   const [state, dispatch] = useEditor();
@@ -30,6 +32,7 @@ export function CustomClassPopover() {
     top: number;
     left: number;
   } | null>(null);
+  const isMobile = useIsMobile();
 
   // Store the selection in a ref so it persists when focus changes
   const savedSelectionRef = useRef<{
@@ -89,6 +92,24 @@ export function CustomClassPopover() {
     }
   }, [state.currentSelection, state.selectionKey, isOpen]);
 
+  // Close keyboard on mobile
+  const closeKeyboard = () => {
+    if (isMobile && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  // Handle opening the popover/sheet
+  const handleOpenChange = (open: boolean) => {
+    if (open && isMobile) {
+      closeKeyboard();
+      // Small delay to ensure keyboard is closed before opening
+      setTimeout(() => setIsOpen(true), 100);
+    } else {
+      setIsOpen(open);
+    }
+  };
+
   // Handle class application
   const handleQuickStyle = (className: string) => {
     // Use saved selection from ref instead of state
@@ -117,46 +138,9 @@ export function CustomClassPopover() {
     }, 0);
   };
 
-  // if (!position) return null;
-
-  console.log("position", position);
-  return (
-    <motion.div
-      layoutId="custom-class-popover"
-      className={`${position ? "opacity-100" : "!opacity-0"} absolute z-[10000] pointer-events-auto`}
-      style={{
-        top: `${position?.top || 0}px`,
-        left: `${position?.left || 0}px`,
-      }}
-    >
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <button
-            className="h-8 w-8 flex items-center justify-center rounded-full shadow-lg hover:scale-110 transition-all bg-background border-2 border-border hover:border-primary"
-            onMouseDown={(e) => {
-              // Prevent default to keep the selection
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClick={(e) => {
-              // Prevent default to keep the selection
-              e.preventDefault();
-              e.stopPropagation();
-              setIsOpen(true);
-            }}
-          >
-            <Pencil className="size-4" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent 
-          className="lg:w-[500px] max-h-[600px]" 
-          align="start"
-          onOpenAutoFocus={(e) => {
-            // Prevent the popover from stealing focus and losing selection
-            e.preventDefault();
-          }}
-        >
-          <div className="space-y-3">
+  // Reusable content component for both Popover and Sheet
+  const ClassPickerContent = () => (
+    <div className="space-y-3">
             {/* Dev Mode Toggle */}
             <div className="flex items-center justify-between pb-2 border-b">
               <div className="flex items-center gap-2">
@@ -246,8 +230,80 @@ export function CustomClassPopover() {
               </div>
             </ScrollArea>
           </div>
-        </PopoverContent>
-      </Popover>
+  );
+
+  // Trigger button component
+  const TriggerButton = () => (
+    <button
+      className="h-8 w-8 flex items-center justify-center rounded-full shadow-lg hover:scale-110 transition-all bg-background border-2 border-border hover:border-primary"
+      onMouseDown={(e) => {
+        // Prevent default to keep the selection
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        // Prevent default to keep the selection
+        e.preventDefault();
+        e.stopPropagation();
+        if (isMobile) {
+          closeKeyboard();
+        }
+        setIsOpen(true);
+      }}
+    >
+      <Pencil className="size-4" />
+    </button>
+  );
+
+  return (
+    <motion.div
+      layoutId="custom-class-popover"
+      className={`${position ? "opacity-100" : "!opacity-0"} absolute z-[10000] pointer-events-auto`}
+      style={{
+        top: `${position?.top || 0}px`,
+        left: `${position?.left || 0}px`,
+      }}
+    >
+      {isMobile ? (
+        // Mobile: Use Sheet (drawer from bottom)
+        <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+          <SheetTrigger asChild>
+            <TriggerButton />
+          </SheetTrigger>
+          <SheetContent 
+            side="bottom" 
+            className="h-[85vh] rounded-t-xl"
+            onOpenAutoFocus={(e) => {
+              // Prevent auto-focus to avoid reopening keyboard
+              e.preventDefault();
+            }}
+          >
+            <SheetHeader>
+              <SheetTitle>Custom Classes</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4 overflow-y-auto h-[calc(100%-60px)]">
+              <ClassPickerContent />
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        // Desktop: Use Popover
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <TriggerButton />
+          </PopoverTrigger>
+          <PopoverContent 
+            className="lg:w-[500px] max-h-[600px]" 
+            align="start"
+            onOpenAutoFocus={(e) => {
+              // Prevent the popover from stealing focus and losing selection
+              e.preventDefault();
+            }}
+          >
+            <ClassPickerContent />
+          </PopoverContent>
+        </Popover>
+      )}
     </motion.div>
   );
 }
