@@ -10,7 +10,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Pencil, Search, Code2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "./ui/sheet";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
@@ -18,7 +24,10 @@ import { Switch } from "./ui/switch";
 import { useEditor, EditorActions } from "../lib";
 import { useToast } from "@/hooks/use-toast";
 import { tailwindClasses } from "../lib/tailwind-classes";
-import { getUserFriendlyClasses, searchUserFriendlyClasses } from "../lib/class-mappings";
+import {
+  getUserFriendlyClasses,
+  searchUserFriendlyClasses,
+} from "../lib/class-mappings";
 import { motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -56,9 +65,9 @@ export function CustomClassPopover() {
           .filter((group) => group.classes.length > 0)
       : tailwindClasses
     : // User Mode: Show user-friendly names
-      searchQuery
-      ? searchUserFriendlyClasses(searchQuery)
-      : getUserFriendlyClasses();
+    searchQuery
+    ? searchUserFriendlyClasses(searchQuery)
+    : getUserFriendlyClasses();
 
   // Track selection and position the floating icon
   useEffect(() => {
@@ -141,95 +150,97 @@ export function CustomClassPopover() {
   // Reusable content component for both Popover and Sheet
   const ClassPickerContent = () => (
     <div className="space-y-3">
-            {/* Dev Mode Toggle */}
-            <div className="flex items-center justify-between pb-2 border-b">
-              <div className="flex items-center gap-2">
-                <Code2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Dev Mode</span>
-              </div>
-              <Switch
-                checked={devMode}
-                onCheckedChange={setDevMode}
-                aria-label="Toggle dev mode"
-              />
-            </div>
-            
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                autoFocus
-                placeholder={
-                  devMode
-                    ? "Search classes... (e.g., 'text', 'bg', 'flex')"
-                    : "Search styles... (e.g., 'red', 'bold', 'shadow')"
-                }
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="space-y-4">
-                {devMode ? (
-                  // Dev Mode: Show Tailwind classes
-                  <>
-                    {filteredClasses.map((group) => (
-                      <div key={group.category}>
-                        <h4 className="text-xs font-semibold mb-2 text-muted-foreground">
-                          {group.category}
-                        </h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(group as any).classes.map((cls: string) => (
-                            <Button
-                              key={cls}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleQuickStyle(cls)}
-                              className="text-xs h-6 px-2"
-                            >
-                              {cls}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
+      {/* Dev Mode Toggle */}
+      <div className="flex items-center justify-between pb-2 border-b">
+        <div className="flex items-center gap-2">
+          <Code2 className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Dev Mode</span>
+        </div>
+        <Switch
+          checked={devMode}
+          onCheckedChange={setDevMode}
+          aria-label="Toggle dev mode"
+        />
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          autoFocus
+          placeholder={
+            devMode
+              ? "Search classes... (e.g., 'text', 'bg', 'flex')"
+              : "Search styles... (e.g., 'red', 'bold', 'shadow')"
+          }
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-8"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+      <ScrollArea className="h-[500px] pr-4">
+        <div className="space-y-4">
+          {devMode ? (
+            // Dev Mode: Show Tailwind classes
+            <>
+              {filteredClasses.map((group) => (
+                <div key={group.category}>
+                  <h4 className="text-xs font-semibold mb-2 text-muted-foreground">
+                    {group.category}
+                  </h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(group as any).classes.map((cls: string) => (
+                      <Button
+                        key={cls}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickStyle(cls)}
+                        className="text-xs h-6 px-2"
+                      >
+                        {cls}
+                      </Button>
                     ))}
-                  </>
-                ) : (
-                  // User Mode: Show user-friendly names
-                  <>
-                    {filteredClasses.map((group) => (
-                      <div key={group.category}>
-                        <h4 className="text-xs font-semibold mb-2 text-muted-foreground">
-                          {group.category}
-                        </h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(group as any).items.map((item: { label: string; value: string }) => (
-                            <Button
-                              key={item.value}
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleQuickStyle(item.value)}
-                              className="text-xs h-6 px-2"
-                              title={`Applies: ${item.value}`}
-                            >
-                              {item.label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {filteredClasses.length === 0 && (
-                  <div className="text-center py-8 text-sm text-muted-foreground">
-                    No classes found matching &quot;{searchQuery}&quot;
                   </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            // User Mode: Show user-friendly names
+            <>
+              {filteredClasses.map((group) => (
+                <div key={group.category}>
+                  <h4 className="text-xs font-semibold mb-2 text-muted-foreground">
+                    {group.category}
+                  </h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(group as any).items.map(
+                      (item: { label: string; value: string }) => (
+                        <Button
+                          key={item.value}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleQuickStyle(item.value)}
+                          className="text-xs h-6 px-2"
+                          title={`Applies: ${item.value}`}
+                        >
+                          {item.label}
+                        </Button>
+                      )
+                    )}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {filteredClasses.length === 0 && (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              No classes found matching &quot;{searchQuery}&quot;
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   );
 
   // Trigger button component
@@ -258,7 +269,9 @@ export function CustomClassPopover() {
   return (
     <motion.div
       layoutId="custom-class-popover"
-      className={`${position ? "opacity-100" : "!opacity-0"} absolute z-[10000] pointer-events-auto`}
+      className={`${
+        position ? "opacity-100" : "!opacity-0"
+      } transition-opacity duration-300 absolute z-50 pointer-events-auto`}
       style={{
         top: `${position?.top || 0}px`,
         left: `${position?.left || 0}px`,
@@ -270,9 +283,9 @@ export function CustomClassPopover() {
           <SheetTrigger asChild>
             <TriggerButton />
           </SheetTrigger>
-          <SheetContent 
-            side="bottom" 
-            className="h-[85vh] rounded-t-xl"
+          <SheetContent
+            side="bottom"
+            className="h-[85vh] px-5 rounded-t-xl"
             onOpenAutoFocus={(e) => {
               // Prevent auto-focus to avoid reopening keyboard
               e.preventDefault();
@@ -289,11 +302,11 @@ export function CustomClassPopover() {
       ) : (
         // Desktop: Use Popover
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>
+          <PopoverTrigger >
             <TriggerButton />
           </PopoverTrigger>
-          <PopoverContent 
-            className="lg:w-[500px] max-h-[600px]" 
+          <PopoverContent
+            className="lg:w-[300px] max-h-[300px] overflow-y-auto"
             align="start"
             onOpenAutoFocus={(e) => {
               // Prevent the popover from stealing focus and losing selection
