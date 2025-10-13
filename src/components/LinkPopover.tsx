@@ -7,7 +7,6 @@
 
 'use client';
 
-import {motion} from 'framer-motion';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link as LinkIcon, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -16,6 +15,7 @@ import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { useEditor, EditorActions } from '../lib';
 import { useToast } from '@/hooks/use-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export function LinkPopover() {
   const [state, dispatch] = useEditor();
@@ -65,12 +65,25 @@ export function LinkPopover() {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         
-        // Calculate position relative to document (absolute positioning)
-        // Position the icon above the selection, offset to the right of custom class icon
-        setPosition({
-          top: rect.top + window.scrollY - 45, // 45px above the selection + scroll offset
-          left: rect.left + window.scrollX + (rect.width / 2) + 16, // Offset to the right + scroll offset
-        });
+        // Find the editor container (the parent with relative positioning)
+        const editorContainer = document
+          .querySelector("[data-editor-content]")
+          ?.closest(".relative");
+        const containerRect = editorContainer?.getBoundingClientRect();
+
+        if (containerRect) {
+          // Calculate position relative to the editor container
+          setPosition({
+            top: rect.top - containerRect.top - 45, // 45px above the selection, relative to container
+            left: rect.left - containerRect.left + rect.width / 2 + 16, // Offset to the right, relative to container
+          });
+        } else {
+          // Fallback to old behavior if container not found
+          setPosition({
+            top: rect.top + window.scrollY - 45,
+            left: rect.left + window.scrollX + (rect.width / 2) + 16,
+          });
+        }
       }
     } else {
       // Only clear position if we don't have a saved selection and popover is closed
@@ -129,102 +142,109 @@ export function LinkPopover() {
     }, 0);
   };
 
-  // if (!position) return null;
-
   const hasExistingLink = savedSelectionRef.current?.href;
 
   return (
-    <motion.div
-      className={`${position ? "opacity-100" : "!opacity-0"} transition-opacity duration-300 absolute z-50 pointer-events-auto`}
-      style={{
-        top: `${position?.top || 0}px`,
-        left: `${position?.left || 0}px`,
-      }}
-      layoutId='link-popover'
-    >
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <button
-            className={`h-8 w-8 flex items-center justify-center rounded-full shadow-lg hover:scale-110 transition-all bg-background border-2 ${
-              hasExistingLink 
-                ? 'border-blue-500 text-blue-500' 
-                : 'border-border hover:border-primary'
-            }`}
-            onMouseDown={(e) => {
-              // Prevent default to keep the selection
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            onClick={(e) => {
-              // Prevent default to keep the selection
-              e.preventDefault();
-              e.stopPropagation();
-              setIsOpen(true);
-            }}
-          >
-            <LinkIcon className="size-4" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent 
-          className="w-80" 
-          align="start"
-          onOpenAutoFocus={(e) => {
-            // Prevent the popover from stealing focus and losing selection
-            e.preventDefault();
+    <AnimatePresence mode="wait">
+      {position && (
+        <motion.div
+      key={position.top + position.left}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={`${
+            position ? "opacity-100" : "!opacity-0"
+          } transition-opacity duration-300 absolute z-50 pointer-events-auto`}
+          style={{
+            top: `${position?.top || 0}px`,
+            left: `${position?.left || 0}px`,
           }}
+          exit={{ opacity: 0 }}
         >
-          <div className="space-y-3">
-            <div>
-              <h4 className="font-medium text-sm mb-1">
-                {hasExistingLink ? 'Edit Link' : 'Add Link'}
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                Selected text: "{savedSelectionRef.current?.text}"
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="href-input" className="text-xs">
-                Link URL
-              </Label>
-              <Input
-                id="href-input"
-                placeholder="https://example.com"
-                value={hrefInput}
-                onChange={(e) => setHrefInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleApplyLink();
-                  }
+          <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={`h-8 w-8 flex items-center justify-center rounded-full shadow-lg hover:scale-110 transition-all bg-background border-2 ${
+                  hasExistingLink 
+                    ? 'border-blue-500 text-blue-500' 
+                    : 'border-border hover:border-primary'
+                }`}
+                onMouseDown={(e) => {
+                  // Prevent default to keep the selection
+                  e.preventDefault();
+                  e.stopPropagation();
                 }}
-                className="flex-1"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleApplyLink}
-                disabled={!hrefInput.trim()}
-                size="sm"
-                className="flex-1"
+                onClick={(e) => {
+                  // Prevent default to keep the selection
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsOpen(true);
+                }}
               >
-                <LinkIcon className="size-3.5 mr-1.5" />
-                {hasExistingLink ? 'Update' : 'Add Link'}
-              </Button>
-              {hasExistingLink && (
-                <Button
-                  onClick={handleRemoveLink}
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    </motion.div>
+                <LinkIcon className="size-4" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent 
+              className="w-80" 
+              align="start"
+              onOpenAutoFocus={(e) => {
+                // Prevent the popover from stealing focus and losing selection
+                e.preventDefault();
+              }}
+            >
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-medium text-sm mb-1">
+                    {hasExistingLink ? 'Edit Link' : 'Add Link'}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Selected text: "{savedSelectionRef.current?.text}"
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="href-input" className="text-xs">
+                    Link URL
+                  </Label>
+                  <Input
+                    id="href-input"
+                    placeholder="https://example.com"
+                    value={hrefInput}
+                    onChange={(e) => setHrefInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleApplyLink();
+                      }
+                    }}
+                    className="flex-1"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleApplyLink}
+                    disabled={!hrefInput.trim()}
+                    size="sm"
+                    className="flex-1"
+                  >
+                    <LinkIcon className="size-3.5 mr-1.5" />
+                    {hasExistingLink ? 'Update' : 'Add Link'}
+                  </Button>
+                  {hasExistingLink && (
+                    <Button
+                      onClick={handleRemoveLink}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
