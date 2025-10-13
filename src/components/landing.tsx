@@ -16,7 +16,7 @@ export default function HeroSection({ onTryEditor }: HeroSectionProps) {
         badgeLabel="New"
         ctaButtons={[
           { text: "Try the editor", href: "#editor", primary: true, onClick: onTryEditor },
-          { text: "Contact me", href: "https://mina-massoud.com", target: "_blank" }
+          { text: "Docs", href: "/docs" }
         ]}
         microDetails={["Block‑based editing", "Custom formatting", "Type‑safe API"]}
       />
