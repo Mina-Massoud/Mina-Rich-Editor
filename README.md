@@ -2,6 +2,8 @@
 
 ![Mina Rich Editor Demo](./public/image_docs/main-image-demo.png)
 
+## 🌐 [Live Demo →](https://mina-rich-editor.vercel.app)
+
 The **first block-based rich text editor** built entirely with **Tailwind CSS** and **shadcn/ui**. Created by [Mina Massoud](https://mina-massoud.com/) - a 22 years old developer with a lot of passion to change people's lives! 😄
 
 [![GitHub stars](https://img.shields.io/github/stars/Mina-Massoud/mina-rich-editor?style=social)](https://github.com/Mina-Massoud/mina-rich-editor)
@@ -9,7 +11,97 @@ The **first block-based rich text editor** built entirely with **Tailwind CSS** 
 [![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
+> 🎉 **Version 0.1.0 - Major Update!** Fresh new features just landed! Check out what's new below.
+
 > ⚠️ **IMPORTANT NOTE:** For transparency, the **code supports everything** mentioned in this document (gradients, shadows, borders, custom styles, etc.), but **some advanced features don't have a UI interface yet**. You can still apply them programmatically through the JSON structure or by typing Tailwind classes in the Custom Class Popover. **Any collaboration is much appreciated!** Feel free to contribute UI components for these features.
+
+---
+
+## 🆕 What's New in v0.1.0
+
+### 📊 Table Support - Full-Featured Spreadsheet-like Tables
+
+Create powerful, interactive tables with comprehensive editing capabilities. Perfect for data presentation, comparisons, and structured content:
+
+- ✅ **Create tables** with custom rows and columns
+- ✅ **Drag columns** to reorder them horizontally
+- ✅ **Drag rows** to reorder them vertically
+- ✅ **Resize columns** by dragging column borders
+- ✅ **Add/remove** rows and columns on the fly
+- ✅ **Drag entire tables** to reorder them between blocks
+- ✅ **Import markdown tables** - paste from GitHub, Notion, or any markdown source
+
+**Example table:**
+
+| Feature | Status | Version |
+|---------|--------|---------|
+| Table Support | ✅ Released | 0.1.0 |
+| Multi-Select Images | ✅ Released | 0.1.0 |
+| Enhanced Drag & Drop | ✅ Released | 0.1.0 |
+
+### 🖼️ Multi-Select Images with Ctrl+Click
+
+Hold **Ctrl (⌘ on Mac)** and click multiple images to select them, then:
+
+- 📦 **Group images** into a side-by-side flex layout
+- 🔄 **Reverse order** of images in a grid
+- 📤 **Extract images** from their container
+- 🎨 **Visual feedback** shows selected images with a blue border
+
+> 💡 **Pro Tip:** Select 2+ images from the same grid to reverse their order, or select images from different locations to group them into a beautiful side-by-side layout!
+
+![Color Picker](./public/image_docs/color-picker.png)
+![Custom Classes](./public/image_docs/custom-class.png)
+![Font Sizes](./public/image_docs/font-size-controller.png)
+![Link Editor](./public/image_docs/modern-link-popover.png)
+
+### 🎯 Enhanced Drag & Drop System
+
+Major improvements to the drag and drop experience across the entire editor:
+
+- 🔧 **Fixed table dragging** - tables now move smoothly between blocks
+- 🔧 **Fixed container blocks** - nested content and lists now drag properly
+- ✨ **Smart drop zones** - visual indicators show exactly where blocks will land
+- 🚫 **No-op prevention** - won't allow drops that don't change position
+- 🔀 **Block swapping** - drag any block over another to swap their positions
+
+### 🎨 Improved Image Grid Operations
+
+Working with image grids is now more powerful and intuitive:
+
+- ↔️ **Horizontal reordering** - drag images left/right within grids
+- ↕️ **Extract vertically** - drag images out of grids to make them standalone
+- ➕ **Add to existing grids** - drag standalone images into grids to expand them
+- 🔗 **Merge grids** - drag images from one grid to another to combine them
+
+### ⚙️ Technical Improvements
+
+- 🏗️ **New structural node types** - table, thead, tbody, tr, th, td for proper HTML semantics
+- 📦 **Improved data transfer** - all block types now properly communicate during drag operations
+- 🎯 **Better type safety** - TypeScript types updated for table structures and multi-select
+- 🧪 **Enhanced state management** - reducer actions for table updates, column/row reordering
+
+```typescript
+// Example: Creating a table programmatically
+const table: StructuralNode = {
+  id: 'table-1',
+  type: 'table',
+  children: [
+    {
+      id: 'thead-1',
+      type: 'thead',
+      children: [/* header row */]
+    },
+    {
+      id: 'tbody-1',
+      type: 'tbody',
+      children: [/* body rows */]
+    }
+  ]
+};
+```
+
+> 🤝 **Collaboration Welcome!** I'm facing a lot of time constraints, so collaboration is much appreciated! Whether you're fixing bugs, adding features, improving documentation, or suggesting ideas - your contributions help make this editor better for everyone. Feel free to open issues, submit PRs, or reach out to discuss improvements. Let's build something amazing together! 🚀
 
 ---
 
@@ -342,7 +434,9 @@ Master these keyboard shortcuts for a blazing-fast editing experience:
 
 - ✅ **Block-Based Architecture** - Each element is an independent, draggable block
 - ✅ **Rich Text Formatting** - Bold, italic, underline, and combinations
-- ✅ **Multiple Block Types** - h1-h6, paragraph, code, blockquote, lists (ol/ul)
+- ✅ **Multiple Block Types** - h1-h6, paragraph, code, blockquote, lists (ol/ul), tables
+- ✅ **Table Support** - Full-featured tables with drag columns/rows, resize, add/remove
+- ✅ **Multi-Select Images** - Ctrl+click to select multiple images for grouping or reordering
 - ✅ **Inline Element Types** - Mix heading styles within paragraphs
 - ✅ **Color Support** - Preset Tailwind colors + custom hex/RGB colors
 - ✅ **Font Size Control** - Preset sizes + custom pixel values
@@ -408,15 +502,17 @@ function App() {
 
 ---
 
-## 🎨 Try It Out!
+## 🎨 Start Creating!
 
-👉 **Select any text** and use the toolbar above to format it with bold, italic, colors, fonts, and more
+👉 **Select any text** and use the toolbar to format it with bold, italic, colors, fonts, and more
 
 👉 Press **Enter** to create new blocks at any time
 
 👉 Press **Shift+Enter** for nested blocks and hierarchical content
 
 👉 Use the **drag handles (⋮⋮)** to reorder blocks and reorganize your document
+
+👉 Hold **Ctrl (⌘ on Mac)** and click multiple images to select them for grouping or reordering
 
 👉 Toggle **View Only** mode in the top-right to see the read-only version
 
