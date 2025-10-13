@@ -733,38 +733,42 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
       files = Array.from(e.dataTransfer.files);
     }
 
-    const imageFile = files.find((file) => file.type.startsWith("image/"));
+    // Find first image or video file
+    const mediaFile = files.find((file) => 
+      file.type.startsWith("image/") || file.type.startsWith("video/")
+    );
 
-    if (!imageFile) {
+    if (!mediaFile) {
       setDragOverNodeId(null);
       setDropPosition(null);
       setDraggingNodeId(null);
       return;
     }
 
+    const isVideo = mediaFile.type.startsWith("video/");
     setIsUploading(true);
 
     try {
       // Use custom upload handler if provided, otherwise use default
-      let imageUrl: string;
+      let mediaUrl: string;
 
       if (onUploadImage) {
-        imageUrl = await onUploadImage(imageFile);
+        mediaUrl = await onUploadImage(mediaFile);
       } else {
-        const result = await uploadImage(imageFile);
+        const result = await uploadImage(mediaFile);
         if (!result.success || !result.url) {
           throw new Error(result.error || "Upload failed");
         }
-        imageUrl = result.url;
+        mediaUrl = result.url;
       }
 
-      const imageNode: TextNode = {
-        id: "img-" + Date.now(),
-        type: "img",
+      const mediaNode: TextNode = {
+        id: `${isVideo ? 'video' : 'img'}-${Date.now()}`,
+        type: isVideo ? "video" : "img",
         content: "", // Optional caption
         attributes: {
-          src: imageUrl,
-          alt: imageFile.name,
+          src: mediaUrl,
+          alt: mediaFile.name,
         },
       };
 
@@ -775,12 +779,12 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
           ? dropPosition
           : "after";
 
-      dispatch(EditorActions.insertNode(imageNode, nodeId, insertPos));
-      dispatch(EditorActions.setActiveNode(imageNode.id));
+      dispatch(EditorActions.insertNode(mediaNode, nodeId, insertPos));
+      dispatch(EditorActions.setActiveNode(mediaNode.id));
 
       toast({
-        title: "Image uploaded!",
-        description: `Image placed ${dropPosition} the block`,
+        title: `${isVideo ? 'Video' : 'Image'} uploaded!`,
+        description: `${isVideo ? 'Video' : 'Image'} placed ${dropPosition} the block`,
       });
     } catch (error) {
       toast({
@@ -789,7 +793,7 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
         description:
           error instanceof Error
             ? error.message
-            : "Failed to upload image. Please try again.",
+            : "Failed to upload file. Please try again.",
       });
     } finally {
       setIsUploading(false);

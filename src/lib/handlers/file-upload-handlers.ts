@@ -20,7 +20,7 @@ export interface FileUploadHandlerParams {
 }
 
 /**
- * Handle single file change
+ * Handle single file change (supports both images and videos)
  */
 export function createHandleFileChange(params: FileUploadHandlerParams) {
   return async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,44 +30,58 @@ export function createHandleFileChange(params: FileUploadHandlerParams) {
 
     setIsUploading(true);
 
+    // Determine if file is image or video
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+
+    if (!isImage && !isVideo) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload an image or video file.",
+      });
+      setIsUploading(false);
+      return;
+    }
+
     try {
       // Use custom upload handler if provided, otherwise use default
-      let imageUrl: string;
+      let fileUrl: string;
 
       if (onUploadImage) {
-        imageUrl = await onUploadImage(file);
+        fileUrl = await onUploadImage(file);
       } else {
         const result = await uploadImage(file);
         if (!result.success || !result.url) {
           throw new Error(result.error || "Upload failed");
         }
-        imageUrl = result.url;
+        fileUrl = result.url;
       }
 
-      // Create new image node
-      const imageNode: TextNode = {
-        id: "img-" + Date.now(),
-        type: "img",
+      // Create new media node (image or video)
+      const mediaNode: TextNode = {
+        id: `${isVideo ? 'video' : 'img'}-${Date.now()}`,
+        type: isVideo ? "video" : "img",
         content: "", // Optional caption
         attributes: {
-          src: imageUrl,
+          src: fileUrl,
           alt: file.name,
         },
       };
 
-      // Insert image after current node or at end
+      // Insert media after current node or at end
       const targetId =
         state.activeNodeId ||
         container.children[container.children.length - 1]?.id;
       if (targetId) {
-        dispatch(EditorActions.insertNode(imageNode, targetId, "after"));
+        dispatch(EditorActions.insertNode(mediaNode, targetId, "after"));
       } else {
-        dispatch(EditorActions.insertNode(imageNode, container.id, "append"));
+        dispatch(EditorActions.insertNode(mediaNode, container.id, "append"));
       }
 
       toast({
-        title: "Image uploaded",
-        description: "Your image has been added to the editor.",
+        title: `${isVideo ? 'Video' : 'Image'} uploaded`,
+        description: `Your ${isVideo ? 'video' : 'image'} has been added to the editor.`,
       });
     } catch (error) {
       toast({
@@ -89,7 +103,7 @@ export function createHandleFileChange(params: FileUploadHandlerParams) {
 }
 
 /**
- * Handle multiple files change
+ * Handle multiple files change (supports both images and videos)
  */
 export function createHandleMultipleFilesChange(params: FileUploadHandlerParams) {
   return async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,8 +114,23 @@ export function createHandleMultipleFilesChange(params: FileUploadHandlerParams)
     setIsUploading(true);
 
     try {
-      // Upload all images
-      const uploadPromises = files.map(async (file) => {
+      // Filter to only images and videos
+      const validFiles = files.filter(
+        (file) => file.type.startsWith('image/') || file.type.startsWith('video/')
+      );
+
+      if (validFiles.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Invalid file types",
+          description: "Please upload only image or video files.",
+        });
+        setIsUploading(false);
+        return;
+      }
+
+      // Upload all media files
+      const uploadPromises = validFiles.map(async (file) => {
         if (onUploadImage) {
           return await onUploadImage(file);
         } else {
@@ -113,25 +142,30 @@ export function createHandleMultipleFilesChange(params: FileUploadHandlerParams)
         }
       });
 
-      const imageUrls = await Promise.all(uploadPromises);
+      const mediaUrls = await Promise.all(uploadPromises);
 
-      // Create image nodes
+      // Create media nodes (images and videos)
       const timestamp = Date.now();
-      const imageNodes: TextNode[] = imageUrls.map((url, index) => ({
-        id: `img-${timestamp}-${index}`,
-        type: "img",
-        content: "",
-        attributes: {
-          src: url,
-          alt: files[index].name,
-        },
-      }));
+      const mediaNodes: TextNode[] = mediaUrls.map((url, index) => {
+        const file = validFiles[index];
+        const isVideo = file.type.startsWith('video/');
+        
+        return {
+          id: `${isVideo ? 'video' : 'img'}-${timestamp}-${index}`,
+          type: isVideo ? "video" : "img",
+          content: "",
+          attributes: {
+            src: url,
+            alt: file.name,
+          },
+        };
+      });
 
-      // Create flex container with images
+      // Create flex container with media
       const flexContainer: ContainerNode = {
         id: `flex-container-${timestamp}`,
         type: "container",
-        children: imageNodes,
+        children: mediaNodes,
         attributes: {
           layoutType: "flex",
           gap: "4",
@@ -151,9 +185,20 @@ export function createHandleMultipleFilesChange(params: FileUploadHandlerParams)
         );
       }
 
+      const videoCount = validFiles.filter((f) => f.type.startsWith('video/')).length;
+      const imageCount = validFiles.filter((f) => f.type.startsWith('image/')).length;
+      let description = "";
+      if (videoCount > 0 && imageCount > 0) {
+        description = `${imageCount} image(s) and ${videoCount} video(s) added in a flex layout.`;
+      } else if (videoCount > 0) {
+        description = `${videoCount} video(s) added in a flex layout.`;
+      } else {
+        description = `${imageCount} image(s) added in a flex layout.`;
+      }
+
       toast({
-        title: "Images uploaded",
-        description: `${imageUrls.length} images added in a flex layout.`,
+        title: "Media uploaded",
+        description,
       });
     } catch (error) {
       toast({

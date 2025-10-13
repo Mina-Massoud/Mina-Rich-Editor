@@ -19,6 +19,7 @@ import {
   getNodeTextContent,
 } from "../lib";
 import { ImageBlock } from "./ImageBlock";
+import { VideoBlock } from "./VideoBlock";
 import { CommandMenu } from "./CommandMenu";
 import { useEditor } from "../lib/context/EditorContext";
 import { GripVertical } from "lucide-react";
@@ -195,70 +196,9 @@ export function Block({
           }}
           dragOverPosition={dragOverFlexId === node.id ? flexDropPosition : null}
         >
-          {containerNode.children.map((childNode) => {
-            const isChildImage =
-              childNode && "type" in childNode && childNode.type === "img";
-
-            const blockContent = (
-              <Block
-                key={childNode.id}
-                node={childNode}
-                isActive={isActive}
-                nodeRef={nodeRef}
-                onInput={onInput}
-                onKeyDown={(e) => {
-                  onKeyDown(e);
-                }}
-                onClick={onClick}
-                onDelete={
-                  isChildImage && onDelete
-                    ? () => onDelete(childNode.id)
-                    : undefined
-                }
-                onCreateNested={onCreateNested}
-                depth={depth + 1}
-                readOnly={readOnly}
-                onImageDragStart={onImageDragStart}
-                onChangeBlockType={onChangeBlockType}
-                onInsertImage={onInsertImage}
-                onCreateList={onCreateList}
-                onUploadImage={onUploadImage}
-                selectedImageIds={selectedImageIds}
-                onToggleImageSelection={onToggleImageSelection}
-                onClickWithModifier={onClickWithModifier}
-                onFlexContainerDragOver={onFlexContainerDragOver}
-                onFlexContainerDragLeave={onFlexContainerDragLeave}
-                onFlexContainerDrop={onFlexContainerDrop}
-                dragOverFlexId={dragOverFlexId}
-                flexDropPosition={flexDropPosition}
-              />
-            );
-
-            // Wrap in flex item div
-            return (
-              <div
-                key={childNode.id}
-                className="flex-1 min-w-[280px] max-w-full"
-              >
-                {blockContent}
-              </div>
-            );
-          })}
-        </FlexContainer>
-      );
-    }
-
-    return (
-      <ContainerElement
-        key={node.id}
-        data-node-id={node.id}
-        data-node-type="container"
-        data-list-type={listType || undefined}
-        className={containerClasses}
-      >
         {containerNode.children.map((childNode) => {
-          const isChildImage =
-            childNode && "type" in childNode && childNode.type === "img";
+          const isChildMedia =
+            childNode && "type" in childNode && (childNode.type === "img" || childNode.type === "video");
 
           const blockContent = (
             <Block
@@ -272,7 +212,68 @@ export function Block({
               }}
               onClick={onClick}
               onDelete={
-                isChildImage && onDelete
+                isChildMedia && onDelete
+                  ? () => onDelete(childNode.id)
+                  : undefined
+              }
+              onCreateNested={onCreateNested}
+              depth={depth + 1}
+              readOnly={readOnly}
+              onImageDragStart={onImageDragStart}
+              onChangeBlockType={onChangeBlockType}
+              onInsertImage={onInsertImage}
+              onCreateList={onCreateList}
+              onUploadImage={onUploadImage}
+              selectedImageIds={selectedImageIds}
+              onToggleImageSelection={onToggleImageSelection}
+              onClickWithModifier={onClickWithModifier}
+              onFlexContainerDragOver={onFlexContainerDragOver}
+              onFlexContainerDragLeave={onFlexContainerDragLeave}
+              onFlexContainerDrop={onFlexContainerDrop}
+              dragOverFlexId={dragOverFlexId}
+              flexDropPosition={flexDropPosition}
+            />
+          );
+
+          // Wrap in flex item div
+          return (
+            <div
+              key={childNode.id}
+              className="flex-1 min-w-[280px] max-w-full"
+            >
+              {blockContent}
+            </div>
+          );
+        })}
+        </FlexContainer>
+      );
+    }
+
+    return (
+      <ContainerElement
+        key={node.id}
+        data-node-id={node.id}
+        data-node-type="container"
+        data-list-type={listType || undefined}
+        className={containerClasses}
+      >
+        {containerNode.children.map((childNode) => {
+          const isChildMedia =
+            childNode && "type" in childNode && (childNode.type === "img" || childNode.type === "video");
+
+          const blockContent = (
+            <Block
+              key={childNode.id}
+              node={childNode}
+              isActive={isActive}
+              nodeRef={nodeRef}
+              onInput={onInput}
+              onKeyDown={(e) => {
+                onKeyDown(e);
+              }}
+              onClick={onClick}
+              onDelete={
+                isChildMedia && onDelete
                   ? () => onDelete(childNode.id)
                   : undefined
               }
@@ -332,6 +333,22 @@ export function Block({
   if (textNode.type === "img") {
     return (
       <ImageBlock
+        node={textNode}
+        isActive={isActive}
+        onClick={onClick}
+        onDelete={onDelete}
+        onDragStart={onImageDragStart}
+        isSelected={selectedImageIds?.has(textNode.id)}
+        onToggleSelection={onToggleImageSelection}
+        onClickWithModifier={onClickWithModifier}
+      />
+    );
+  }
+
+  // Video nodes render as VideoBlock
+  if (textNode.type === "video") {
+    return (
+      <VideoBlock
         node={textNode}
         isActive={isActive}
         onClick={onClick}

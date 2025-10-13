@@ -183,6 +183,24 @@ function serializeTextNode(node: TextNode, indent: string = ''): string {
     html += `${indent}</figure>\n`;
     return html;
   }
+
+  // Handle video nodes
+  if (type === 'video') {
+    const src = attributes?.src as string || '';
+    const caption = node.content || '';
+    
+    let html = `${indent}<figure class="mb-4">\n`;
+    html += `${indent}  <video src="${escapeHtml(src)}" controls class="w-full h-auto rounded-lg object-cover max-h-[600px]" preload="metadata">\n`;
+    html += `${indent}    Your browser does not support the video tag.\n`;
+    html += `${indent}  </video>\n`;
+    
+    if (caption) {
+      html += `${indent}  <figcaption class="text-sm text-muted-foreground text-center mt-3 italic">${escapeHtml(caption)}</figcaption>\n`;
+    }
+    
+    html += `${indent}</figure>\n`;
+    return html;
+  }
   
   // Get block-level classes
   const blockClasses = getBlockTypeClasses(type);

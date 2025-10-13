@@ -34,6 +34,7 @@ import {
   List,
   ListOrdered,
   Image,
+  Video,
 } from 'lucide-react';
 import { useEditor, EditorActions } from '@/lib';
 
@@ -139,6 +140,13 @@ const commands: CommandOption[] = [
     description: 'Upload or embed an image',
     keywords: ['image', 'img', 'picture', 'photo', 'upload'],
   },
+  {
+    label: 'Video',
+    value: 'video',
+    icon: <Video className="w-4 h-4" />,
+    description: 'Upload or embed a video',
+    keywords: ['video', 'vid', 'movie', 'mp4', 'upload'],
+  },
 ];
 
 export function CommandMenu({ 
@@ -156,7 +164,7 @@ export function CommandMenu({
 
   const [, dispatch] = useEditor();
 
-  // Handle command selection - for image, we'll use dispatch directly here
+  // Handle command selection - for image/video, we'll use dispatch directly here
   const handleSelect = useCallback(async (commandValue: string) => {
     // Special handling for image - trigger file picker and upload
     if (commandValue === 'img') {
@@ -227,6 +235,98 @@ export function CommandMenu({
             requestAnimationFrame(() => {
               dispatch(EditorActions.updateNode(nodeId, {
                 type: 'img',
+                content: '', 
+                attributes: {
+                  src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2ZlZjJmMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNlZjQ0NDQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5VcGxvYWQgRmFpbGVkPC90ZXh0Pjwvc3ZnPg==',
+                  alt: 'Upload failed',
+                  error: 'true',
+                }
+              }));
+            });
+          });
+        } finally {
+          setIsUploading(false);
+          // Clean up
+          document.body.removeChild(fileInput);
+        }
+      };
+      
+      // Add to DOM and trigger click
+      document.body.appendChild(fileInput);
+      fileInput.click();
+      return;
+    }
+
+    // Special handling for video - trigger file picker and upload
+    if (commandValue === 'video') {
+      // Close the menu first
+      onClose();
+      
+      // Create a hidden file input
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'video/*';
+      fileInput.style.display = 'none';
+      
+      fileInput.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        
+        // Show loading state immediately
+        setIsUploading(true);
+        
+        // Create placeholder video with loading state
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            dispatch(EditorActions.updateNode(nodeId, {
+              type: 'video',
+              content: '', // Empty caption initially
+              attributes: {
+                src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5VcGxvYWRpbmcuLi48L3RleHQ+PC9zdmc+',
+                alt: 'Uploading...',
+                loading: 'true', // Custom attribute to indicate loading
+              }
+            }));
+          });
+        });
+        
+        try {
+          // Use custom upload handler if provided
+          let videoUrl: string;
+          
+          if (onUploadImage) {
+            // Reuse the same handler for video uploads
+            videoUrl = await onUploadImage(file);
+          } else {
+            // Fallback: use default upload (works for videos too)
+            const { uploadImage } = await import('../lib/utils/image-upload');
+            const result = await uploadImage(file);
+            if (!result.success || !result.url) {
+              throw new Error(result.error || "Upload failed");
+            }
+            videoUrl = result.url;
+          }
+          
+          // Update with actual video URL
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              dispatch(EditorActions.updateNode(nodeId, {
+                type: 'video',
+                content: '', // Empty caption initially
+                attributes: {
+                  src: videoUrl,
+                  alt: file.name,
+                }
+              }));
+            });
+          });
+        } catch (error) {
+          console.error('Video upload failed:', error);
+          // Revert to error state
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              dispatch(EditorActions.updateNode(nodeId, {
+                type: 'video',
                 content: '', 
                 attributes: {
                   src: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iI2ZlZjJmMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNlZjQ0NDQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5VcGxvYWQgRmFpbGVkPC90ZXh0Pjwvc3ZnPg==',

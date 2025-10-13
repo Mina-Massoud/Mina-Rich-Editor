@@ -4,6 +4,7 @@ import React from "react";
 import { type TextNode, type SelectionInfo, serializeToHtml, type ContainerNode } from "../lib";
 import { ColorPickerComponent } from "./ColorPicker";
 import { FontSizePicker } from "./FontSizePicker";
+import { MediaUploadPopover } from "./MediaUploadPopover";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import {
   Select,
@@ -32,8 +33,6 @@ import {
   Italic,
   Underline,
   Type,
-  ImagePlus,
-  LayoutGrid,
   Download,
   Copy,
   Check,
@@ -59,6 +58,7 @@ interface EditorToolbarProps {
   onFontSizeSelect: (fontSize: string) => void;
   onImageUploadClick: () => void;
   onMultipleImagesUploadClick: () => void;
+  onVideoUploadClick: () => void;
   onCreateList: (listType: "ul" | "ol") => void;
   onCreateLink: () => void;
   onCreateTable: () => void;
@@ -82,6 +82,7 @@ export function EditorToolbar({
   onFontSizeSelect,
   onImageUploadClick,
   onMultipleImagesUploadClick,
+  onVideoUploadClick,
   onCreateList,
   onCreateLink,
   onCreateTable,
@@ -264,29 +265,13 @@ export function EditorToolbar({
 
         {/* Right Section - Insert Elements */}
         <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-          {/* Image Buttons Group */}
-          <ButtonGroup>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onImageUploadClick}
-              disabled={isUploading}
-              className="h-7 w-7 md:h-8 md:w-8"
-              title="Add single image"
-            >
-              <ImagePlus className="size-3 md:size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onMultipleImagesUploadClick}
-              disabled={isUploading}
-              className="h-7 w-7 md:h-8 md:w-8"
-              title="Add multiple images"
-            >
-              <LayoutGrid className="size-3 md:size-3.5" />
-            </Button>
-          </ButtonGroup>
+          {/* Media Upload Popover - combines image and video uploads */}
+          <MediaUploadPopover
+            isUploading={isUploading}
+            onImageUploadClick={onImageUploadClick}
+            onMultipleImagesUploadClick={onMultipleImagesUploadClick}
+            onVideoUploadClick={onVideoUploadClick}
+          />
 
           <Separator orientation="vertical" className="h-5 md:h-6 hidden sm:block" />
 

@@ -122,6 +122,7 @@ export function Editor({
   const contentUpdateTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const multipleFileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const editorContentRef = useRef<HTMLDivElement>(null);
   const [readOnly, setReadOnly] = useState(initialReadOnly);
 
@@ -199,6 +200,17 @@ export function Editor({
     setIsUploading,
     fileInputRef,
     multipleFileInputRef,
+    onUploadImage,
+  };
+
+  const videoUploadParams = {
+    container,
+    dispatch,
+    state,
+    toast,
+    setIsUploading,
+    fileInputRef: videoInputRef,
+    multipleFileInputRef: videoInputRef, // Reuse the same ref for consistency
     onUploadImage,
   };
 
@@ -430,6 +442,16 @@ export function Editor({
     []
   );
 
+  const handleVideoUploadClick = useCallback(
+    createHandleImageUploadClick(videoInputRef),
+    []
+  );
+
+  const handleVideoFileChange = useCallback(
+    createHandleFileChange(videoUploadParams),
+    [container, dispatch, state.activeNodeId, toast, onUploadImage]
+  );
+
   const handleClearImageSelection = useCallback(
     createHandleClearImageSelection(setSelectedImageIds),
     []
@@ -656,6 +678,7 @@ export function Editor({
               onFontSizeSelect={handleApplyFontSize}
               onImageUploadClick={handleImageUploadClick}
               onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
+              onVideoUploadClick={handleVideoUploadClick}
               onCreateList={handleCreateList}
               onCreateLink={handleCreateLink}
               onCreateTable={() => setTableDialogOpen(true)}
@@ -673,7 +696,7 @@ export function Editor({
             onImportMarkdown={handleImportMarkdownTable}
           />
 
-          {/* Hidden file inputs for image uploads */}
+          {/* Hidden file inputs for image and video uploads */}
           {!readOnly && (
             <>
               <input
@@ -689,6 +712,13 @@ export function Editor({
                 accept="image/*"
                 multiple
                 onChange={handleMultipleFilesChange}
+                className="hidden"
+              />
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleVideoFileChange}
                 className="hidden"
               />
             </>
