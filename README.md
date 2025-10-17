@@ -4,6 +4,8 @@
 
 ## 🌐 [Live Demo →](https://mina-rich-editor.vercel.app)
 
+## Quick Install : ```npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json```
+
 The **first block-based rich text editor** built entirely with **Tailwind CSS** and **shadcn/ui**. Created by [Mina Massoud](https://mina-massoud.com/) - a 22 years old developer with a lot of passion to change people's lives! 😄
 
 [![GitHub stars](https://img.shields.io/github/stars/Mina-Massoud/mina-rich-editor?style=social)](https://github.com/Mina-Massoud/mina-rich-editor)
