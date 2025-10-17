@@ -101,7 +101,7 @@ export function EditorToolbar({
             <Select
               value={
                 currentSelection?.elementType !== undefined &&
-                currentSelection?.elementType !== null
+                  currentSelection?.elementType !== null
                   ? currentSelection.elementType
                   : currentNode?.type || "p"
               }
@@ -117,7 +117,7 @@ export function EditorToolbar({
                   {(() => {
                     const type =
                       currentSelection?.elementType !== undefined &&
-                      currentSelection?.elementType !== null
+                        currentSelection?.elementType !== null
                         ? currentSelection.elementType
                         : currentNode?.type || "p";
 
@@ -315,6 +315,7 @@ export function EditorToolbar({
             onClick={onCreateTable}
             className="h-7 w-7 md:h-8 md:w-8"
             title="Add table"
+            type="button"
           >
             <TableIcon className="size-3 md:size-3.5" />
           </Button>
@@ -388,8 +389,8 @@ export function EditorToolbar({
                     dangerouslySetInnerHTML={{
                       __html: enhanceSpaces
                         ? `<div class="[&>*]:my-3 [&_*]:my-5">${serializeToHtml(
-                            container
-                          )}</div>`
+                          container
+                        )}</div>`
                         : serializeToHtml(container),
                     }}
                   />
@@ -425,8 +426,8 @@ export function EditorToolbar({
                   <pre className="flex-1 text-xs bg-secondary text-secondary-foreground p-4 rounded-lg overflow-auto border">
                     {enhanceSpaces
                       ? `<div class="[&>*]:my-3 [&_*]:my-5">\n${serializeToHtml(
-                          container
-                        )}\n</div>`
+                        container
+                      )}\n</div>`
                       : serializeToHtml(container)}
                   </pre>
                 </TabsContent>
