@@ -283,6 +283,7 @@ export function EditorToolbar({
               onClick={() => onCreateList("ul")}
               className="h-7 w-7 md:h-8 md:w-8"
               title="Add unordered list"
+              type="button"
             >
               <List className="size-3 md:size-3.5" />
             </Button>
@@ -292,6 +293,7 @@ export function EditorToolbar({
               onClick={() => onCreateList("ol")}
               className="h-7 w-7 md:h-8 md:w-8"
               title="Add ordered list"
+              type="button"
             >
               <ListOrdered className="size-3 md:size-3.5" />
             </Button>
@@ -304,6 +306,7 @@ export function EditorToolbar({
             onClick={onCreateLink}
             className="h-7 w-7 md:h-8 md:w-8"
             title="Add link"
+            type="button"
           >
             <LinkIcon className="size-3 md:size-3.5" />
           </Button>

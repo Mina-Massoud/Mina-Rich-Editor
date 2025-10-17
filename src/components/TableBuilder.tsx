@@ -130,7 +130,7 @@ export function TableBuilder({
   const handleColumnDrop = (targetColIndex: number, e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (draggingCol === null || draggingCol === targetColIndex || !headerRow || !bodyRows) return;
 
     // Swap columns in header
@@ -207,7 +207,7 @@ export function TableBuilder({
   const handleRowDrop = (targetRowIndex: number, e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (draggingRow === null || draggingRow === targetRowIndex || !bodyRows) return;
 
     // Reorder rows
@@ -498,225 +498,229 @@ export function TableBuilder({
       )}
 
       <div className="relative w-fit mx-auto">
-      {/* Column controls - top */}
-      {showColControls && (
-        <div className="absolute top-0 left-8 right-0 flex justify-center gap-1 z-10">
-          {Array.from({ length: numCols }).map((_, idx) => (
-            <div
-              key={idx}
-              className="flex flex-col items-center"
-              style={{ width: `${100 / numCols}%` }}
-              onMouseEnter={() => setHoveredCol(idx)}
-              onMouseLeave={() => setHoveredCol(null)}
+        {/* Column controls - top */}
+        {showColControls && (
+          <div className="absolute top-0 left-8 right-0 flex justify-center gap-1 z-10">
+            {Array.from({ length: numCols }).map((_, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col items-center"
+                style={{ width: `${100 / numCols}%` }}
+                onMouseEnter={() => setHoveredCol(idx)}
+                onMouseLeave={() => setHoveredCol(null)}
+              >
+                {hoveredCol === idx && numCols > 1 && (
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    type="button"
+                    className="h-5 w-5"
+                    onClick={() => removeColumn(idx)}
+                    title="Remove column"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              size="icon"
+              variant="secondary"
+              type="button"
+              className="h-6 w-6 ml-1"
+              onClick={addColumn}
+              title="Add column"
             >
-              {hoveredCol === idx && numCols > 1 && (
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  className="h-5 w-5"
-                  onClick={() => removeColumn(idx)}
-                  title="Remove column"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          ))}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-6 w-6 ml-1"
-            onClick={addColumn}
-            title="Add column"
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        </div>
-      )}
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
 
-      {/* Row controls - left side */}
-      {showRowControls && bodyRows && (
-        <div className="absolute -left-2 top-0 bottom-0 flex flex-col justify-start gap-1 z-10 pt-10">
-          {bodyRows.map((_, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-center"
-              style={{ height: "40px" }}
-              onMouseEnter={() => setHoveredRow(idx)}
-              onMouseLeave={() => setHoveredRow(null)}
+        {/* Row controls - left side */}
+        {showRowControls && bodyRows && (
+          <div className="absolute -left-2 top-0 bottom-0 flex flex-col justify-start gap-1 z-10 pt-10">
+            {bodyRows.map((_, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-center"
+                style={{ height: "40px" }}
+                onMouseEnter={() => setHoveredRow(idx)}
+                onMouseLeave={() => setHoveredRow(null)}
+              >
+                {hoveredRow === idx && bodyRows.length > 1 && (
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    type="button"
+                    className="h-4 w-4"
+                    onClick={() => removeRow(idx)}
+                    title="Remove row"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-4 w-4 mt-1"
+              onClick={addRow}
+              type="button"
+              title="Add row"
             >
-              {hoveredRow === idx && bodyRows.length > 1 && (
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  className="h-4 w-4"
-                  onClick={() => removeRow(idx)}
-                  title="Remove row"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </Button>
-              )}
-            </div>
-          ))}
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-4 w-4 mt-1"
-            onClick={addRow}
-            title="Add row"
-          >
-            <Plus className="h-2.5 w-2.5" />
-          </Button>
-        </div>
-      )}
+              <Plus className="h-2.5 w-2.5" />
+            </Button>
+          </div>
+        )}
 
-      <div className="relative w-fit mx-auto py-5 overflow-x-auto">
-        {/* Table */}
-        <table
-          ref={tableRef}
-          className="border-collapse border border-border"
-          style={{ width: "auto" }}
-        >
-           <thead>
-             {headerRow && (
-               <tr>
-                 {headerRow.children.map((cell, colIdx) => (
-                   <th
-                     key={cell.id}
-                     className={cn(
-                       "border border-border bg-muted/50 p-2 font-semibold text-left relative group/cell",
-                       hoveredCol === colIdx && "bg-muted",
-                       dragOverCol === colIdx && draggingCol !== colIdx && "bg-primary/20"
-                     )}
-                     style={
-                       columnWidths[colIdx]
-                         ? {
-                             width: columnWidths[colIdx],
-                             minWidth: columnWidths[colIdx],
-                             maxWidth: columnWidths[colIdx],
-                           }
-                         : {
-                             whiteSpace: "nowrap",
-                           }
-                     }
-                     draggable={!readOnly}
-                     onDragStart={(e) => handleColumnDragStart(colIdx, e)}
-                     onDragOver={(e) => handleColumnDragOver(colIdx, e)}
-                     onDrop={(e) => handleColumnDrop(colIdx, e)}
-                     onDragEnd={handleColumnDragEnd}
-                   >
-                     <div className="flex items-center gap-1">
-                       {/* Drag handle for column */}
-                       {!readOnly && (
-                         <div
-                           className="opacity-0 group-hover/cell:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-                           onMouseDown={(e) => e.stopPropagation()}
-                         >
-                           <GripVertical className="h-3 w-3 text-muted-foreground" />
-                         </div>
-                       )}
-                       
-                      <input
-                        type="text"
-                        value={(cell as TextNode).content || ""}
-                        onChange={(e) =>
-                          handleCellChange(0, colIdx, e.target.value, true)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Backspace" && !(cell as TextNode).content && numCols > 1) {
-                            e.preventDefault();
-                            removeColumn(colIdx);
+        <div className="relative w-fit mx-auto py-5 overflow-x-auto">
+          {/* Table */}
+          <table
+            ref={tableRef}
+            className="border-collapse border border-border"
+            style={{ width: "auto" }}
+          >
+            <thead>
+              {headerRow && (
+                <tr>
+                  {headerRow.children.map((cell, colIdx) => (
+                    <th
+                      key={cell.id}
+                      className={cn(
+                        "border border-border bg-muted/50 p-2 font-semibold text-left relative group/cell",
+                        hoveredCol === colIdx && "bg-muted",
+                        dragOverCol === colIdx && draggingCol !== colIdx && "bg-primary/20"
+                      )}
+                      style={
+                        columnWidths[colIdx]
+                          ? {
+                            width: columnWidths[colIdx],
+                            minWidth: columnWidths[colIdx],
+                            maxWidth: columnWidths[colIdx],
                           }
-                        }}
-                        readOnly={readOnly}
-                        className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0"
-                        placeholder={`Column ${colIdx + 1}`}
-                      />
-                     </div>
+                          : {
+                            whiteSpace: "nowrap",
+                          }
+                      }
+                      draggable={!readOnly}
+                      onDragStart={(e) => handleColumnDragStart(colIdx, e)}
+                      onDragOver={(e) => handleColumnDragOver(colIdx, e)}
+                      onDrop={(e) => handleColumnDrop(colIdx, e)}
+                      onDragEnd={handleColumnDragEnd}
+                    >
+                      <div className="flex items-center gap-1">
+                        {/* Drag handle for column */}
+                        {!readOnly && (
+                          <div
+                            className="opacity-0 group-hover/cell:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <GripVertical className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        )}
 
-                     {/* Resize handle */}
-                     {!readOnly && (
-                       <div
-                         className={cn(
-                           "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors",
-                           resizingCol === colIdx && "bg-primary"
-                         )}
-                         onMouseDown={(e) => handleResizeStart(colIdx, e)}
-                         style={{ userSelect: "none" }}
-                       >
-                         <div className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity">
-                           <GripVertical className="h-4 w-4 text-muted-foreground" />
-                         </div>
-                       </div>
-                     )}
-                   </th>
-                 ))}
-               </tr>
-             )}
-           </thead>
-           <tbody>
-             {bodyRows?.map((row, rowIdx) => (
-               <tr
-                 key={row.id}
-                 className={cn(
-                   "group/row",
-                   hoveredRow === rowIdx && "bg-muted/30",
-                   dragOverRow === rowIdx && draggingRow !== rowIdx && "bg-primary/20"
-                 )}
-                 draggable={!readOnly}
-                 onDragStart={(e) => handleRowDragStart(rowIdx, e)}
-                 onDragOver={(e) => handleRowDragOver(rowIdx, e)}
-                 onDrop={(e) => handleRowDrop(rowIdx, e)}
-                 onDragEnd={handleRowDragEnd}
-               >
-                 {row.children.map((cell, colIdx) => (
-                   <td
-                     key={cell.id}
-                     className={cn(
-                       "border border-border p-2 relative",
-                       hoveredCol === colIdx && "bg-muted/50"
-                     )}
-                     style={
-                       columnWidths[colIdx]
-                         ? {
-                             width: columnWidths[colIdx],
-                             minWidth: columnWidths[colIdx],
-                             maxWidth: columnWidths[colIdx],
-                           }
-                         : {
-                             whiteSpace: "nowrap",
-                           }
-                     }
-                   >
-                     <div className="flex items-center gap-1">
-                       {/* Drag handle for row (only show in first column) */}
-                       {!readOnly && colIdx === 0 && (
-                         <div
-                           className="opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-                           onMouseDown={(e) => e.stopPropagation()}
-                         >
-                           <GripVertical className="h-3 w-3 text-muted-foreground" />
-                         </div>
-                       )}
-                       
-                       <input
-                         type="text"
-                         value={(cell as TextNode).content || ""}
-                         onChange={(e) =>
-                           handleCellChange(rowIdx, colIdx, e.target.value, false)
-                         }
-                         readOnly={readOnly}
-                         className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0"
-                         placeholder="Enter text"
-                       />
-                     </div>
-                   </td>
-                 ))}
-               </tr>
-             ))}
-           </tbody>
-        </table>
-      </div>
+                        <input
+                          type="text"
+                          value={(cell as TextNode).content || ""}
+                          onChange={(e) =>
+                            handleCellChange(0, colIdx, e.target.value, true)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Backspace" && !(cell as TextNode).content && numCols > 1) {
+                              e.preventDefault();
+                              removeColumn(colIdx);
+                            }
+                          }}
+                          readOnly={readOnly}
+                          className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0"
+                          placeholder={`Column ${colIdx + 1}`}
+                        />
+                      </div>
+
+                      {/* Resize handle */}
+                      {!readOnly && (
+                        <div
+                          className={cn(
+                            "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors",
+                            resizingCol === colIdx && "bg-primary"
+                          )}
+                          onMouseDown={(e) => handleResizeStart(colIdx, e)}
+                          style={{ userSelect: "none" }}
+                        >
+                          <div className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity">
+                            <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              )}
+            </thead>
+            <tbody>
+              {bodyRows?.map((row, rowIdx) => (
+                <tr
+                  key={row.id}
+                  className={cn(
+                    "group/row",
+                    hoveredRow === rowIdx && "bg-muted/30",
+                    dragOverRow === rowIdx && draggingRow !== rowIdx && "bg-primary/20"
+                  )}
+                  draggable={!readOnly}
+                  onDragStart={(e) => handleRowDragStart(rowIdx, e)}
+                  onDragOver={(e) => handleRowDragOver(rowIdx, e)}
+                  onDrop={(e) => handleRowDrop(rowIdx, e)}
+                  onDragEnd={handleRowDragEnd}
+                >
+                  {row.children.map((cell, colIdx) => (
+                    <td
+                      key={cell.id}
+                      className={cn(
+                        "border border-border p-2 relative",
+                        hoveredCol === colIdx && "bg-muted/50"
+                      )}
+                      style={
+                        columnWidths[colIdx]
+                          ? {
+                            width: columnWidths[colIdx],
+                            minWidth: columnWidths[colIdx],
+                            maxWidth: columnWidths[colIdx],
+                          }
+                          : {
+                            whiteSpace: "nowrap",
+                          }
+                      }
+                    >
+                      <div className="flex items-center gap-1">
+                        {/* Drag handle for row (only show in first column) */}
+                        {!readOnly && colIdx === 0 && (
+                          <div
+                            className="opacity-0 group-hover/row:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <GripVertical className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        )}
+
+                        <input
+                          type="text"
+                          value={(cell as TextNode).content || ""}
+                          onChange={(e) =>
+                            handleCellChange(rowIdx, colIdx, e.target.value, false)
+                          }
+                          readOnly={readOnly}
+                          className="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0"
+                          placeholder="Enter text"
+                        />
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

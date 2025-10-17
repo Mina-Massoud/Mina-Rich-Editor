@@ -80,6 +80,7 @@ export function FontSizePicker({
         size="icon"
         onClick={handleDecrement}
         disabled={disabled || fontSize <= 8}
+        type="button"
         className="h-7 w-6 md:h-8 md:w-7 rounded-r-none hover:bg-muted"
         title="Decrease font size"
       >
@@ -103,6 +104,7 @@ export function FontSizePicker({
         variant="ghost"
         size="icon"
         onClick={handleIncrement}
+        type="button"
         disabled={disabled || fontSize >= 128}
         className="h-7 w-6 md:h-8 md:w-7 rounded-l-none hover:bg-muted"
         title="Increase font size"
