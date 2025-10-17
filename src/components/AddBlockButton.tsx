@@ -27,7 +27,7 @@ export function AddBlockButton({ onAdd, position = 'after' }: AddBlockButtonProp
     >
       {/* Hover area - full width */}
       <div className="absolute inset-0 w-full" />
-      
+
       {/* Divider line - shows on hover */}
       <div
         className={`
@@ -41,6 +41,7 @@ export function AddBlockButton({ onAdd, position = 'after' }: AddBlockButtonProp
       {/* Add button - shows on hover */}
       <Button
         variant="outline"
+        type="button" // Prevent form submission if inside a form
         size="sm"
         className={`
           relative z-10 gap-1 h-6 px-2 transition-all shadow-sm
