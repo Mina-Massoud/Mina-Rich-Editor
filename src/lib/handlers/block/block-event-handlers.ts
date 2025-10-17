@@ -60,8 +60,11 @@ export function createHandleInput(params: Pick<BlockEventHandlerParams, 'textNod
     const element = e.currentTarget;
     const text = element.textContent || "";
 
-    // Check if the block is empty and user typed "/"
-    if (text === "/" && !readOnly && onChangeBlockType) {
+    // Check if this is a header block (h1) - headers don't show command menu
+    const isHeaderBlock = textNode.type === 'h1';
+
+    // Check if the block is empty and user typed "/" (but not for header blocks)
+    if (text === "/" && !readOnly && onChangeBlockType && !isHeaderBlock) {
       setShowCommandMenu(true);
       setCommandMenuAnchor(element);
     } else if (showCommandMenu && text !== "/") {
@@ -75,10 +78,10 @@ export function createHandleInput(params: Pick<BlockEventHandlerParams, 'textNod
     // Call the parent onInput handler
     onInput(element);
 
-    // Reset the flag after a short delay to allow React to process
+    // Reset the flag after user stops typing (longer delay to prevent innerHTML updates during typing)
     setTimeout(() => {
       shouldPreserveSelectionRef.current = false;
-    }, 0);
+    }, 200);
   };
 }
 
@@ -219,6 +222,7 @@ export function createHandleCommandSelect(params: {
   onChangeBlockType?: (nodeId: string, newType: string) => void;
   onInsertImage?: (nodeId: string) => void;
   onCreateList?: (nodeId: string, listType: string) => void;
+  onCreateTable?: (nodeId: string) => void;
   localRef: React.RefObject<HTMLElement | null>;
   setShowCommandMenu: (show: boolean) => void;
   setCommandMenuAnchor: (el: HTMLElement | null) => void;
@@ -229,6 +233,7 @@ export function createHandleCommandSelect(params: {
       onChangeBlockType,
       onInsertImage,
       onCreateList,
+      onCreateTable,
       localRef,
       setShowCommandMenu,
       setCommandMenuAnchor,
@@ -254,6 +259,15 @@ export function createHandleCommandSelect(params: {
       // Small delay to ensure menu is closed before creating the list
       setTimeout(() => {
         onCreateList(textNode.id, commandValue);
+      }, 50);
+      return;
+    }
+
+    // Handle table creation
+    if (commandValue === "table" && onCreateTable) {
+      // Small delay to ensure menu is closed before opening table dialog
+      setTimeout(() => {
+        onCreateTable(textNode.id);
       }, 50);
       return;
     }

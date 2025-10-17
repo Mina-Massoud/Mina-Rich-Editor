@@ -67,18 +67,22 @@ function getInlineElementTypeClasses(elementType: string): string {
 }
 
 /**
- * Build inline formatting classes (bold, italic, underline)
+ * Build inline formatting classes (bold, italic, underline, strikethrough, code)
  */
 function getInlineFormattingClasses(
   bold?: boolean,
   italic?: boolean,
-  underline?: boolean
+  underline?: boolean,
+  strikethrough?: boolean,
+  code?: boolean
 ): string {
   const classes: string[] = [];
   
   if (bold) classes.push('font-bold');
   if (italic) classes.push('italic');
   if (underline) classes.push('underline');
+  if (strikethrough) classes.push('line-through');
+  if (code) classes.push('font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded');
   
   return classes.join(' ');
 }
@@ -107,7 +111,9 @@ function serializeInlineChildren(node: TextNode): string {
     const formattingClasses = getInlineFormattingClasses(
       child.bold,
       child.italic,
-      child.underline
+      child.underline,
+      child.strikethrough,
+      child.code
     );
     
     const elementTypeClasses = child.elementType 
@@ -137,15 +143,15 @@ function serializeInlineChildren(node: TextNode): string {
       const linkClasses = ['text-primary hover:underline cursor-pointer', allClasses]
         .filter(Boolean)
         .join(' ');
-      const italicSpacing = child.italic ? 'inline-block pr-1' : '';
+      const italicSpacing = child.italic ? 'inline' : '';
       const finalClasses = [linkClasses, italicSpacing].filter(Boolean).join(' ');
       const styleAttr = inlineStyles ? ` style="${inlineStyles}"` : '';
       return `<a href="${escapeHtml(child.href)}" target="_blank" rel="noopener noreferrer" class="${finalClasses}"${styleAttr}>${content}</a>`;
     }
     
     if (allClasses || inlineStyles) {
-      // Add inline-block pr-1 for italic text to prevent overlapping
-      const italicSpacing = child.italic ? 'inline-block pr-1' : '';
+      // Add inline-blockfor italic text to prevent overlapping
+      const italicSpacing = child.italic ? 'inline' : '';
       const finalClasses = [allClasses, italicSpacing].filter(Boolean).join(' ');
       const classAttr = finalClasses ? ` class="${finalClasses}"` : '';
       const styleAttr = inlineStyles ? ` style="${inlineStyles}"` : '';
@@ -173,8 +179,21 @@ function serializeTextNode(node: TextNode, indent: string = ''): string {
     const alt = attributes?.alt as string || '';
     const caption = node.content || '';
     
+    // Build inline styles for the image
+    const imgStyles: string[] = ['width: auto', 'margin: auto'];
+    
+    // Add custom styles from attributes.styles if they exist
+    if (attributes?.styles && typeof attributes.styles === 'object' && !Array.isArray(attributes.styles)) {
+      const styles = attributes.styles as Record<string, string>;
+      if (styles.width) {
+        imgStyles[0] = `width: ${styles.width}`;
+      }
+    }
+    
+    const imgStyleAttr = ` style="${imgStyles.join('; ')};"`;
+    
     let html = `${indent}<figure class="mb-4">\n`;
-    html += `${indent}  <img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="h-auto rounded-lg object-cover max-h-[600px]" style="width: auto; margin: auto;" />\n`;
+    html += `${indent}  <img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="h-auto rounded-lg object-cover max-h-[600px]"${imgStyleAttr} />\n`;
     
     if (caption) {
       html += `${indent}  <figcaption class="text-sm text-muted-foreground text-center mt-3 italic">${escapeHtml(caption)}</figcaption>\n`;

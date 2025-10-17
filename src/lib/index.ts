@@ -50,6 +50,7 @@ export type {
   SelectionInfo,
   InlineText,
   BlockLine,
+  CoverImage,
 } from './types';
 
 export { isContainerNode, isStructuralNode, isTextNode, hasInlineChildren, getNodeTextContent } from './types';

@@ -35,6 +35,7 @@ import {
   ListOrdered,
   Image,
   Video,
+  Table,
 } from 'lucide-react';
 import { useEditor, EditorActions } from '@/lib';
 
@@ -146,6 +147,13 @@ const commands: CommandOption[] = [
     icon: <Video className="w-4 h-4" />,
     description: 'Upload or embed a video',
     keywords: ['video', 'vid', 'movie', 'mp4', 'upload'],
+  },
+  {
+    label: 'Table',
+    value: 'table',
+    icon: <Table className="w-4 h-4" />,
+    description: 'Create a table',
+    keywords: ['table', 'grid', 'rows', 'columns', 'cells'],
   },
 ];
 
@@ -346,6 +354,13 @@ export function CommandMenu({
       // Add to DOM and trigger click
       document.body.appendChild(fileInput);
       fileInput.click();
+      return;
+    }
+
+    // Special handling for table - just call onSelect which will open the table dialog
+    if (commandValue === 'table') {
+      onClose();
+      onSelect(commandValue);
       return;
     }
     

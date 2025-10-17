@@ -21,7 +21,7 @@ export function AddBlockButton({ onAdd, position = 'after' }: AddBlockButtonProp
 
   return (
     <div
-      className="group relative h-3 flex items-center justify-center transition-all"
+      className="group mx-30 relative h-3 flex items-center justify-center transition-all"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

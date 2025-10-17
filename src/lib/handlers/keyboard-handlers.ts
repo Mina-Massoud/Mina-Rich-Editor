@@ -377,13 +377,13 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
             })
           );
 
-          // Create new node with children after cursor (deep copy with all properties)
+          // Create new node with children after cursor (always create a paragraph on Enter)
           const newNode: TextNode = {
-            id: `${node.type}-` + Date.now(),
-            type: node.type,
+            id: `p-` + Date.now(),
+            type: "p",
             content: afterChildren.length === 0 ? afterCursor : node.content,
             children: afterChildren.length > 0 ? afterChildren : undefined,
-            attributes: { ...node.attributes },
+            attributes: {},
           };
 
           dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
@@ -397,12 +397,12 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
             })
           );
 
-          // Create new node with content after cursor (deep copy all properties)
+          // Create new node with content after cursor (always create a paragraph on Enter)
           const newNode: TextNode = {
-            id: `${node.type}-` + Date.now(),
-            type: node.type,
+            id: `p-` + Date.now(),
+            type: "p",
             content: afterCursor,
-            attributes: { ...node.attributes },
+            attributes: {},
           };
 
           dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
@@ -414,7 +414,7 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
         // Focus the new node after a brief delay and place cursor at start
         setTimeout(() => {
           const newElement = nodeRefs.current.get(
-            `${node.type}-` + currentTime
+            `p-` + currentTime
           );
           if (newElement) {
             newElement.focus();

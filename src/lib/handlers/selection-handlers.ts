@@ -34,8 +34,11 @@ export function createHandleSelectionChange(
       selection !== null &&
       !selection.isCollapsed &&
       selection.toString().length > 0;
+    
+    // Also track collapsed cursor (even when no text selected)
+    const hasCursor = selection !== null && selection.isCollapsed;
 
-    if (hasText && selection) {
+    if ((hasText || hasCursor) && selection) {
       // NEW APPROACH: Find the actual node by traversing the DOM upwards from the selection
       const range = selection.getRangeAt(0);
       let currentElement: HTMLElement | null = null;
@@ -91,32 +94,8 @@ export function createHandleSelectionChange(
             // Get the selected text
             const selectedText = selection.toString();
 
-            // Trim trailing whitespace from the selection range
-            // This fixes the issue where double-clicking selects an extra space
-            const trimmedText = selectedText.trimEnd();
-            const trimmedLength = selectedText.length - trimmedText.length;
-
-            // Adjust end position to exclude trailing whitespace
-            if (trimmedLength > 0) {
-              end = end - trimmedLength;
-
-              // Also adjust the actual browser selection to exclude trailing space
-              // This makes the visual selection match what we're tracking
-              try {
-                const newRange = document.createRange();
-                const endContainer = range.endContainer;
-                const endOffset = range.endOffset - trimmedLength;
-
-                newRange.setStart(range.startContainer, range.startOffset);
-                newRange.setEnd(endContainer, endOffset);
-
-                selection.removeAllRanges();
-                selection.addRange(newRange);
-              } catch (e) {
-                // If adjusting the selection fails, just continue with the original
-                console.warn("Failed to adjust selection:", e);
-              }
-            }
+            // For collapsed cursor (no selection), we still want to detect formatting at cursor position
+            const isCollapsed = start === end;
 
             // Detect active formats in the selected range
             const detected = detectFormatsInRange(actualNode, start, end);
@@ -130,6 +109,8 @@ export function createHandleSelectionChange(
                 bold: detected.bold,
                 italic: detected.italic,
                 underline: detected.underline,
+                strikethrough: detected.strikethrough,
+                code: detected.code,
               },
               elementType: detected.elementType,
               href: detected.href,
@@ -190,7 +171,7 @@ export function createHandleSelectionChange(
  * Handle format button clicks - completely state-driven!
  */
 export function createHandleFormat(params: SelectionHandlerParams) {
-  return (format: "bold" | "italic" | "underline") => {
+  return (format: "bold" | "italic" | "underline" | "strikethrough" | "code") => {
     const { container, dispatch, selectionManager, nodeRefs } = params;
     console.group("🔘 [handleFormat] Button clicked");
 
@@ -300,48 +281,60 @@ export function createHandleApplyFontSize(
  */
 export function createHandleTypeChange(
   params: SelectionHandlerParams,
-  currentNode: TextNode | undefined,
   handleSelectionChange: () => void
 ) {
   return (type: TextNode["type"]) => {
     const { dispatch, selectionManager, nodeRefs } = params;
-    if (!currentNode) return;
 
     // Check if there's a selection (use ref for freshest data)
     const refSelection = selectionManager.getSelection();
-    if (refSelection) {
-      // Save selection info before dispatch
-      const { start, end, nodeId } = refSelection;
+    if (!refSelection) return;
 
-      // Apply as inline element type to selected text only
-      const elementType = type as
-        | "p"
-        | "h1"
-        | "h2"
-        | "h3"
-        | "h4"
-        | "h5"
-        | "h6"
-        | "code"
-        | "blockquote";
-      dispatch(EditorActions.applyInlineElementType(elementType));
+    // Save selection info before dispatch
+    const { start, end, nodeId } = refSelection;
 
-      // Restore selection after state update and trigger re-detection
+    // List types should change the entire block, not inline formatting
+    if (type === "ol" || type === "li") {
+      dispatch(EditorActions.updateNode(nodeId, { type: type }));
+      
       setTimeout(() => {
         const element = nodeRefs.current.get(nodeId);
         if (element) {
           restoreSelection(element, start, end);
-          // Manually trigger selection change detection to update the UI
           handleSelectionChange();
         }
       }, 0);
-    } else {
-      // No selection - change entire block type (old behavior)
-      dispatch(
-        EditorActions.updateNode(currentNode.id, {
-          type,
-        })
-      );
+      return;
     }
+
+    // Apply as inline element type to selected text (or at cursor position)
+    // Note: "code" is excluded here - use the code formatting button for inline code
+    const elementType = type as
+      | "p"
+      | "h1"
+      | "h2"
+      | "h3"
+      | "h4"
+      | "h5"
+      | "h6"
+      | "blockquote";
+    
+    // Skip applying if trying to apply "code" - that should be a block-level change only
+    if (type === "code") {
+      console.warn("Code element type not supported as inline - use the code formatting button instead");
+      return;
+    }
+    
+    dispatch(EditorActions.applyInlineElementType(elementType));
+
+    // Restore selection after state update and trigger re-detection
+    setTimeout(() => {
+      const element = nodeRefs.current.get(nodeId);
+      if (element) {
+        restoreSelection(element, start, end);
+        // Manually trigger selection change detection to update the UI
+        handleSelectionChange();
+      }
+    }, 0);
   };
 }

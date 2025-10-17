@@ -31,6 +31,7 @@ import { AddBlockButton } from "./AddBlockButton";
 import { CustomClassPopover } from "./CustomClassPopover";
 import { LinkPopover } from "./LinkPopover";
 import { EditorToolbar } from "./EditorToolbar";
+import { SelectionToolbar } from "./SelectionToolbar";
 import { TableDialog } from "./TableDialog";
 import { TableBuilder } from "./TableBuilder";
 import { Card, CardContent } from "./ui/card";
@@ -101,6 +102,8 @@ import {
 } from "../lib/handlers/flex-container-handlers";
 
 import { Block } from "./Block";
+import { CoverImage } from "./CoverImage";
+import { ExportFloatingButton } from "./ExportFloatingButton";
 
 /**
  * Editor Component Props
@@ -144,9 +147,13 @@ export function Editor({
   >(null);
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>("");
-  const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
+  const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(
+    new Set()
+  );
   const [dragOverFlexId, setDragOverFlexId] = useState<string | null>(null);
-  const [flexDropPosition, setFlexDropPosition] = useState<"left" | "right" | null>(null);
+  const [flexDropPosition, setFlexDropPosition] = useState<
+    "left" | "right" | null
+  >(null);
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
 
   // Get the current container from history
@@ -157,6 +164,9 @@ export function Editor({
         | TextNode
         | undefined)
     : (container.children[0] as TextNode | undefined);
+
+  console.log("🎨 [Editor] Current Node:", currentNode);
+  console.log("🎨 [Editor] Current Selection:", state.currentSelection);
 
   // Debounced dispatch for selection state updates
   const selectionDispatchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -237,8 +247,8 @@ export function Editor({
   );
 
   const handleTypeChange = useCallback(
-    createHandleTypeChange(selectionParams, currentNode, handleSelectionChange),
-    [currentNode, dispatch, selectionManager, handleSelectionChange]
+    createHandleTypeChange(selectionParams, handleSelectionChange),
+    [dispatch, selectionManager, handleSelectionChange]
   );
 
   const handleToggleImageSelection = useCallback(
@@ -248,7 +258,13 @@ export function Editor({
 
   const handleContentChange = useCallback(
     createHandleContentChange(
-      { container, dispatch, nodeRefs, lastEnterTime, onToggleImageSelection: handleToggleImageSelection },
+      {
+        container,
+        dispatch,
+        nodeRefs,
+        lastEnterTime,
+        onToggleImageSelection: handleToggleImageSelection,
+      },
       contentUpdateTimers
     ),
     [container, dispatch, handleToggleImageSelection]
@@ -326,10 +342,20 @@ export function Editor({
     [container, dispatch, toast, editorContentRef]
   );
 
+  const handleCreateTableFromCommand = useCallback(
+    (nodeId: string) => {
+      // Store the node ID for later use when table is created
+      dispatch(EditorActions.setActiveNode(nodeId));
+      // Open the table dialog
+      setTableDialogOpen(true);
+    },
+    [dispatch]
+  );
+
   const handleImportMarkdownTable = useCallback(
     (table: any) => {
       const timestamp = Date.now();
-      
+
       // Wrap table in a container for consistent handling
       const tableWrapper: ContainerNode = {
         id: `table-wrapper-${timestamp}`,
@@ -471,14 +497,17 @@ export function Editor({
     if (selectedImageIds.size < 2) {
       return { inSameFlex: false, flexParentId: null };
     }
-    return checkImagesInSameFlex({ container, dispatch, toast }, selectedImageIds);
+    return checkImagesInSameFlex(
+      { container, dispatch, toast },
+      selectedImageIds
+    );
   }, [container, selectedImageIds, dispatch, toast]);
 
   const handleReverseImagesInFlex = useCallback(
     createHandleReverseImagesInFlex(
       { container, dispatch, toast },
       selectedImageIds,
-      flexInfo.flexParentId || ''
+      flexInfo.flexParentId || ""
     ),
     [container, dispatch, toast, selectedImageIds, flexInfo.flexParentId]
   );
@@ -487,10 +516,17 @@ export function Editor({
     createHandleExtractFromFlex(
       { container, dispatch, toast },
       selectedImageIds,
-      flexInfo.flexParentId || '',
+      flexInfo.flexParentId || "",
       handleClearImageSelection
     ),
-    [container, dispatch, toast, selectedImageIds, flexInfo.flexParentId, handleClearImageSelection]
+    [
+      container,
+      dispatch,
+      toast,
+      selectedImageIds,
+      flexInfo.flexParentId,
+      handleClearImageSelection,
+    ]
   );
 
   const handleFlexContainerDragOver = useCallback(
@@ -562,6 +598,154 @@ export function Editor({
     };
   }, []);
 
+  // Handle paste events for images/videos
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const activeElement = document.activeElement;
+      const isInEditor = Array.from(nodeRefs.current.values()).some(
+        (el) => el === activeElement || el.contains(activeElement)
+      );
+
+      if (!isInEditor || readOnly) return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      // Check if any item is an image or video file
+      const mediaFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (
+          item.kind === "file" &&
+          (item.type.startsWith("image/") || item.type.startsWith("video/"))
+        ) {
+          const file = item.getAsFile();
+          if (file) {
+            mediaFiles.push(file);
+          }
+        }
+      }
+
+      if (mediaFiles.length === 0) return;
+
+      // Prevent default paste behavior
+      e.preventDefault();
+
+      // Upload the files
+      setIsUploading(true);
+
+      try {
+        const uploadPromises = mediaFiles.map(async (file) => {
+          if (onUploadImage) {
+            return await onUploadImage(file);
+          } else {
+            const { uploadImage } = await import("../lib/utils/image-upload");
+            const result = await uploadImage(file);
+            if (!result.success || !result.url) {
+              throw new Error(result.error || "Upload failed");
+            }
+            return result.url;
+          }
+        });
+
+        const mediaUrls = await Promise.all(uploadPromises);
+
+        // Create media nodes
+        const timestamp = Date.now();
+        const mediaNodes: TextNode[] = mediaUrls.map((url, index) => {
+          const file = mediaFiles[index];
+          const isVideo = file.type.startsWith("video/");
+
+          return {
+            id: `${isVideo ? "video" : "img"}-${timestamp}-${index}`,
+            type: isVideo ? "video" : "img",
+            content: "",
+            attributes: {
+              src: url,
+              alt: file.name,
+            },
+          };
+        });
+
+        // Insert media nodes after current active node
+        const targetId =
+          state.activeNodeId ||
+          container.children[container.children.length - 1]?.id;
+
+        if (mediaFiles.length === 1) {
+          // Single media file - insert directly
+          if (targetId) {
+            dispatch(
+              EditorActions.insertNode(mediaNodes[0], targetId, "after")
+            );
+          }
+        } else {
+          // Multiple media files - create flex container
+          const flexContainer: ContainerNode = {
+            id: `flex-container-${timestamp}`,
+            type: "container",
+            children: mediaNodes,
+            attributes: {
+              layoutType: "flex",
+              gap: "4",
+              flexWrap: "wrap",
+            },
+          };
+
+          if (targetId) {
+            dispatch(
+              EditorActions.insertNode(flexContainer, targetId, "after")
+            );
+          }
+        }
+
+        const videoCount = mediaFiles.filter((f) =>
+          f.type.startsWith("video/")
+        ).length;
+        const imageCount = mediaFiles.filter((f) =>
+          f.type.startsWith("image/")
+        ).length;
+        let description = "";
+        if (videoCount > 0 && imageCount > 0) {
+          description = `${imageCount} image(s) and ${videoCount} video(s) pasted successfully.`;
+        } else if (videoCount > 0) {
+          description = `${videoCount} video(s) pasted successfully.`;
+        } else {
+          description = `${imageCount} image(s) pasted successfully.`;
+        }
+
+        toast({
+          title: "Media pasted",
+          description,
+        });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Paste failed",
+          description:
+            error instanceof Error
+              ? error.message
+              : "An unexpected error occurred",
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    };
+
+    document.addEventListener("paste", handlePaste);
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+    };
+  }, [
+    readOnly,
+    state.activeNodeId,
+    container,
+    dispatch,
+    toast,
+    onUploadImage,
+    setIsUploading,
+  ]);
+
   // Handle global keyboard shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -615,6 +799,24 @@ export function Editor({
         }
       }
 
+      // Ctrl+Shift+S / Cmd+Shift+S - Toggle Strikethrough
+      if (isCtrlOrCmd && e.shiftKey && e.key === "S" && isInEditor) {
+        e.preventDefault();
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) {
+          handleFormat("strikethrough");
+        }
+      }
+
+      // Ctrl+E / Cmd+E - Toggle Code
+      if (isCtrlOrCmd && e.key === "e" && isInEditor) {
+        e.preventDefault();
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed) {
+          handleFormat("code");
+        }
+      }
+
       // Ctrl+Z / Cmd+Z - Undo
       if (isCtrlOrCmd && e.key === "z" && !e.shiftKey) {
         if (
@@ -660,34 +862,18 @@ export function Editor({
       {/* Editor with integrated toolbar */}
       <div className="mx-auto flex flex-col flex-1 w-full">
         <QuickModeToggle readOnly={readOnly} onReadOnlyChange={setReadOnly} />
-        <Card className="shadow-2xl flex flex-col flex-1 pt-0 rounded-none border-2 gap-3 transition-all duration-300">
-          {/* Toolbar - hidden in readOnly mode */}
-          {!readOnly && (
-            <EditorToolbar
-              currentNode={currentNode}
-              currentSelection={state.currentSelection}
-              selectedColor={selectedColor}
-              isUploading={isUploading}
-              enhanceSpaces={enhanceSpaces}
-              copiedHtml={copiedHtml}
-              copiedJson={copiedJson}
-              container={container}
-              onTypeChange={handleTypeChange}
-              onFormat={handleFormat}
-              onColorSelect={handleApplyColor}
-              onFontSizeSelect={handleApplyFontSize}
-              onImageUploadClick={handleImageUploadClick}
-              onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
-              onVideoUploadClick={handleVideoUploadClick}
-              onCreateList={handleCreateList}
-              onCreateLink={handleCreateLink}
-              onCreateTable={() => setTableDialogOpen(true)}
-              onCopyHtml={handleCopyHtml}
-              onCopyJson={handleCopyJson}
-              onEnhanceSpacesChange={setEnhanceSpaces}
-            />
-          )}
-
+        {/* Toolbar - hidden in readOnly mode */}
+        {!readOnly && (
+          <EditorToolbar
+            isUploading={isUploading}
+            onImageUploadClick={handleImageUploadClick}
+            onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
+            onVideoUploadClick={handleVideoUploadClick}
+            onCreateList={handleCreateList}
+            onCreateTable={() => setTableDialogOpen(true)}
+          />
+        )}
+        <Card className="shadow-2xl relative flex flex-col flex-1 rounded-none border-2 gap-3 transition-all duration-300">
           {/* Table Dialog */}
           <TableDialog
             open={tableDialogOpen}
@@ -726,12 +912,20 @@ export function Editor({
 
           {/* Editor Content */}
           <CardContent
-            className={`p-6 flex flex-col w-full flex-1 transition-all duration-300 max-w-4xl mx-auto ${
+            className={`px-0 flex flex-col w-full flex-1 transition-all duration-300 mx-auto ${
               readOnly ? "py-14 md:py-20" : ""
             }`}
           >
             <div ref={editorContentRef}>
-              <div data-editor-content>
+              {/* Cover Image */}
+              <CoverImage onUploadImage={onUploadImage} readOnly={readOnly} />
+
+              <div
+                data-editor-content
+                className={`${
+                  state.coverImage ? "pt-[350px]" : "pt-[50px]"
+                } transition-all duration-300`}
+              >
                 {container.children.map((node, index) => {
                   const isText = isTextNode(node);
                   const textNode = isText ? (node as TextNode) : null;
@@ -747,7 +941,7 @@ export function Editor({
                   const isFirstBlock = index === 0;
 
                   return (
-                    <React.Fragment key={nodeKey}>
+                    <div className="mx-auto max-w-6xl w-full" key={nodeKey}>
                       {/* Add block button before first block */}
                       {!readOnly && isFirstBlock && (
                         <AddBlockButton
@@ -797,6 +991,9 @@ export function Editor({
                           key={`${node.id}-${node.type}`}
                           node={node}
                           isActive={state.activeNodeId === node.id}
+                          isFirstBlock={isFirstBlock}
+                          hasCoverImage={!!state.coverImage}
+                          onUploadCoverImage={onUploadImage}
                           nodeRef={(el) => {
                             if (el) {
                               const elementNodeId =
@@ -859,12 +1056,15 @@ export function Editor({
                           onChangeBlockType={handleChangeBlockType}
                           onInsertImage={handleInsertImageFromCommand}
                           onCreateList={handleCreateListFromCommand}
+                          onCreateTable={handleCreateTableFromCommand}
                           onUploadImage={onUploadImage}
                           selectedImageIds={selectedImageIds}
                           onToggleImageSelection={handleToggleImageSelection}
                           onClickWithModifier={handleClickWithModifier}
                           onFlexContainerDragOver={handleFlexContainerDragOver}
-                          onFlexContainerDragLeave={handleFlexContainerDragLeave}
+                          onFlexContainerDragLeave={
+                            handleFlexContainerDragLeave
+                          }
                           onFlexContainerDrop={handleFlexContainerDrop}
                           dragOverFlexId={dragOverFlexId}
                           flexDropPosition={flexDropPosition}
@@ -878,7 +1078,7 @@ export function Editor({
                           position="after"
                         />
                       )}
-                    </React.Fragment>
+                    </div>
                   );
                 })}
               </div>
@@ -887,15 +1087,18 @@ export function Editor({
         </Card>
       </div>
 
-      {/* Custom Class Popover - Floats on text selection */}
-      <div className={`${readOnly ? "opacity-0" : ""}`}>
-        <CustomClassPopover />
-      </div>
-
-      {/* Link Popover - Floats on text selection */}
-      <div className={`${readOnly ? "opacity-0" : ""}`}>
-        <LinkPopover />
-      </div>
+      {/* Selection Toolbar - Floats above selected text (Notion-style) */}
+      {/* LinkPopover and CustomClassPopover are now integrated directly into SelectionToolbar */}
+      {!readOnly && (
+        <SelectionToolbar
+          selection={state.currentSelection}
+          selectedColor={selectedColor}
+          onFormat={handleFormat}
+          onTypeChange={(type) => handleTypeChange(type as TextNode["type"])}
+          onColorSelect={handleApplyColor}
+          onFontSizeSelect={handleApplyFontSize}
+        />
+      )}
 
       {/* Group Images Button - Floats when multiple images selected */}
       {!readOnly && (
@@ -903,9 +1106,24 @@ export function Editor({
           selectedCount={selectedImageIds.size}
           inSameFlex={flexInfo.inSameFlex}
           onGroup={handleGroupSelectedImages}
-          onReverse={flexInfo.inSameFlex ? handleReverseImagesInFlex : undefined}
+          onReverse={
+            flexInfo.inSameFlex ? handleReverseImagesInFlex : undefined
+          }
           onExtract={flexInfo.inSameFlex ? handleExtractFromFlex : undefined}
           onClear={handleClearImageSelection}
+        />
+      )}
+
+      {/* Floating Export Button */}
+      {!readOnly && (
+        <ExportFloatingButton
+          container={container}
+          onCopyHtml={handleCopyHtml}
+          onCopyJson={handleCopyJson}
+          copiedHtml={copiedHtml}
+          copiedJson={copiedJson}
+          enhanceSpaces={enhanceSpaces}
+          onEnhanceSpacesChange={setEnhanceSpaces}
         />
       )}
     </div>

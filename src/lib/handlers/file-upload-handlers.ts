@@ -185,6 +185,11 @@ export function createHandleMultipleFilesChange(params: FileUploadHandlerParams)
         );
       }
 
+      // For flex containers, set the first child as active (containers themselves aren't focusable)
+      if (mediaNodes.length > 0) {
+        dispatch(EditorActions.setActiveNode(mediaNodes[0].id));
+      }
+
       const videoCount = validFiles.filter((f) => f.type.startsWith('video/')).length;
       const imageCount = validFiles.filter((f) => f.type.startsWith('image/')).length;
       let description = "";

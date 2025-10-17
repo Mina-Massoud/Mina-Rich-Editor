@@ -22,10 +22,36 @@ import { ImageBlock } from "./ImageBlock";
 import { VideoBlock } from "./VideoBlock";
 import { CommandMenu } from "./CommandMenu";
 import { useEditor } from "../lib/context/EditorContext";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Plus } from "lucide-react";
 import { BlockContextMenu } from "./BlockContextMenu";
 import { FlexContainer } from "./FlexContainer";
 import { TableBuilder } from "./TableBuilder";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Button } from "./ui/button";
+import { ELEMENT_OPTIONS } from "@/lib/elements";
+import {
+  Type,
+  Heading1,
+  Heading2,
+  Heading3,
+  Quote,
+  Code,
+  List,
+  ListOrdered,
+  ImageIcon,
+} from "lucide-react";
+
+// Icon mapping
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Type,
+  Heading1,
+  Heading2,
+  Heading3,
+  Code,
+  Quote,
+  List,
+  ListOrdered,
+};
 
 // Import all block handlers
 import {
@@ -59,6 +85,7 @@ interface BlockProps {
   onChangeBlockType?: (nodeId: string, newType: string) => void;
   onInsertImage?: (nodeId: string) => void;
   onCreateList?: (nodeId: string, listType: string) => void;
+  onCreateTable?: (nodeId: string) => void;
   onUploadImage?: (file: File) => Promise<string>;
   onBlockDragStart?: (nodeId: string) => void;
   selectedImageIds?: Set<string>;
@@ -69,6 +96,9 @@ interface BlockProps {
   onFlexContainerDrop?: (e: React.DragEvent, flexId: string, position: "left" | "right" | null) => void;
   dragOverFlexId?: string | null;
   flexDropPosition?: "left" | "right" | null;
+  isFirstBlock?: boolean;
+  hasCoverImage?: boolean;
+  onUploadCoverImage?: (file: File) => Promise<string>;
 }
 
 export function Block({
@@ -86,6 +116,7 @@ export function Block({
   onChangeBlockType,
   onInsertImage,
   onCreateList,
+  onCreateTable,
   onUploadImage,
   onBlockDragStart,
   selectedImageIds,
@@ -96,11 +127,16 @@ export function Block({
   onFlexContainerDrop,
   dragOverFlexId,
   flexDropPosition,
+  isFirstBlock = false,
+  hasCoverImage = false,
+  onUploadCoverImage,
 }: BlockProps) {
   const localRef = useRef<HTMLElement | null>(null);
   const isComposingRef = useRef(false);
   const shouldPreserveSelectionRef = useRef(false);
   const [isHovering, setIsHovering] = useState(false);
+  const coverImageInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   // Get editor context for direct state manipulation (needed for table updates)
   const [state, dispatch] = useEditor();
@@ -109,6 +145,9 @@ export function Block({
   const [showCommandMenu, setShowCommandMenu] = useState(false);
   const [commandMenuAnchor, setCommandMenuAnchor] =
     useState<HTMLElement | null>(null);
+
+  // Add block popover state
+  const [addBlockPopoverOpen, setAddBlockPopoverOpen] = useState(false);
 
   // Handle container nodes (recursive rendering)
   if (isContainerNode(node)) {
@@ -223,6 +262,7 @@ export function Block({
               onChangeBlockType={onChangeBlockType}
               onInsertImage={onInsertImage}
               onCreateList={onCreateList}
+              onCreateTable={onCreateTable}
               onUploadImage={onUploadImage}
               selectedImageIds={selectedImageIds}
               onToggleImageSelection={onToggleImageSelection}
@@ -284,6 +324,7 @@ export function Block({
               onChangeBlockType={onChangeBlockType}
               onInsertImage={onInsertImage}
               onCreateList={onCreateList}
+              onCreateTable={onCreateTable}
               onUploadImage={onUploadImage}
               selectedImageIds={selectedImageIds}
               onToggleImageSelection={onToggleImageSelection}
@@ -474,11 +515,12 @@ export function Block({
       onChangeBlockType,
       onInsertImage,
       onCreateList,
+      onCreateTable,
       localRef,
       setShowCommandMenu,
       setCommandMenuAnchor,
     }),
-    [textNode, onChangeBlockType, onInsertImage, onCreateList]
+    [textNode, onChangeBlockType, onInsertImage, onCreateList, onCreateTable]
   );
 
   const handleBackgroundColorChange = useCallback(
@@ -493,10 +535,43 @@ export function Block({
 
   const handleBlockDragEndFn = useCallback(createHandleBlockDragEnd(), []);
 
+  // Handle cover image upload
+  const handleCoverImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadCoverImage) return;
+
+    setIsUploadingCover(true);
+    try {
+      const url = await onUploadCoverImage(file);
+      const { EditorActions } = await import("../lib/reducer/actions");
+      dispatch(EditorActions.setCoverImage({
+        url,
+        alt: file.name,
+        position: 50,
+      }));
+    } catch (error) {
+      console.error("Failed to upload cover image:", error);
+    } finally {
+      setIsUploadingCover(false);
+      // Reset input value so the same file can be selected again
+      if (coverImageInputRef.current) {
+        coverImageInputRef.current.value = '';
+      }
+    }
+  }, [onUploadCoverImage, dispatch]);
+
   // Check if block is empty
   const textContent = getNodeTextContent(textNode);
   const isEmpty = !textContent || textContent.trim() === "";
-  const showPlaceholder = isEmpty && isActive && !readOnly && onChangeBlockType;
+  
+  // Get placeholder from attributes
+  const placeholder = textNode.attributes?.placeholder as string | undefined;
+  
+  // Determine if this is a header block (h1) - headers don't show command menu
+  const isHeaderBlock = textNode.type === 'h1';
+  
+  // Show command menu placeholder only if no custom placeholder is set and not a header block
+  const showCommandPlaceholder = isEmpty && isActive && !readOnly && onChangeBlockType && !placeholder && !isHeaderBlock;
 
   // Determine which HTML element to render based on type
   const ElementType =
@@ -541,21 +616,23 @@ export function Block({
     key: textNode.id,
     "data-node-id": textNode.id,
     "data-node-type": textNode.type,
+    "data-show-command-placeholder": showCommandPlaceholder ? "true" : undefined,
     contentEditable: !readOnly,
     suppressContentEditableWarning: true,
+    ...(placeholder ? { placeholder } : {}),
     className: `
       ${isListItem ? "relative" : ""} 
       ${getTypeClassName(textNode.type)}
       ${className}
-      ${readOnly ? "" : "outline-none focus:ring-1 focus:ring-border/50"}
-      rounded-lg px-3 py-2 mb-2
+      ${readOnly ? "" : "outline-none"}
+      ${isListItem ? "px-3 py-1 mb-1" : "px-3 py-2 mb-2"}
       transition-all
-      ${!readOnly && isActive ? "ring-1 ring-border/50 bg-accent/5" : ""}
+      ${!readOnly && isActive ? "border-b bg-accent/5" : ""}
       ${!readOnly ? "hover:bg-accent/5" : ""}
       ${readOnly ? "cursor-default" : ""}
     `,
     style: {
-      marginLeft: `${depth * 0.5}rem`,
+      marginLeft: isListItem ? `${depth * 0.5 + 1.5}rem` : `${depth * 0.5}rem`,
       ...(textColor ? { color: textColor as string } : {}),
       ...(backgroundColor ? { backgroundColor: backgroundColor } : {}),
     },
@@ -570,32 +647,117 @@ export function Block({
         currentBackgroundColor={backgroundColor}
       >
         <div
-          className="relative group"
-          style={{
-            paddingLeft: readOnly ? "0" : "28px",
-            marginLeft: readOnly ? "0" : "-28px",
-          }}
+          className="flex items-stretch gap-1 group"
           onMouseEnter={() => !readOnly && setIsHovering(true)}
           onMouseLeave={() => !readOnly && setIsHovering(false)}
         >
-          {/* Drag Handle */}
-          {!readOnly && isHovering && onBlockDragStart && (
-            <div
-              draggable
-              onDragStart={handleBlockDragStartFn}
-              onDragEnd={handleBlockDragEndFn}
-              className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <GripVertical
-                className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors duration-200"
-                strokeWidth={1.5}
-              />
+          {/* Drag Handle & Add Button */}
+          {!readOnly && onBlockDragStart && (
+            <div className="flex items-center gap-0.5 mr-5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+              {/* Add Cover Button - Only show on first block if no cover */}
+              {isFirstBlock && !hasCoverImage && onUploadCoverImage && (
+                <>
+                  <input
+                    ref={coverImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleCoverImageUpload}
+                  />
+                  <button
+                    className="p-0.5 rounded hover:bg-accent transition-colors duration-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      coverImageInputRef.current?.click();
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    disabled={isUploadingCover}
+                    title="Add Cover"
+                  >
+                    {isUploadingCover ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                    ) : (
+                      <ImageIcon
+                        className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                        strokeWidth={1.5}
+                      />
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Add Block Button */}
+              <Popover open={addBlockPopoverOpen} onOpenChange={setAddBlockPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    className="p-0.5 rounded hover:bg-accent transition-colors duration-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <Plus
+                      className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                      strokeWidth={1.5}
+                    />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="start">
+                  <div className="flex flex-col gap-1">
+                    {ELEMENT_OPTIONS.map((element) => {
+                      const IconComponent = element.icon ? iconMap[element.icon] : null;
+                      return (
+                        <Button
+                          key={element.value}
+                          variant="ghost"
+                          size="sm"
+                          className="justify-start gap-2"
+                          onClick={() => {
+                            dispatch({
+                              type: "INSERT_NODE",
+                              payload: {
+                                node: {
+                                  id: `${element.value}-${Date.now()}`,
+                                  type: element.value as TextNode["type"],
+                                  content: "",
+                                },
+                                targetId: textNode.id,
+                                position: "after",
+                              },
+                            });
+                            setAddBlockPopoverOpen(false);
+                          }}
+                        >
+                          {IconComponent && (
+                            <IconComponent className={element.iconSize || "h-4 w-4"} />
+                          )}
+                          <span>{element.label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Drag Handle */}
+              <div
+                draggable
+                onDragStart={handleBlockDragStartFn}
+                onDragEnd={handleBlockDragEndFn}
+                className="p-0.5 cursor-grab active:cursor-grabbing"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <GripVertical
+                  className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors duration-200"
+                  strokeWidth={1.5}
+                />
+              </div>
             </div>
           )}
 
-          <ElementType
+          <div className="flex-1 min-w-0">
+            <ElementType
             {...commonProps}
             key={textNode.id}
             ref={(el: HTMLElement | null) => {
@@ -608,19 +770,7 @@ export function Block({
             onCompositionStart={readOnly ? undefined : handleCompositionStart}
             onCompositionEnd={readOnly ? undefined : handleCompositionEnd}
           />
-
-          {/* Placeholder text */}
-          {showPlaceholder && (
-            <div
-              className="absolute top-2 pointer-events-none text-muted-foreground/50 select-none"
-              style={{
-                left: readOnly ? "0.75rem" : "calc(28px + 0.75rem)",
-                marginLeft: `${depth * 0.5}rem`,
-              }}
-            >
-              Type / for commands...
-            </div>
-          )}
+          </div>
         </div>
       </BlockContextMenu>
 

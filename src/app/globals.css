@@ -49,12 +49,39 @@ body {
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+    }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+    }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
 }
 
-/* Placeholder styling for contentEditable */
-[contenteditable][data-placeholder]:empty:before {
-  content: attr(data-placeholder);
-  color: #9ca3af;
+/* Placeholder styling for contentEditable - Notion-like */
+[contenteditable]:empty:before {
+  content: attr(placeholder);
+  color: var(--muted-foreground);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Command menu placeholder - shows "Type / for commands..." */
+[contenteditable][data-show-command-placeholder="true"]:empty:before {
+  content: "Type / for commands...";
+  color: var(--muted-foreground);
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -191,8 +218,4 @@ button:active {
 
 button:focus {
   outline: none;
-}
-
-span {
-  display: inline-block;
 }

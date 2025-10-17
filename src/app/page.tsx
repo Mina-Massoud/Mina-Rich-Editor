@@ -85,27 +85,34 @@ export default function Home() {
             <HeroSection onTryEditor={handleTryEditor} />
           </motion.div>
         ) : (
-          <motion.div
-            key="editor"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              transition: {
-                duration: 0.6,
-                ease: [0.76, 0, 0.24, 1],
-                delay: 0.2,
-              },
-            }}
-            className="w-full min-h-screen flex flex-col"
-          >
-            <EditorProvider
-              initialContainer={initialContainer}
-              debug={true}
-            >
-              <Editor readOnly={readOnly} onUploadImage={handleImageUpload} />
-            </EditorProvider>
-          </motion.div>
+          <div className="flex flex-grow">
+            <div className="flex w-full flex-col flex-grow">
+              <motion.div
+                key="editor"
+                initial={{ opacity: 0, y: 50 }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.6,
+                    ease: [0.76, 0, 0.24, 1],
+                    delay: 0.2,
+                  },
+                }}
+                className="w-full flex-1 min-h-screen flex flex-col"
+              >
+                <EditorProvider
+                  // initialContainer={initialContainer}
+                  debug={true}
+                >
+                  <Editor
+                    readOnly={readOnly}
+                    onUploadImage={handleImageUpload}
+                  />
+                </EditorProvider>
+              </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
     </div>

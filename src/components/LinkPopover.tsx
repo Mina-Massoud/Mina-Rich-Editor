@@ -163,6 +163,7 @@ export function LinkPopover() {
           <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
               <button
+                data-link-popover-trigger
                 className={`h-8 w-8 flex items-center justify-center rounded-full shadow-lg hover:scale-110 transition-all bg-background border-2 ${
                   hasExistingLink 
                     ? 'border-blue-500 text-blue-500' 
