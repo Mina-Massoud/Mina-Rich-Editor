@@ -1,6 +1,8 @@
 # ✨ Mina Rich Editor
 
-![Mina Rich Editor Demo](./public/image_docs/main-image-demo.png)
+![Mina Rich Editor - Light Mode](./public/light-mode-showcase.png)
+
+![Mina Rich Editor - Dark Mode](./public/dark-mode-showcase.png)
 
 ## 🌐 [Live Demo →](https://mina-rich-editor.vercel.app)
 
