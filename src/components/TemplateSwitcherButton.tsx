@@ -27,6 +27,7 @@ import {
   Briefcase,
   User,
   Zap,
+  Plus,
 } from "lucide-react";
 import { getAllTemplateMetadata, getTemplateById, type TemplateMetadata } from "../lib/templates";
 import type { EditorState } from "../lib/types";
@@ -169,7 +170,7 @@ export function TemplateSwitcherButton({
           size="icon"
           title="Switch Template"
         >
-          <FileText className={cn(
+          <Plus className={cn(
             "h-5 w-5 transition-transform duration-200",
             isHovered && "scale-110"
           )} />

@@ -52,10 +52,22 @@ export function createHandleContentChange(
       const timer = setTimeout(() => {
         // Auto-detect ordered list pattern: "1. ", "2. ", etc. (only with space)
       const orderedListMatch = newContent.match(/^(\d+)\.\s(.+)$/);
+      // Auto-detect unordered list pattern: "- " or "* "
+      const unorderedListMatch = newContent.match(/^[-*]\s(.+)$/);
 
       if (orderedListMatch && node.type === "p") {
-        // Convert to list item and remove only the number prefix
+        // Convert to ordered list item and remove only the number prefix
         const [_, number, content] = orderedListMatch;
+
+        dispatch(
+          EditorActions.updateNode(node.id, {
+            type: "ol",
+            content: content,
+          })
+        );
+      } else if (unorderedListMatch && node.type === "p") {
+        // Convert to unordered list item and remove the bullet prefix
+        const [_, content] = unorderedListMatch;
 
         dispatch(
           EditorActions.updateNode(node.id, {
@@ -163,50 +175,19 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
       }
       const node = result.node as TextNode;
 
-      // Shift+Enter: For list items, add a line break within the same item
-      // For other blocks, insert a line break within the block
+      // Shift+Enter: Add a line break within the same block
       if (e.shiftKey) {
-        // For list items (ul, ol, or li), just insert a line break within the same item
-        if (node.type === "ul" || node.type === "ol" || node.type === "li") {
-          // preventDefault is already called in Block.tsx
-
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-            const br = document.createElement("br");
-            range.insertNode(br);
-            range.setStartAfter(br);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-
-            const element = nodeRefs.current.get(actualNodeId);
-            if (element) {
-              const {
-                createHandleContentChange,
-              } = require("./keyboard-handlers");
-              // This would need contentUpdateTimers which is not available here
-              // So we need to pass it from the calling context
-            }
-          }
-        } else {
-          // For non-list items, just insert a line break within the block
-          e.preventDefault();
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-            const br = document.createElement("br");
-            range.insertNode(br);
-            range.setStartAfter(br);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-
-            const element = nodeRefs.current.get(actualNodeId);
-            // Content change handling would be done by the parent
-          }
+        e.preventDefault();
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const br = document.createElement("br");
+          range.insertNode(br);
+          range.setStartAfter(br);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
 
         return;
@@ -236,10 +217,8 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
       // Get the full text content
       const fullText = getNodeTextContent(node);
 
-      // Check if this is a list item (ul or ol)
-      if (node.type === "ul" || node.type === "ol" || node.type === "li") {
-        const listType = "li"; // Always create li elements when pressing Enter in a list
-
+      // Check if this is a list item (li or ol)
+      if (node.type === "li" || node.type === "ol") {
         // Split content at cursor position
         const beforeCursor = fullText.substring(0, cursorPosition);
         const afterCursor = fullText.substring(cursorPosition);
@@ -268,8 +247,7 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
           return;
         }
 
-        // Create new list item after current one at the SAME LEVEL
-
+        // Create new list item with same type as current one
         // Update current node with content before cursor
         dispatch(
           EditorActions.updateNode(actualNodeId, {
@@ -281,8 +259,8 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
 
         // Create new list item with content after cursor, same type as current
         const newNode: TextNode = {
-          id: `${listType}-${Date.now()}`,
-          type: listType,
+          id: `${node.type}-${Date.now()}`,
+          type: node.type,
           content: afterCursor,
           attributes: {},
         };
@@ -296,14 +274,27 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
           const newElement = nodeRefs.current.get(newNode.id);
           if (newElement) {
             newElement.focus();
-            const range = document.createRange();
-            const sel = window.getSelection();
-            if (newElement.childNodes.length > 0) {
-              const firstNode = newElement.childNodes[0];
-              range.setStart(firstNode, 0);
+            // For list items, place cursor after the bullet/number marker
+            // For other blocks, place at the start
+            if (node.type === "li" || node.type === "ol") {
+              // Place cursor at the very start of the text content, which will be after the marker
+              const range = document.createRange();
+              const sel = window.getSelection();
+              // Use setStart on the element itself to position after the list marker
+              range.selectNodeContents(newElement);
               range.collapse(true);
               sel?.removeAllRanges();
               sel?.addRange(range);
+            } else {
+              const range = document.createRange();
+              const sel = window.getSelection();
+              if (newElement.childNodes.length > 0) {
+                const firstNode = newElement.childNodes[0];
+                range.setStart(firstNode, 0);
+                range.collapse(true);
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+              }
             }
           }
         }, 10);
@@ -432,7 +423,7 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
         }, 10);
       }
     } else if (e.key === "Backspace" || e.key === "Delete") {
-      const result = findNodeInTree(nodeId, container);
+      const result = findNodeInTree(actualNodeId, container);
       if (!result || !isTextNode(result.node)) return;
 
       const node = result.node as TextNode;
@@ -442,15 +433,25 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
       const cursorAtStart =
         selection && selection.anchorOffset === 0 && selection.isCollapsed;
 
+      // Get the actual DOM element to check real text content
+      const element = nodeRefs.current.get(actualNodeId);
+      const domTextContent = element?.textContent || "";
+      
       // Get the full text content (handles both simple content and inline children)
       const fullTextContent = getNodeTextContent(node);
-      const isNodeEmpty = !fullTextContent || fullTextContent.trim() === "";
+      // For list items, check if the DOM content is empty (what the user actually sees)
+      // For other nodes, check both state and DOM
+      const isListItemType = node.type === "li" || node.type === "ol";
+      const isNodeEmpty = isListItemType 
+        ? (!domTextContent || domTextContent.trim() === "")
+        : ((!fullTextContent || fullTextContent.trim() === "") && 
+           (!domTextContent || domTextContent.trim() === ""));
 
       // If cursor is at the start and node is empty or BR, delete the node
       if ((cursorAtStart && isNodeEmpty) || node.type === "br") {
         e.preventDefault();
 
-        const currentIndex = siblings.findIndex((n) => n.id === nodeId);
+        const currentIndex = siblings.findIndex((n) => n.id === actualNodeId);
 
         // Don't delete if it's the only node in the container
         if (siblings.length === 1) {
@@ -481,7 +482,7 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
         }
 
         // Delete the current node
-        dispatch(EditorActions.deleteNode(nodeId));
+        dispatch(EditorActions.deleteNode(actualNodeId));
 
         // Focus the previous node if it exists, otherwise the next one
         const prevNode = siblings[currentIndex - 1];
@@ -490,6 +491,37 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
 
         if (nodeToFocus) {
           dispatch(EditorActions.setActiveNode(nodeToFocus.id));
+          
+          // Place cursor at the end of the focused node
+          setTimeout(() => {
+            const elementToFocus = nodeRefs.current.get(nodeToFocus.id);
+            if (elementToFocus) {
+              elementToFocus.focus();
+              const range = document.createRange();
+              const sel = window.getSelection();
+              
+              // Find the last text node to place cursor at the end
+              const lastChild = elementToFocus.childNodes[elementToFocus.childNodes.length - 1];
+              if (lastChild) {
+                if (lastChild.nodeType === Node.TEXT_NODE) {
+                  // Place at end of text node
+                  range.setStart(lastChild, lastChild.textContent?.length || 0);
+                } else {
+                  // Place after the last child element
+                  range.setStartAfter(lastChild);
+                }
+                range.collapse(true);
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+              } else if (elementToFocus.childNodes.length === 0) {
+                // Empty element, place cursor inside it
+                range.selectNodeContents(elementToFocus);
+                range.collapse(false);
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+              }
+            }
+          }, 10);
         }
       }
     }

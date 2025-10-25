@@ -14,29 +14,29 @@ import { ContainerNode, StructuralNode, TextNode, EditorNode, isTextNode, isCont
 function getBlockTypeClasses(type: string): string {
   switch (type) {
     case 'h1':
-      return 'text-5xl font-extrabold text-foreground leading-[1.2]';
+      return 'text-4xl font-bold text-foreground leading-[1.2] mb-2';
     case 'h2':
-      return 'text-4xl font-bold text-foreground leading-[1.2]';
+      return 'text-3xl font-bold text-foreground leading-[1.2] mb-1.5';
     case 'h3':
-      return 'text-3xl font-semibold text-foreground leading-[1.3]';
+      return 'text-2xl font-bold text-foreground leading-[1.2] mb-1';
     case 'h4':
-      return 'text-2xl font-semibold text-foreground leading-[1.3]';
+      return 'text-xl font-semibold text-foreground leading-[1.3] mb-1';
     case 'h5':
-      return 'text-xl font-semibold text-foreground leading-[1.4]';
+      return 'text-lg font-semibold text-foreground leading-[1.4] mb-0.5';
     case 'h6':
-      return 'text-lg font-semibold text-foreground leading-[1.4]';
+      return 'text-base font-semibold text-foreground leading-[1.4] mb-0.5';
     case 'p':
-      return 'text-lg text-foreground leading-relaxed';
+      return 'text-base text-foreground leading-[1.6]';
     case 'li':
-      return 'text-lg text-foreground leading-relaxed';
+      return 'text-base text-foreground leading-[1.6] list-disc list-inside';
     case 'blockquote':
-      return 'text-xl text-muted-foreground italic border-l-4 border-primary pl-6 py-2';
+      return 'text-base text-muted-foreground italic border-l-4 border-primary pl-6 py-1';
     case 'code':
-      return 'font-mono text-base bg-secondary text-secondary-foreground px-2 py-0.5 rounded';
+      return 'font-mono text-sm bg-secondary text-secondary-foreground px-4 py-2 rounded-lg whitespace-pre-wrap break-words';
     case 'br':
       return '';
     default:
-      return 'text-lg text-foreground leading-relaxed';
+      return 'text-base text-foreground leading-[1.6]';
   }
 }
 
@@ -46,21 +46,21 @@ function getBlockTypeClasses(type: string): string {
 function getInlineElementTypeClasses(elementType: string): string {
   switch (elementType) {
     case 'h1':
-      return 'text-5xl font-extrabold text-foreground leading-[1.2]';
-    case 'h2':
       return 'text-4xl font-bold text-foreground leading-[1.2]';
+    case 'h2':
+      return 'text-3xl font-bold text-foreground leading-[1.2]';
     case 'h3':
-      return 'text-3xl font-semibold text-foreground leading-[1.3]';
+      return 'text-2xl font-bold text-foreground leading-[1.2]';
     case 'h4':
-      return 'text-2xl font-semibold text-foreground leading-[1.3]';
+      return 'text-xl font-semibold text-foreground leading-[1.3]';
     case 'h5':
-      return 'text-xl font-semibold text-foreground leading-[1.4]';
-    case 'h6':
       return 'text-lg font-semibold text-foreground leading-[1.4]';
+    case 'h6':
+      return 'text-base font-semibold text-foreground leading-[1.4]';
     case 'code':
-      return 'font-mono text-base bg-secondary text-secondary-foreground px-2 py-0.5 rounded';
+      return 'font-mono text-sm bg-secondary text-secondary-foreground px-4 py-2 rounded-lg whitespace-pre-wrap break-words';
     case 'blockquote':
-      return 'text-xl text-muted-foreground italic border-l-4 border-primary pl-6 py-2';
+      return 'text-base text-muted-foreground italic border-l-4 border-primary pl-6 py-1';
     default:
       return '';
   }
@@ -266,7 +266,7 @@ function serializeTextNode(node: TextNode, indent: string = ''): string {
   const classAttr = allClasses ? ` class="${allClasses}"` : '';
   
   // Use appropriate HTML tag
-  const tag = type === 'code' ? 'code' : type;
+  const tag = type === 'code' ? 'pre' : type;
   
   return `${indent}<${tag}${classAttr}${styleAttr}>${content}</${tag}>\n`;
 }
@@ -370,7 +370,7 @@ function serializeContainerNode(node: ContainerNode, indent: string = ''): strin
     ? `flex flex-row gap-${gap || '4'} items-start ${flexWrap === 'wrap' ? 'flex-wrap items-center' : ''}`
     : isListContainer
     ? `list-none pl-0 ml-6`
-    : `nested-container border-l-2 border-border/50 pl-4 ml-2`;
+    : `border-l-2 border-border/50 pl-2 ml-6 transition-all`;
   
   // Add custom classes
   if (customClassName) {

@@ -9,10 +9,12 @@ import { EditorNode, TextNode, isContainerNode, ContainerNode } from "../../type
 /**
  * Determine which HTML element to render based on node type
  */
-export function getElementType(type: string): keyof JSX.IntrinsicElements {
+export function getElementType(type: string): "li" | "ol" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "p" | "blockquote" | "pre" | "div" {
   switch (type) {
     case "li":
       return "li";
+    case "ol":
+      return "ol";
     case "h1":
       return "h1";
     case "h2":
@@ -43,7 +45,6 @@ export function getNodeRenderType(node: EditorNode):
   | "container" 
   | "table" 
   | "flex" 
-  | "list-container" 
   | "nested-container"
   | "br" 
   | "img" 
@@ -62,17 +63,6 @@ export function getNodeRenderType(node: EditorNode):
     if (firstChild?.type === "table") return "table";
     if (layoutType === "flex") return "flex";
     
-    const listTypeFromAttribute = containerNode.attributes?.listType as string | undefined;
-    const listTypeFromChild =
-      firstChild &&
-      (firstChild.type === "ul" || firstChild.type === "ol" || firstChild.type === "li")
-        ? firstChild.type === "li"
-          ? "ul"
-          : firstChild.type
-        : null;
-    
-    if (listTypeFromAttribute || listTypeFromChild) return "list-container";
-    
     return "nested-container";
   }
   
@@ -80,32 +70,13 @@ export function getNodeRenderType(node: EditorNode):
 }
 
 /**
- * Get container element type for list containers
- */
-export function getContainerElementType(listType: string | null): "ul" | "ol" | "div" {
-  switch (listType) {
-    case "ul":
-      return "ul";
-    case "ol":
-      return "ol";
-    default:
-      return "div";
-  }
-}
-
-/**
  * Get container CSS classes
  */
 export function getContainerClasses(
   isFlexContainer: boolean,
-  isListContainer: boolean,
   isActive: boolean
 ): string {
   if (isFlexContainer) return "";
-  
-  if (isListContainer) {
-    return "list-none pl-0 ml-6";
-  }
   
   return `border-l-2 border-border/50 pl-2 ml-6 transition-all ${
     isActive ? "border-primary" : "hover:border-border"

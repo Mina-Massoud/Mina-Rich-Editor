@@ -34,12 +34,10 @@ export function getTypeClassName(type: string): string {
       return "text-base font-semibold text-foreground leading-[1.4] mb-0.5";
     case "p":
       return "text-base text-foreground leading-[1.6]";
-    case "ul":
-      return "text-base text-foreground leading-[1.6]";
     case "ol":
-      return "text-base text-foreground leading-[1.6]";
+      return "text-base text-foreground leading-[1.6] list-decimal list-inside";
     case "li":
-      return "text-base text-foreground leading-[1.6]";
+      return "text-base text-foreground leading-[1.6] list-disc list-inside";
     case "blockquote":
       return "text-base text-muted-foreground italic border-l-4 border-primary pl-6 py-1";
     case "code":

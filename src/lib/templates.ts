@@ -931,47 +931,22 @@ export function createGalleryTemplate(): Template {
       } as TextNode,
 
       {
-        id: id(tid, "tip-1"),
-        type: "blockquote",
-        children: [
-          { content: "💡 Tip: ", bold: true },
-          { content: "Hold ", italic: true },
-          { content: "Ctrl", bold: true, italic: true, elementType: "code" },
-          { content: " (", italic: true },
-          { content: "⌘", bold: true, italic: true, elementType: "code" },
-          {
-            content:
-              " on Mac) and click multiple images to select them, then group them or reverse their order!",
-            italic: true,
-          },
-        ],
-        attributes: {
-          className: "bg-blue-50 dark:bg-blue-900/20 border-blue-500",
-        },
-      } as TextNode,
-
-      {
         id: id(tid, "placeholder-note"),
         type: "p",
         children: [
           {
-            content: "📸 Click the ",
+            content: "Remove this content and type ",
             bold: false,
           },
           {
-            content: "Upload Image",
+            content: "/image",
             bold: true,
-            className: "text-blue-600 dark:text-blue-400",
-          },
-          {
-            content:
-              " button or drag images here to add your photos to the gallery.",
-            bold: false,
+            elementType: "code",
           },
         ],
         attributes: {
           className:
-            "border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 text-center bg-gray-50 dark:bg-gray-900/30",
+            "border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg py-16 text-center bg-gray-50 dark:bg-gray-900/30",
         },
       } as TextNode,
 
@@ -995,14 +970,18 @@ export function createGalleryTemplate(): Template {
         type: "p",
         children: [
           {
-            content: "📸 Add your urban photography here",
+            content: "Remove this content and type ",
+            bold: false,
+          },
+          {
+            content: "/image",
             bold: true,
-            className: "text-center block",
+            elementType: "code",
           },
         ],
         attributes: {
           className:
-            "border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 text-center bg-gray-50 dark:bg-gray-900/30",
+            "border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg py-16 text-center bg-gray-50 dark:bg-gray-900/30",
         },
       } as TextNode,
 
@@ -1025,14 +1004,18 @@ export function createGalleryTemplate(): Template {
         type: "p",
         children: [
           {
-            content: "📸 Upload portrait photos here",
+            content: "Remove this content and type ",
+            bold: false,
+          },
+          {
+            content: "/image",
             bold: true,
-            className: "text-center block",
+            elementType: "code",
           },
         ],
         attributes: {
           className:
-            "border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-8 text-center bg-gray-50 dark:bg-gray-900/30",
+            "border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg py-16 text-center bg-gray-50 dark:bg-gray-900/30",
         },
       } as TextNode,
 
@@ -1125,6 +1108,11 @@ export function createGalleryTemplate(): Template {
         },
       } as TextNode,
     ],
+    coverImage: {
+      url: "/templates/gallery/gallery-cover.jpg",
+      alt: "Gallery cover image",
+      position: 50,
+    },
   };
 }
 
@@ -2658,6 +2646,11 @@ function example() {
         },
       } as TextNode,
     ],
+    coverImage: {
+      url: "/templates/blog/blog-cover.jpg",
+      alt: "Blog cover image",
+      position: 50,
+    },
   };
 }
 
@@ -3111,7 +3104,7 @@ export function createHalloweenPartyTemplate(): Template {
                   { content: "\nmusic and delicious food? All ready!", bold: false },
                 ],
                 attributes: {
-                  className: "bg-gray-100 dark:bg-gray-800/30 border-l-4 border-gray-400 dark:border-gray-600",
+                  className: "border-l-4 border-purple-500 dark:border-purple-600",
                 },
               } as TextNode,
             ],
@@ -3748,6 +3741,26 @@ export function createHalloweenPartyTemplate(): Template {
         ],
         attributes: {
           className: "text-center text-orange-600 dark:text-orange-400 text-lg mt-8",
+        },
+      } as TextNode,
+
+      // Free-positioned spider decoration
+      {
+        id: id(tid, "spider-decoration"),
+        type: "img",
+        content: "",
+        attributes: {
+          src: "/templates/haloween/Halloween-Noicon.gif",
+          alt: "Halloween spider decoration",
+          isFreePositioned: true,
+          styles: {
+            left: "140px",
+            top: "320px",
+            width: "150px",
+            height: "auto",
+            position: "fixed",
+            zIndex: "10",
+          },
         },
       } as TextNode,
     ],

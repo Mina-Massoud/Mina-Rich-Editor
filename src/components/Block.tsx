@@ -72,7 +72,6 @@ import {
 import {
   getNodeRenderType,
   getElementType,
-  getContainerElementType,
   getContainerClasses,
 } from "../lib/handlers/block/block-renderer";
 import {
@@ -260,35 +259,17 @@ export function Block({
       );
     }
 
-    case "list-container":
     case "nested-container": {
       const containerNode = node as ContainerNode;
       
-      // Determine list type for list containers
-      const firstChild = containerNode.children[0];
-      const listTypeFromAttribute = containerNode.attributes?.listType as string | undefined;
-      const listTypeFromChild =
-        firstChild &&
-        (firstChild.type === "ul" || firstChild.type === "ol" || firstChild.type === "li")
-          ? firstChild.type === "li"
-            ? "ul"
-            : firstChild.type
-          : null;
-      const listType = listTypeFromAttribute || listTypeFromChild;
-      
-      // Determine container element type
-      const ContainerElement = getContainerElementType(listType);
-      
       // Get container classes
-      const isListContainer = renderType === "list-container";
-      const containerClasses = getContainerClasses(false, isListContainer, isActive);
+      const containerClasses = getContainerClasses(false, isActive);
 
       return (
-        <ContainerElement
+        <div
           key={node.id}
           data-node-id={node.id}
           data-node-type="container"
-          data-list-type={listType || undefined}
           className={containerClasses}
         >
           {containerNode.children.map((childNode: EditorNode) => {
@@ -331,7 +312,7 @@ export function Block({
               />
             );
           })}
-        </ContainerElement>
+        </div>
       );
     }
   }
@@ -558,6 +539,8 @@ export function Block({
   const ElementType =
     textNode.type === "li"
       ? "li"
+      : textNode.type === "ol"
+      ? "ol"
       : textNode.type === "h1"
       ? "h1"
       : textNode.type === "h2"
@@ -578,7 +561,7 @@ export function Block({
       ? "pre"
       : "div";
 
-  const isListItem = textNode.type === "li";
+  const isListItem = textNode.type === "li" || textNode.type === "ol";
 
   // Get custom class from attributes
   const customClassName = textNode.attributes?.className || "";

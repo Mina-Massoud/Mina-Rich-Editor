@@ -180,7 +180,7 @@ export function ImageBlock({
         className={`
           relative !border-0 p-4 duration-200 group
           ${!isResizing ? 'cursor-move' : ''}
-          ${isActive ? "ring-2 ring-primary/50 bg-accent/5" : "hover:bg-accent/5"}
+          ${isActive ? "ring-2 ring-primary/[0.05] bg-accent/5" : "hover:bg-accent/5"}
           ${isSelected ? "ring-2 ring-blue-500 bg-blue-500/10" : ""}
         `}
         style={{ width: `${currentWidth}%`, margin: '0 auto' }}

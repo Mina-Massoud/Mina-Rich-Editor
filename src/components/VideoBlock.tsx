@@ -92,7 +92,7 @@ export function VideoBlock({
       onDragEnd={handleDragEnd}
       className={`
         relative !border-0 mb-4 p-4 transition-all duration-200 cursor-move group
-        ${isActive ? "ring-2 ring-primary/50 bg-accent/5" : "hover:bg-accent/5"}
+        ${isActive ? "ring-2 ring-primary/[0.05] bg-accent/5" : "hover:bg-accent/5"}
         ${isSelected ? "ring-2 ring-blue-500 bg-blue-500/10" : ""}
       `}
       onClick={handleClick}

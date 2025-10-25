@@ -39,8 +39,8 @@ export default function Home() {
     // Add cover image for Notion mode
     if (notionBased) {
       state.coverImage = {
-        url: "/backgrounds/cover.png",
-        alt: "Cover Image",
+        url: "/templates/haloween/haloween.webp",
+        alt: "Halloween Cover",
         position: 50,
       };
     }

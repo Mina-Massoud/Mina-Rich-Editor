@@ -50,7 +50,7 @@ export function QuickModeToggle({
                     alt="Notion Logo"
                     width={16}
                     height={16}
-                    className={`h-3.5 w-3.5 md:h-4 md:w-4 ${notionBased ? 'invert dark:invert-0' : ''}`}
+                    className={`h-3.5 w-3.5 md:h-4 md:w-4 invert-0 dark:invert  ${notionBased ? '!invert dark:!invert-0' : ''}`}
                   />
                   <span className="sr-only">
                     {notionBased ? "Notion Mode" : "Rich Editor Mode"}

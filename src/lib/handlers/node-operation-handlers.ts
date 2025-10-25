@@ -277,59 +277,47 @@ export function createHandleInsertImageFromCommand(
 }
 
 /**
- * Handle create list
+ * Handle create list - Creates a simple list item (li, ol, or ul type based on listType)
  */
 export function createHandleCreateList(params: NodeOperationHandlerParams) {
-  return (listType: "ul" | "ol") => {
+  return (listType: "ul" | "ol" | "li") => {
     const { container, dispatch, toast, editorContentRef } = params;
     const timestamp = Date.now();
 
-    // Create a container with a header and 1 nested item
-    const listContainer: ContainerNode = {
-      id: `container-${timestamp}`,
-      type: "container",
-      children: [
-        {
-          id: `h3-${timestamp}`,
-          type: "h3",
-          content: "List Title",
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-1`,
-          type: "li",
-          content: "First item",
-          attributes: {},
-        } as TextNode,
-      ],
-      attributes: {
-        listType: listType,
-      },
+    // For 'ul' and 'ol', we create 'ol' type items (numbered)
+    // For 'li', we create 'li' type items (bulleted)
+    const itemType = listType === "ul" ? "li" : listType === "ol" ? "ol" : "li";
+    
+    // Create a simple list item
+    const listItem: TextNode = {
+      id: `${itemType}-${timestamp}`,
+      type: itemType as any,
+      content: "",
+      attributes: {},
     };
 
-    // Insert the list container at the end
+    // Insert the list item at the end
     const lastNode = container.children[container.children.length - 1];
     if (lastNode) {
-      dispatch(EditorActions.insertNode(listContainer, lastNode.id, "after"));
+      dispatch(EditorActions.insertNode(listItem, lastNode.id, "after"));
     } else {
       // If no nodes exist, replace the container
       dispatch(
         EditorActions.replaceContainer({
           ...container,
-          children: [listContainer],
+          children: [listItem],
         })
       );
     }
 
-    const listTypeLabel = listType === "ol" ? "ordered" : "unordered";
+    const listTypeLabel = listType === "ol" ? "numbered" : "bulleted";
     toast({
-      title: "List Created",
-      description: `Added a new ${listTypeLabel} list with header and 3 items`,
+      title: "List Item Added",
+      description: `Added a new ${listTypeLabel} list item`,
     });
 
-    // Smooth scroll to the newly created list
+    // Smooth scroll to the newly created list item
     setTimeout(() => {
-      // Find the last element in the editor (the newly created list container)
       const editorContent = editorContentRef.current;
       if (editorContent) {
         const lastChild = editorContent.querySelector(
@@ -348,63 +336,35 @@ export function createHandleCreateList(params: NodeOperationHandlerParams) {
 }
 
 /**
- * Handle create list from command menu
+ * Handle create list from command menu - converts current block to a list item
  */
 export function createHandleCreateListFromCommand(
   params: Pick<NodeOperationHandlerParams, "dispatch" | "toast" | "nodeRefs">
 ) {
   return (nodeId: string, listType: string) => {
     const { dispatch, toast, nodeRefs } = params;
-    const timestamp = Date.now();
-    const firstItemId = `li-${timestamp}-1`;
 
-    // Create a container with 1 list item (always "li", regardless of ul/ol)
-    // The container's attributes will store whether it's ul or ol
-    const listContainer: ContainerNode = {
-      id: `container-${timestamp}`,
-      type: "container",
-      attributes: {
-        listType: listType, // Store 'ul' or 'ol' in the container attributes
-      },
-      children: [
-        {
-          id: firstItemId,
-          type: "li",
-          content: "",
-          attributes: {},
-        } as TextNode,
-      ],
-    };
-
-    // Insert the list container after the current node, then delete the current node
-    dispatch(EditorActions.insertNode(listContainer, nodeId, "after"));
-    dispatch(EditorActions.deleteNode(nodeId));
+    // Convert the current block to a list item
+    // listType can be 'li' (bulleted) or 'ol' (numbered)
+    dispatch(EditorActions.updateNode(nodeId, {
+      type: listType as any,
+      content: "", // Clear content when converting
+    }));
 
     const listTypeLabel = listType === "ol" ? "numbered" : "bulleted";
     toast({
-      title: "List Created",
-      description: `Created a ${listTypeLabel} list with 3 items`,
+      title: "List Item Created",
+      description: `Converted to ${listTypeLabel} list item`,
     });
 
-    // Focus the first item after a longer delay to ensure nested elements are registered
-    // Nested elements take longer to mount and register their refs
+    // Focus the converted item
     setTimeout(() => {
-      const element = nodeRefs.current.get(firstItemId);
+      const element = nodeRefs.current.get(nodeId);
       if (element) {
         element.focus();
-        // Also set it as active node
-        dispatch(EditorActions.setActiveNode(firstItemId));
-      } else {
-        // Retry after another delay
-        setTimeout(() => {
-          const retryElement = nodeRefs.current.get(firstItemId);
-          if (retryElement) {
-            retryElement.focus();
-            dispatch(EditorActions.setActiveNode(firstItemId));
-          }
-        }, 100);
+        dispatch(EditorActions.setActiveNode(nodeId));
       }
-    }, 150);
+    }, 50);
   };
 }
 

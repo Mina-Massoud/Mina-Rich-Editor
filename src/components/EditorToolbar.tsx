@@ -10,6 +10,7 @@ import {
   List,
   ListOrdered,
   Table as TableIcon,
+  Plus,
 } from "lucide-react";
 
 interface EditorToolbarProps {
@@ -17,7 +18,8 @@ interface EditorToolbarProps {
   onImageUploadClick: () => void;
   onMultipleImagesUploadClick: () => void;
   onVideoUploadClick: () => void;
-  onCreateList: (listType: "ul" | "ol") => void;
+  onInsertComponentClick: () => void;
+  onCreateList: (listType: "ul" | "ol" | "li") => void;
   onCreateTable: () => void;
 }
 
@@ -26,6 +28,7 @@ export function EditorToolbar({
   onImageUploadClick,
   onMultipleImagesUploadClick,
   onVideoUploadClick,
+  onInsertComponentClick,
   onCreateList,
   onCreateTable,
 }: EditorToolbarProps) {
@@ -41,6 +44,20 @@ export function EditorToolbar({
             onMultipleImagesUploadClick={onMultipleImagesUploadClick}
             onVideoUploadClick={onVideoUploadClick}
           />
+
+          <Separator orientation="vertical" className="h-5 md:h-6 hidden sm:block" />
+
+          {/* Insert Component Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onInsertComponentClick}
+            className="h-7 w-7 md:h-8 md:w-8"
+            title="Insert component"
+            disabled={isUploading}
+          >
+            <Plus className="size-3 md:size-3.5" />
+          </Button>
 
           <Separator orientation="vertical" className="h-5 md:h-6 hidden sm:block" />
 

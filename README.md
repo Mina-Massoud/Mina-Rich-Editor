@@ -13,9 +13,75 @@ The **first block-based rich text editor** built entirely with **Tailwind CSS** 
 [![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-> 🎉 **Version 0.1.0 - Major Update!** Fresh new features just landed! Check out what's new below.
+> 🎉 **Version 0.2.0 - Exciting New Features!** Major improvements to usability, new Notion-style features, and much more!
 
 > ⚠️ **IMPORTANT NOTE:** For transparency, the **code supports everything** mentioned in this document (gradients, shadows, borders, custom styles, etc.), but **some advanced features don't have a UI interface yet**. You can still apply them programmatically through the JSON structure or by typing Tailwind classes in the Custom Class Popover. **Any collaboration is much appreciated!** Feel free to contribute UI components for these features.
+
+---
+
+## 🆕 What's New in v0.2.0
+
+### 📄 Template System
+
+Quick-start your content with beautiful pre-designed templates. Switch between templates instantly and customize to your needs:
+
+![Template Dialog](./public/image_docs/template-dialog.png)
+
+- ✅ **Blog template** - Perfect for articles and blog posts
+- ✅ **Gallery template** - Showcase photos and portfolio work
+- ✅ **Halloween template** - Festive seasonal design
+- ✅ **Instant switch** - Change templates with one click
+
+#### 📝 Blog Template
+
+Professional blog post layout with metadata, sections, and beautiful typography:
+
+![Blog Template](./public/image_docs/blog-template-showcase.png)
+
+#### 🖼️ Gallery Template
+
+Perfect for photographers and artists - showcase your work in stunning image collections:
+
+![Gallery Template](./public/image_docs/gallery-template-showcase.png)
+
+### 🎨 Notion-Style Mode
+
+Toggle between classic rich editor mode and Notion-style mode with cover images and enhanced first-block styling:
+
+- ✅ **Cover images** - Add beautiful header images to your documents
+- ✅ **First-block styling** - Automatic large heading for document titles
+- ✅ **Drag to reposition** - Adjust cover image position with slider
+- ✅ **Upload or remove** - Full control over your document's cover
+
+### 🖼️ Free-Floating Images
+
+New free image mode lets you place images anywhere on the canvas with full positioning control:
+
+- ✅ **Drag anywhere** - Position images freely on the canvas
+- ✅ **Resize handles** - Adjust image size with visual handles
+- ✅ **Z-index control** - Layer images in front or behind
+- ✅ **Perfect for layouts** - Create magazine-style designs
+
+To add a free-floating image, click on the **plus icon (➕)** in the editor toolbar and choose **Free Movement Image** from the insert component dialog:
+
+![Insert Component](./public/image_docs/insert-component.png)
+
+### 📝 Simplified List Items
+
+List handling is now much simpler and more intuitive:
+
+- ✅ **Simple li elements** - No complex nested structures
+- ✅ **Bulleted (li) and numbered (ol)** - Two simple types
+- ✅ **Auto-convert** - Type '- ' for bullets or '1. ' for numbers
+- ✅ **Easy exit** - Press Enter on empty item to exit list
+
+### 🐛 Bug Fixes & Improvements
+
+- ✅ **Selection improvements** - Fixed text selection and cursor positioning bugs
+- ✅ **Better image handling** - Improved upload and display logic
+- ✅ **Video block updates** - Enhanced video embedding and playback
+- ✅ **Component modal** - New insert components dialog for quick access
+- ✅ **Performance optimizations** - Faster rendering and smoother interactions
 
 ---
 
@@ -437,6 +503,9 @@ Master these keyboard shortcuts for a blazing-fast editing experience:
 - ✅ **Block-Based Architecture** - Each element is an independent, draggable block
 - ✅ **Rich Text Formatting** - Bold, italic, underline, and combinations
 - ✅ **Multiple Block Types** - h1-h6, paragraph, code, blockquote, lists (ol/ul), tables
+- ✅ **Template System** - Pre-designed templates (Blog, Gallery, Halloween) with instant switching
+- ✅ **Notion-Style Mode** - Cover images, enhanced first-block styling, drag to reposition
+- ✅ **Free-Floating Images** - Position images anywhere with drag, resize, and z-index control
 - ✅ **Table Support** - Full-featured tables with drag columns/rows, resize, add/remove
 - ✅ **Multi-Select Images** - Ctrl+click to select multiple images for grouping or reordering
 - ✅ **Inline Element Types** - Mix heading styles within paragraphs
@@ -513,6 +582,12 @@ function App() {
 👉 Press **Shift+Enter** for nested blocks and hierarchical content
 
 👉 Use the **drag handles (⋮⋮)** to reorder blocks and reorganize your document
+
+👉 Click the **plus icon (➕)** in the toolbar to insert components like free-floating images
+
+👉 Use the **template button** to switch between Blog, Gallery, and Halloween templates
+
+👉 Toggle **Notion-style mode** to enable cover images and enhanced first-block styling
 
 👉 Hold **Ctrl (⌘ on Mac)** and click multiple images to select them for grouping or reordering
 

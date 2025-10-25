@@ -20,7 +20,6 @@ export type NodeType =
   | 'h6'
   | 'p'
   | 'blockquote'
-  | 'ul'
   | 'ol'
   | 'li'
   | 'code'

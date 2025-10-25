@@ -119,10 +119,9 @@ export function createHandleKeyDown(params: BlockEventHandlerParams) {
       return;
     }
 
-    // For list items (ul/ol/li), handle Enter and Shift+Enter specially
+    // For list items (ol/li), handle Enter and Shift+Enter specially
     // For non-list items, Shift+Enter creates nested blocks
     const isListItem =
-      textNode.type === "ul" ||
       textNode.type === "ol" ||
       textNode.type === "li";
 
@@ -273,7 +272,7 @@ export function createHandleCommandSelect(params: {
       return;
     }
 
-    // For other block types, just change the type
+    // For other block types (including 'li'), just change the type
     if (onChangeBlockType) {
       onChangeBlockType(textNode.id, commandValue);
 

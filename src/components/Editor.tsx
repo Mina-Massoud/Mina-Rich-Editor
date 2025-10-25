@@ -39,6 +39,8 @@ import { useToast } from "@/hooks/use-toast";
 import { QuickModeToggle } from "./QuickModeToggle";
 import { useDragAutoScroll } from "../lib/utils/drag-auto-scroll";
 import { GroupImagesButton } from "./GroupImagesButton";
+import { FreeImageBlock } from "./FreeImageBlock";
+import { InsertComponentsModal } from "./InsertComponentsModal";
 
 // Import all handlers
 import {
@@ -69,6 +71,8 @@ import {
   createHandleMultipleFilesChange,
   createHandleImageUploadClick,
   createHandleMultipleImagesUploadClick,
+  createHandleFreeImageFileChange,
+  createHandleFreeImageUploadClick,
 } from "../lib/handlers/file-upload-handlers";
 
 import {
@@ -132,6 +136,7 @@ export function Editor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const multipleFileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const freeImageInputRef = useRef<HTMLInputElement>(null);
   const editorContentRef = useRef<HTMLDivElement>(null);
   const [readOnly, setReadOnly] = useState(initialReadOnly);
 
@@ -161,6 +166,7 @@ export function Editor({
     "left" | "right" | null
   >(null);
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
+  const [insertComponentModalOpen, setInsertComponentModalOpen] = useState(false);
 
   // Get the current container from history
   const container = state.history[state.historyIndex];
@@ -227,6 +233,17 @@ export function Editor({
     setIsUploading,
     fileInputRef: videoInputRef,
     multipleFileInputRef: videoInputRef, // Reuse the same ref for consistency
+    onUploadImage,
+  };
+
+  const freeImageUploadParams = {
+    container,
+    dispatch,
+    state,
+    toast,
+    setIsUploading,
+    fileInputRef: freeImageInputRef,
+    multipleFileInputRef: freeImageInputRef,
     onUploadImage,
   };
 
@@ -483,6 +500,27 @@ export function Editor({
     createHandleFileChange(videoUploadParams),
     [container, dispatch, state.activeNodeId, toast, onUploadImage]
   );
+
+  const handleFreeImageFileChange = useCallback(
+    createHandleFreeImageFileChange(freeImageUploadParams),
+    [container, dispatch, state, toast, onUploadImage]
+  );
+
+  const handleFreeImageUploadClick = useCallback(
+    createHandleFreeImageUploadClick(freeImageInputRef),
+    []
+  );
+
+  const handleInsertComponentClick = useCallback(() => {
+    setInsertComponentModalOpen(true);
+  }, []);
+
+  const handleInsertComponentSelect = useCallback((componentId: string) => {
+    if (componentId === "free-image") {
+      handleFreeImageUploadClick();
+    }
+    // Future: handle other component types here
+  }, [handleFreeImageUploadClick]);
 
   const handleClearImageSelection = useCallback(
     createHandleClearImageSelection(setSelectedImageIds),
@@ -988,6 +1026,7 @@ export function Editor({
             onImageUploadClick={handleImageUploadClick}
             onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
             onVideoUploadClick={handleVideoUploadClick}
+            onInsertComponentClick={handleInsertComponentClick}
             onCreateList={handleCreateList}
             onCreateTable={() => setTableDialogOpen(true)}
           />
@@ -999,6 +1038,13 @@ export function Editor({
             onOpenChange={setTableDialogOpen}
             onCreateTable={handleCreateTable}
             onImportMarkdown={handleImportMarkdownTable}
+          />
+
+          {/* Insert Components Modal */}
+          <InsertComponentsModal
+            open={insertComponentModalOpen}
+            onOpenChange={setInsertComponentModalOpen}
+            onSelect={handleInsertComponentSelect}
           />
 
           {/* Hidden file inputs for image and video uploads */}
@@ -1026,6 +1072,13 @@ export function Editor({
                 onChange={handleVideoFileChange}
                 className="hidden"
               />
+              <input
+                ref={freeImageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFreeImageFileChange}
+                className="hidden"
+              />
             </>
           )}
 
@@ -1042,12 +1095,17 @@ export function Editor({
               <div
                 data-editor-content
                 className={`${
-                  notionBased && state.coverImage ? "pt-[350px]" : notionBased ? "pt-[50px]" : "pt-4"
+                  notionBased && state.coverImage ? "pt-[420px]" : notionBased ? "pt-[50px]" : "pt-4"
                 } transition-all duration-300`}
               >
                 {container.children.map((node, index) => {
                   const isText = isTextNode(node);
                   const textNode = isText ? (node as TextNode) : null;
+
+                  // Skip free-positioned images - they'll be rendered separately
+                  if (textNode && textNode.type === "img" && textNode.attributes?.isFreePositioned) {
+                    return null;
+                  }
 
                   // Use stable key based only on node.id to prevent unnecessary remounts
                   // Previously included children.length which caused remounts on every edit
@@ -1073,7 +1131,6 @@ export function Editor({
                         onDrop={(e) => handleDrop(e, node.id)}
                         className={`
                         relative transition-all
-                        ${notionBased && isSecondBlock ? "pt-14" : ""}
                         ${
                           dragOverNodeId === node.id &&
                           dropPosition === "before" &&
@@ -1208,6 +1265,23 @@ export function Editor({
               </div>
             </div>
           </CardContent>
+
+          {/* Free-positioned images - rendered absolutely */}
+          {container.children
+            .filter((node) => {
+              const textNode = isTextNode(node) ? (node as TextNode) : null;
+              return textNode && textNode.type === "img" && textNode.attributes?.isFreePositioned;
+            })
+            .map((node) => (
+              <FreeImageBlock
+                key={node.id}
+                node={node as TextNode}
+                isActive={state.activeNodeId === node.id}
+                onClick={() => handleNodeClick(node.id)}
+                onDelete={readOnly ? undefined : () => handleDeleteNode(node.id)}
+                readOnly={readOnly}
+              />
+            ))}
         </Card>
       </div>
 

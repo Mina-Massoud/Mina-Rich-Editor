@@ -122,16 +122,16 @@ const commands: CommandOption[] = [
   },
   {
     label: 'Bulleted List',
-    value: 'ul',
+    value: 'li',
     icon: <List className="w-4 h-4" />,
-    description: 'Unordered list with bullets',
+    description: 'Simple list item with bullet',
     keywords: ['list', 'bullet', 'unordered', 'ul', 'li'],
   },
   {
     label: 'Numbered List',
     value: 'ol',
     icon: <ListOrdered className="w-4 h-4" />,
-    description: 'Ordered list with numbers',
+    description: 'Numbered list item',
     keywords: ['list', 'numbered', 'ordered', 'ol', 'li'],
   },
   {
@@ -364,7 +364,7 @@ export function CommandMenu({
       return;
     }
     
-    // For all other commands, call the original onSelect handler AFTER closing menu
+    // For all other commands (including 'li' and 'ol'), call the original onSelect handler AFTER closing menu
     onClose();
     onSelect(commandValue);
   }, [dispatch, nodeId, onSelect, onClose, onUploadImage]);
