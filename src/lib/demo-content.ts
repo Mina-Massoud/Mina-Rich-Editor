@@ -117,50 +117,41 @@ export function createDemoContent(
     } as TextNode,
 
     {
-      id: `container-${timestamp}-version-3c`,
-      type: "container",
-      attributes: {
-        listType: "ul",
-      },
+      id: `li-${timestamp}-version-3c-1`,
+      type: "li",
       children: [
-        {
-          id: `li-${timestamp}-version-3c-1`,
-          type: "li",
-          children: [
-            { content: "✅ Blog template", bold: true },
-            { content: " - Perfect for articles and blog posts", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-3c-2`,
-          type: "li",
-          children: [
-            { content: "✅ Gallery template", bold: true },
-            { content: " - Showcase photos and portfolio work", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-3c-3`,
-          type: "li",
-          children: [
-            { content: "✅ Halloween template", bold: true },
-            { content: " - Festive seasonal design", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-3c-4`,
-          type: "li",
-          children: [
-            { content: "✅ Instant switch", bold: true },
-            { content: " - Change templates with one click", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
+        { content: "✅ Blog template", bold: true },
+        { content: " - Perfect for articles and blog posts", bold: false },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-3c-2`,
+      type: "li",
+      children: [
+        { content: "✅ Gallery template", bold: true },
+        { content: " - Showcase photos and portfolio work", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-3c-3`,
+      type: "li",
+      children: [
+        { content: "✅ Halloween template", bold: true },
+        { content: " - Festive seasonal design", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-3c-4`,
+      type: "li",
+      children: [
+        { content: "✅ Instant switch", bold: true },
+        { content: " - Change templates with one click", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
 
     {
       id: `h4-${timestamp}-version-3d`,
@@ -230,50 +221,41 @@ export function createDemoContent(
     } as TextNode,
 
     {
-      id: `container-${timestamp}-version-4b`,
-      type: "container",
-      attributes: {
-        listType: "ul",
-      },
+      id: `li-${timestamp}-version-4b-1`,
+      type: "li",
       children: [
-        {
-          id: `li-${timestamp}-version-4b-1`,
-          type: "li",
-          children: [
-            { content: "✅ Cover images", bold: true },
-            { content: " - Add beautiful header images to your documents", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-4b-2`,
-          type: "li",
-          children: [
-            { content: "✅ First-block styling", bold: true },
-            { content: " - Automatic large heading for document titles", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-4b-3`,
-          type: "li",
-          children: [
-            { content: "✅ Drag to reposition", bold: true },
-            { content: " - Adjust cover image position with slider", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-4b-4`,
-          type: "li",
-          children: [
-            { content: "✅ Upload or remove", bold: true },
-            { content: " - Full control over your document's cover", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
+        { content: "✅ Cover images", bold: true },
+        { content: " - Add beautiful header images to your documents", bold: false },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-4b-2`,
+      type: "li",
+      children: [
+        { content: "✅ First-block styling", bold: true },
+        { content: " - Automatic large heading for document titles", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-4b-3`,
+      type: "li",
+      children: [
+        { content: "✅ Drag to reposition", bold: true },
+        { content: " - Adjust cover image position with slider", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-4b-4`,
+      type: "li",
+      children: [
+        { content: "✅ Upload or remove", bold: true },
+        { content: " - Full control over your document's cover", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
 
     {
       id: `h3-${timestamp}-version-5`,
@@ -291,50 +273,41 @@ export function createDemoContent(
     } as TextNode,
 
     {
-      id: `container-${timestamp}-version-5b`,
-      type: "container",
-      attributes: {
-        listType: "ul",
-      },
+      id: `li-${timestamp}-version-5b-1`,
+      type: "li",
       children: [
-        {
-          id: `li-${timestamp}-version-5b-1`,
-          type: "li",
-          children: [
-            { content: "✅ Drag anywhere", bold: true },
-            { content: " - Position images freely on the canvas", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-5b-2`,
-          type: "li",
-          children: [
-            { content: "✅ Resize handles", bold: true },
-            { content: " - Adjust image size with visual handles", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-5b-3`,
-          type: "li",
-          children: [
-            { content: "✅ Z-index control", bold: true },
-            { content: " - Layer images in front or behind", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-5b-4`,
-          type: "li",
-          children: [
-            { content: "✅ Perfect for layouts", bold: true },
-            { content: " - Create magazine-style designs", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
+        { content: "✅ Drag anywhere", bold: true },
+        { content: " - Position images freely on the canvas", bold: false },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-5b-2`,
+      type: "li",
+      children: [
+        { content: "✅ Resize handles", bold: true },
+        { content: " - Adjust image size with visual handles", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-5b-3`,
+      type: "li",
+      children: [
+        { content: "✅ Z-index control", bold: true },
+        { content: " - Layer images in front or behind", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-5b-4`,
+      type: "li",
+      children: [
+        { content: "✅ Perfect for layouts", bold: true },
+        { content: " - Create magazine-style designs", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
 
     {
       id: `p-${timestamp}-version-5c`,
@@ -376,50 +349,41 @@ export function createDemoContent(
     } as TextNode,
 
     {
-      id: `container-${timestamp}-version-6b`,
-      type: "container",
-      attributes: {
-        listType: "ul",
-      },
+      id: `li-${timestamp}-version-6b-1`,
+      type: "li",
       children: [
-        {
-          id: `li-${timestamp}-version-6b-1`,
-          type: "li",
-          children: [
-            { content: "✅ Simple li elements", bold: true },
-            { content: " - No complex nested structures", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-6b-2`,
-          type: "li",
-          children: [
-            { content: "✅ Bulleted (li) and numbered (ol)", bold: true },
-            { content: " - Two simple types", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-6b-3`,
-          type: "li",
-          children: [
-            { content: "✅ Auto-convert", bold: true },
-            { content: " - Type '- ' for bullets or '1. ' for numbers", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-6b-4`,
-          type: "li",
-          children: [
-            { content: "✅ Easy exit", bold: true },
-            { content: " - Press Enter on empty item to exit list", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
+        { content: "✅ Simple li elements", bold: true },
+        { content: " - No complex nested structures", bold: false },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-6b-2`,
+      type: "li",
+      children: [
+        { content: "✅ Bulleted (li) and numbered (ol)", bold: true },
+        { content: " - Two simple types", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-6b-3`,
+      type: "li",
+      children: [
+        { content: "✅ Auto-convert", bold: true },
+        { content: " - Type '- ' for bullets or '1. ' for numbers", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-6b-4`,
+      type: "li",
+      children: [
+        { content: "✅ Easy exit", bold: true },
+        { content: " - Press Enter on empty item to exit list", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
 
     {
       id: `h3-${timestamp}-version-7`,
@@ -429,68 +393,59 @@ export function createDemoContent(
     } as TextNode,
 
     {
-      id: `container-${timestamp}-version-7a`,
-      type: "container",
-      attributes: {
-        listType: "ul",
-      },
+      id: `li-${timestamp}-version-7a-1`,
+      type: "li",
       children: [
-        {
-          id: `li-${timestamp}-version-7a-1`,
-          type: "li",
-          children: [
-            { content: "✅ Mobile drag & drop", bold: true },
-            { content: " - Full touch support for dragging blocks on mobile devices with visual feedback", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-7a-2`,
-          type: "li",
-          children: [
-            { content: "✅ Selection improvements", bold: true },
-            { content: " - Fixed text selection and cursor positioning bugs", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-7a-3`,
-          type: "li",
-          children: [
-            { content: "✅ Better image handling", bold: true },
-            { content: " - Improved upload and display logic", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-7a-4`,
-          type: "li",
-          children: [
-            { content: "✅ Video block updates", bold: true },
-            { content: " - Enhanced video embedding and playback", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-7a-5`,
-          type: "li",
-          children: [
-            { content: "✅ Component modal", bold: true },
-            { content: " - New insert components dialog for quick access", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-7a-6`,
-          type: "li",
-          children: [
-            { content: "✅ Performance optimizations", bold: true },
-            { content: " - Faster rendering and smoother interactions", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
+        { content: "✅ Mobile drag & drop", bold: true },
+        { content: " - Full touch support for dragging blocks on mobile devices with visual feedback", bold: false },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-7a-2`,
+      type: "li",
+      children: [
+        { content: "✅ Selection improvements", bold: true },
+        { content: " - Fixed text selection and cursor positioning bugs", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-7a-3`,
+      type: "li",
+      children: [
+        { content: "✅ Better image handling", bold: true },
+        { content: " - Improved upload and display logic", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-7a-4`,
+      type: "li",
+      children: [
+        { content: "✅ Video block updates", bold: true },
+        { content: " - Enhanced video embedding and playback", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-7a-5`,
+      type: "li",
+      children: [
+        { content: "✅ Component modal", bold: true },
+        { content: " - New insert components dialog for quick access", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-7a-6`,
+      type: "li",
+      children: [
+        { content: "✅ Performance optimizations", bold: true },
+        { content: " - Faster rendering and smoother interactions", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
 
     {
       id: `h3-${timestamp}-version-8`,
@@ -508,41 +463,32 @@ export function createDemoContent(
     } as TextNode,
 
     {
-      id: `container-${timestamp}-version-8b`,
-      type: "container",
-      attributes: {
-        listType: "ul",
-      },
+      id: `li-${timestamp}-version-8b-1`,
+      type: "li",
       children: [
-        {
-          id: `li-${timestamp}-version-8b-1`,
-          type: "li",
-          children: [
-            { content: "✅ Create tables", bold: true },
-            { content: " with custom rows and columns", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-8b-2`,
-          type: "li",
-          children: [
-            { content: "✅ Drag & resize", bold: true },
-            { content: " columns and rows", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-version-8b-3`,
-          type: "li",
-          children: [
-            { content: "✅ Import markdown", bold: true },
-            { content: " tables from any source", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
+        { content: "✅ Create tables", bold: true },
+        { content: " with custom rows and columns", bold: false },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-8b-2`,
+      type: "li",
+      children: [
+        { content: "✅ Drag & resize", bold: true },
+        { content: " columns and rows", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-version-8b-3`,
+      type: "li",
+      children: [
+        { content: "✅ Import markdown", bold: true },
+        { content: " tables from any source", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
 
     {
       id: `table-wrapper-${timestamp}-version-8`,
@@ -1014,42 +960,33 @@ console.log(message);`,
     } as TextNode,
 
     {
-      id: `container-${timestamp}-33`,
-      type: "container",
-      attributes: {
-        listType: "ol",
-      },
+      id: `li-${timestamp}-33-1`,
+      type: "ol",
+      content: "First item - Automatically numbered",
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-33-2`,
+      type: "ol",
+      content: "Second item - Numbers increment automatically",
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-33-3`,
+      type: "ol",
+      content: "Third item - Perfect for step-by-step instructions",
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-33-4`,
+      type: "ol",
       children: [
-        {
-          id: `li-${timestamp}-33-1`,
-          type: "li",
-          content: "First item - Automatically numbered",
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-33-2`,
-          type: "li",
-          content: "Second item - Numbers increment automatically",
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-33-3`,
-          type: "li",
-          content: "Third item - Perfect for step-by-step instructions",
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-33-4`,
-          type: "li",
-          children: [
-            { content: "You can even add ", bold: false },
-            { content: "formatting", bold: true },
-            { content: " to list items!", italic: true },
-          ],
-          attributes: {},
-        } as TextNode,
+        { content: "You can even add ", bold: false },
+        { content: "formatting", bold: true },
+        { content: " to list items!", italic: true },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
 
     {
       id: `h3-${timestamp}-34`,
@@ -1059,70 +996,57 @@ console.log(message);`,
     } as TextNode,
 
     {
-      id: `container-${timestamp}-35`,
-      type: "container",
-      attributes: {
-        listType: "ul",
-      },
+      id: `li-${timestamp}-35-1`,
+      type: "li",
+      content: "Bullet point item",
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-35-2`,
+      type: "li",
+      content: "Another bullet point",
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-35-3`,
+      type: "li",
+      content: "Great for feature lists",
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-35-4`,
+      type: "li",
       children: [
+        { content: "Supports ", bold: false },
         {
-          id: `li-${timestamp}-35-1`,
-          type: "li",
-          content: "Bullet point item",
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-35-2`,
-          type: "li",
-          content: "Another bullet point",
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-35-3`,
-          type: "li",
-          content: "Great for feature lists",
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-35-4`,
-          type: "li",
-          children: [
-            { content: "Supports ", bold: false },
-            {
-              content: "rich text formatting",
-              bold: true,
-              className: "text-blue-600 dark:text-blue-400",
-            },
-            { content: " too!", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
+          content: "rich text formatting",
+          bold: true,
+          className: "text-blue-600 dark:text-blue-400",
+        },
+        { content: " too!", bold: false },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
 
     {
       id: `code-${timestamp}-36`,
       type: "code",
-      content: `// List structure in the editor
-const orderedList = {
-  id: 'container-1',
-  type: 'container',
-  attributes: {
-    listType: 'ol'  // 'ol' for ordered, 'ul' for unordered
-  },
+      content: `// Simple list structure - no container needed!
+// Ordered list items (numbered)
+{ id: 'item-1', type: 'ol', content: 'First item' },
+{ id: 'item-2', type: 'ol', content: 'Second item' },
+{ 
+  id: 'item-3',
+  type: 'ol',
   children: [
-    { id: 'li-1', type: 'li', content: 'First item' },
-    { id: 'li-2', type: 'li', content: 'Second item' },
-    { 
-      id: 'li-3',
-      type: 'li',
-      children: [
-        { content: 'Formatted ', bold: false },
-        { content: 'item', bold: true }
-      ]
-    }
+    { content: 'Formatted ', bold: false },
+    { content: 'item', bold: true }
   ]
-};`,
+},
+
+// Unordered list items (bullets)
+{ id: 'item-4', type: 'li', content: 'Bullet item' },
+{ id: 'item-5', type: 'li', content: 'Another bullet' }`,
       attributes: {},
     } as TextNode,
 
@@ -1276,65 +1200,56 @@ const richParagraph = {
     } as TextNode,
 
     {
-      id: `container-${timestamp}-52`,
-      type: "container",
-      attributes: {
-        listType: "ul",
-      },
+      id: `li-${timestamp}-52-1`,
+      type: "li",
       children: [
+        { content: "Text Colors", bold: true },
         {
-          id: `li-${timestamp}-52-1`,
-          type: "li",
-          children: [
-            { content: "Text Colors", bold: true },
-            {
-              content: " - All Tailwind color shades (red, blue, green, etc.)",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-52-2`,
-          type: "li",
-          children: [
-            { content: "Background Colors", bold: true },
-            { content: " - Full palette of background colors", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-52-3`,
-          type: "li",
-          children: [
-            { content: "Font Sizes", bold: true },
-            { content: " - From xs to 9xl", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-52-4`,
-          type: "li",
-          children: [
-            { content: "Search Functionality", bold: true },
-            {
-              content: " - Quick class lookup (e.g., 'text', 'bg', 'flex')",
-              bold: false,
-            },
-          ],
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-52-5`,
-          type: "li",
-          children: [
-            { content: "Custom Input", bold: true },
-            { content: " - Type any Tailwind class manually", bold: false },
-          ],
-          attributes: {},
-        } as TextNode,
+          content: " - All Tailwind color shades (red, blue, green, etc.)",
+          bold: false,
+        },
       ],
-    } as ContainerNode,
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-52-2`,
+      type: "li",
+      children: [
+        { content: "Background Colors", bold: true },
+        { content: " - Full palette of background colors", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-52-3`,
+      type: "li",
+      children: [
+        { content: "Font Sizes", bold: true },
+        { content: " - From xs to 9xl", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-52-4`,
+      type: "li",
+      children: [
+        { content: "Search Functionality", bold: true },
+        {
+          content: " - Quick class lookup (e.g., 'text', 'bg', 'flex')",
+          bold: false,
+        },
+      ],
+      attributes: {},
+    } as TextNode,
+    {
+      id: `li-${timestamp}-52-5`,
+      type: "li",
+      children: [
+        { content: "Custom Input", bold: true },
+        { content: " - Type any Tailwind class manually", bold: false },
+      ],
+      attributes: {},
+    } as TextNode,
 
     {
       id: `h3-${timestamp}-53`,
@@ -2001,32 +1916,23 @@ const nestedBlock = {
         } as TextNode,
 
         {
-          id: `container-${timestamp}-107`,
-          type: "container",
-          attributes: {
-            listType: "ul",
-          },
-          children: [
-            {
-              id: `li-${timestamp}-107-1`,
-              type: "li",
-              content: "Nested lists are supported",
-              attributes: {},
-            } as TextNode,
-            {
-              id: `li-${timestamp}-107-2`,
-              type: "li",
-              content: "Drag handles work in nested blocks too",
-              attributes: {},
-            } as TextNode,
-            {
-              id: `li-${timestamp}-107-3`,
-              type: "li",
-              content: "All formatting features available",
-              attributes: {},
-            } as TextNode,
-          ],
-        } as ContainerNode,
+          id: `li-${timestamp}-107-1`,
+          type: "li",
+          content: "Nested lists are supported",
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-107-2`,
+          type: "li",
+          content: "Drag handles work in nested blocks too",
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-107-3`,
+          type: "li",
+          content: "All formatting features available",
+          attributes: {},
+        } as TextNode,
       ],
       attributes: {
         style:

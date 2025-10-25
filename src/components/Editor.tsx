@@ -27,6 +27,7 @@ import {
   useSelection,
   findNodeById,
 } from "../lib";
+import { findNodeInTree } from "../lib/utils/editor-helpers";
 import { AddBlockButton } from "./AddBlockButton";
 import { CustomClassPopover } from "./CustomClassPopover";
 import { LinkPopover } from "./LinkPopover";
@@ -894,113 +895,80 @@ export function Editor({
         }
       }
 
-      // F2 - Trigger re-render (for testing)
-      if (e.key === "F2") {
-        e.preventDefault();
-        const {
-          parseDOMToInlineChildren,
-        } = require("@/lib/utils/editor-helpers");
+      // Arrow Up/Down - Navigate between blocks
+      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && isInEditor && state.activeNodeId) {
+        const currentElement = activeElement as HTMLElement;
+        const currentNodeId = currentElement?.getAttribute("data-node-id") || state.activeNodeId;
 
-        // Test Case 1: Empty bold span (the main issue)
-        console.group("🧪 Test 1: Empty bold span");
-        const test1 = document.createElement("div");
-        test1.innerHTML = 'test <span class="font-bold"></span>';
-        const result1 = parseDOMToInlineChildren(test1);
-        console.log("Input:", test1.innerHTML);
-        console.log("Result:", result1);
-        const pass1 = result1.some(
-          (child: any) => child.content === "" && child.bold === true
-        );
-        console.log(pass1 ? "✅ PASS" : "❌ FAIL");
-        console.groupEnd();
+        // Find the current node and its siblings
+        const result = findNodeInTree(currentNodeId, container);
+        if (!result) return;
 
-        // Test Case 2: Empty italic + underline span
-        console.group("🧪 Test 2: Empty italic + underline span");
-        const test2 = document.createElement("div");
-        test2.innerHTML = 'hello <span class="italic underline"></span> world';
-        const result2 = parseDOMToInlineChildren(test2);
-        console.log("Input:", test2.innerHTML);
-        console.log("Result:", result2);
-        const pass2 = result2.some(
-          (child: any) =>
-            child.content === "" &&
-            child.italic === true &&
-            child.underline === true
-        );
-        console.log(pass2 ? "✅ PASS" : "❌ FAIL");
-        console.groupEnd();
+        const { siblings } = result;
+        const currentIndex = siblings.findIndex((n) => n.id === currentNodeId);
+        if (currentIndex === -1) return;
 
-        // Test Case 3: Empty span with custom class
-        console.group("🧪 Test 3: Empty span with custom class");
-        const test3 = document.createElement("div");
-        test3.innerHTML = 'text <span class="text-red-500"></span>';
-        const result3 = parseDOMToInlineChildren(test3);
-        console.log("Input:", test3.innerHTML);
-        console.log("Result:", result3);
-        const pass3 = result3.some(
-          (child: any) =>
-            child.content === "" && child.className === "text-red-500"
-        );
-        console.log(pass3 ? "✅ PASS" : "❌ FAIL");
-        console.groupEnd();
+        // ArrowUp: Navigate to previous block
+        if (e.key === "ArrowUp" && currentIndex > 0) {
+          e.preventDefault();
+          const prevNode = siblings[currentIndex - 1];
+          dispatch(EditorActions.setActiveNode(prevNode.id));
+          
+          // Focus and place cursor at the end of the previous node
+          setTimeout(() => {
+            const prevElement = nodeRefs.current.get(prevNode.id);
+            if (prevElement) {
+              prevElement.focus();
+              const range = document.createRange();
+              const sel = window.getSelection();
+              
+              // Place cursor at the end
+              const lastChild = prevElement.childNodes[prevElement.childNodes.length - 1];
+              if (lastChild?.nodeType === Node.TEXT_NODE) {
+                range.setStart(lastChild, lastChild.textContent?.length || 0);
+              } else if (lastChild) {
+                range.setStartAfter(lastChild);
+              } else {
+                range.selectNodeContents(prevElement);
+              }
+              range.collapse(true);
+              sel?.removeAllRanges();
+              sel?.addRange(range);
+            }
+          }, 10);
+        }
 
-        // Test Case 4: Non-empty span should always be preserved
-        console.group("🧪 Test 4: Non-empty span (control test)");
-        const test4 = document.createElement("div");
-        test4.innerHTML = 'test <span class="font-bold">bold</span>';
-        const result4 = parseDOMToInlineChildren(test4);
-        console.log("Input:", test4.innerHTML);
-        console.log("Result:", result4);
-        const pass4 = result4.some(
-          (child: any) => child.content === "bold" && child.bold === true
-        );
-        console.log(pass4 ? "✅ PASS" : "❌ FAIL");
-        console.groupEnd();
-
-        // Test Case 5: Multiple formatting on empty span
-        console.group("🧪 Test 5: Multiple formatting on empty span");
-        const test5 = document.createElement("div");
-        test5.innerHTML =
-          '<span class="font-bold italic underline line-through"></span>';
-        const result5 = parseDOMToInlineChildren(test5);
-        console.log("Input:", test5.innerHTML);
-        console.log("Result:", result5);
-        const pass5 = result5.some(
-          (child: any) =>
-            child.content === "" &&
-            child.bold === true &&
-            child.italic === true &&
-            child.underline === true &&
-            child.strikethrough === true
-        );
-        console.log(pass5 ? "✅ PASS" : "❌ FAIL");
-        console.groupEnd();
-
-        const allPassed = pass1 && pass2 && pass3 && pass4 && pass5;
-
-        if (allPassed) {
-          toast({
-            title: "✅ All Tests Passed!",
-            description:
-              "Empty formatted spans are preserved. Focus should remain stable during editing.",
-          });
-        } else {
-          const failed = [];
-          if (!pass1) failed.push("Test 1 (empty bold)");
-          if (!pass2) failed.push("Test 2 (empty italic+underline)");
-          if (!pass3) failed.push("Test 3 (empty custom class)");
-          if (!pass4) failed.push("Test 4 (non-empty span)");
-          if (!pass5) failed.push("Test 5 (multiple formats)");
-
-          toast({
-            variant: "destructive",
-            title: "❌ Some Tests Failed",
-            description: `Failed: ${failed.join(
-              ", "
-            )}. Check console for details.`,
-          });
+        // ArrowDown: Navigate to next block
+        if (e.key === "ArrowDown" && currentIndex < siblings.length - 1) {
+          e.preventDefault();
+          const nextNode = siblings[currentIndex + 1];
+          dispatch(EditorActions.setActiveNode(nextNode.id));
+          
+          // Focus and place cursor at the end of the next node
+          setTimeout(() => {
+            const nextElement = nodeRefs.current.get(nextNode.id);
+            if (nextElement) {
+              nextElement.focus();
+              const range = document.createRange();
+              const sel = window.getSelection();
+              
+              // Place cursor at the end
+              const lastChild = nextElement.childNodes[nextElement.childNodes.length - 1];
+              if (lastChild?.nodeType === Node.TEXT_NODE) {
+                range.setStart(lastChild, lastChild.textContent?.length || 0);
+              } else if (lastChild) {
+                range.setStartAfter(lastChild);
+              } else {
+                range.selectNodeContents(nextElement);
+              }
+              range.collapse(true);
+              sel?.removeAllRanges();
+              sel?.addRange(range);
+            }
+          }, 10);
         }
       }
+
     };
 
     document.addEventListener("keydown", handleGlobalKeyDown);
