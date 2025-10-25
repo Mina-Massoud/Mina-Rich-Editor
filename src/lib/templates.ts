@@ -3060,7 +3060,7 @@ export function createHalloweenPartyTemplate(): Template {
       icon: "🎃",
     },
     coverImage: {
-      url: "/templates/haloween/haloween.webp",
+      url: "/templates/haloween/haloween.gif",
       alt: "Halloween Party Cover",
       position: 50,
     },
