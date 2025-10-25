@@ -21,31 +21,31 @@ export function escapeHTML(text: string): string {
 export function getTypeClassName(type: string): string {
   switch (type) {
     case "h1":
-      return "text-4xl text-foreground leading-[1.2]";
+      return "text-4xl font-bold text-foreground leading-[1.2] mb-2";
     case "h2":
-      return "text-3xl text-foreground leading-[1.2]";
+      return "text-3xl font-bold text-foreground leading-[1.2] mb-1.5";
     case "h3":
-      return "text-2xl text-foreground leading-[1.3]";
+      return "text-2xl font-bold text-foreground leading-[1.2] mb-1";
     case "h4":
-      return "text-xl text-foreground leading-[1.3]";
+      return "text-xl font-semibold text-foreground leading-[1.3] mb-1";
     case "h5":
-      return "text-lg text-foreground leading-[1.4]";
+      return "text-lg font-semibold text-foreground leading-[1.4] mb-0.5";
     case "h6":
-      return "text-base text-foreground leading-[1.4]";
+      return "text-base font-semibold text-foreground leading-[1.4] mb-0.5";
     case "p":
-      return "text-base text-foreground leading-relaxed";
+      return "text-base text-foreground leading-[1.6]";
     case "ul":
-      return "text-base text-foreground leading-relaxed";
+      return "text-base text-foreground leading-[1.6]";
     case "ol":
-      return "text-base text-foreground leading-relaxed";
+      return "text-base text-foreground leading-[1.6]";
     case "li":
-      return "text-base text-foreground leading-relaxed";
+      return "text-base text-foreground leading-[1.6]";
     case "blockquote":
-      return "text-base text-muted-foreground italic border-l-4 border-primary pl-6 py-2";
+      return "text-base text-muted-foreground italic border-l-4 border-primary pl-6 py-1";
     case "code":
-      return "font-mono text-sm bg-secondary text-secondary-foreground px-4 py-3 rounded-lg whitespace-pre-wrap break-words";
+      return "font-mono text-sm bg-secondary text-secondary-foreground px-4 py-2 rounded-lg whitespace-pre-wrap break-words";
     default:
-      return "text-lg text-foreground leading-relaxed";
+      return "text-base text-foreground leading-[1.6]";
   }
 }
 

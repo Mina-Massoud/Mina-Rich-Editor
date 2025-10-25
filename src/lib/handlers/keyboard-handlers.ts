@@ -48,72 +48,72 @@ export function createHandleContentChange(
         clearTimeout(existingTimer);
       }
 
-      // Debounce the state update - only update after user stops typing for 150ms
+      // Small debounce (50ms) for better performance while avoiding content loss
       const timer = setTimeout(() => {
         // Auto-detect ordered list pattern: "1. ", "2. ", etc. (only with space)
-        const orderedListMatch = newContent.match(/^(\d+)\.\s(.+)$/);
+      const orderedListMatch = newContent.match(/^(\d+)\.\s(.+)$/);
 
-        if (orderedListMatch && node.type === "p") {
-          // Convert to list item and remove only the number prefix
-          const [_, number, content] = orderedListMatch;
+      if (orderedListMatch && node.type === "p") {
+        // Convert to list item and remove only the number prefix
+        const [_, number, content] = orderedListMatch;
+
+        dispatch(
+          EditorActions.updateNode(node.id, {
+            type: "li",
+            content: content,
+          })
+        );
+      } else if (
+        node.type === "li" &&
+        (node.lines || newContent.includes("\n"))
+      ) {
+        // List items with line breaks should always use lines structure
+        const textLines = newContent
+          .split("\n")
+          .filter((line) => line.trim() !== "");
+
+        if (textLines.length > 1) {
+          // Multiple lines - use lines structure
+          const updatedLines = textLines.map((lineText) => {
+            // Remove number prefix if present (e.g., "1. text" -> "text")
+            const cleanedText = lineText.replace(/^\d+\.\s*/, "");
+            return { content: cleanedText };
+          });
 
           dispatch(
             EditorActions.updateNode(node.id, {
-              type: "li",
-              content: content,
+              lines: updatedLines,
+              content: undefined, // Clear simple content
+              children: undefined, // Clear children
             })
           );
-        } else if (
-          node.type === "li" &&
-          (node.lines || newContent.includes("\n"))
-        ) {
-          // List items with line breaks should always use lines structure
-          const textLines = newContent
-            .split("\n")
-            .filter((line) => line.trim() !== "");
-
-          if (textLines.length > 1) {
-            // Multiple lines - use lines structure
-            const updatedLines = textLines.map((lineText) => {
-              // Remove number prefix if present (e.g., "1. text" -> "text")
-              const cleanedText = lineText.replace(/^\d+\.\s*/, "");
-              return { content: cleanedText };
-            });
-
-            dispatch(
-              EditorActions.updateNode(node.id, {
-                lines: updatedLines,
-                content: undefined, // Clear simple content
-                children: undefined, // Clear children
-              })
-            );
-          } else {
-            // Single line - use simple content
-            dispatch(EditorActions.updateContent(node.id, newContent));
-          }
-        } else if (!hasInlineChildren(node)) {
-          // Simple content node - just update the text
-          dispatch(EditorActions.updateContent(node.id, newContent));
         } else {
-          // Node has inline children with formatting - parse DOM to preserve formatting
-          const {
-            parseDOMToInlineChildren,
-          } = require("../utils/editor-helpers");
-          const parsedChildren = parseDOMToInlineChildren(element);
-
-          dispatch(
-            EditorActions.updateNode(node.id, {
-              children: parsedChildren,
-            })
-          );
+          // Single line - use simple content
+          dispatch(EditorActions.updateContent(node.id, newContent));
         }
+      } else if (!hasInlineChildren(node)) {
+        // Simple content node - just update the text
+        dispatch(EditorActions.updateContent(node.id, newContent));
+      } else {
+        // Node has inline children with formatting - parse DOM to preserve formatting
+        const {
+          parseDOMToInlineChildren,
+        } = require("../utils/editor-helpers");
+        const parsedChildren = parseDOMToInlineChildren(element);
 
-        // Clean up the timer reference
-        contentUpdateTimers.current.delete(nodeId);
-      }, 150);
+        dispatch(
+          EditorActions.updateNode(node.id, {
+            children: parsedChildren,
+          })
+        );
+      }
 
-      // Store the timer reference
-      contentUpdateTimers.current.set(nodeId, timer);
+      // Clean up the timer reference
+      contentUpdateTimers.current.delete(nodeId);
+    }, 50); // Small 50ms debounce - fast enough to avoid content loss
+
+    // Store the timer reference
+    contentUpdateTimers.current.set(nodeId, timer);
     }
   };
 }

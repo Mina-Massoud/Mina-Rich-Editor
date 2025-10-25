@@ -2,15 +2,19 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { EditorProvider } from "@/lib";
+import { EditorProvider, createInitialState } from "@/lib";
 import { createDemoContent } from "@/lib/demo-content";
-import { ContainerNode } from "@/lib/types";
+import { createEmptyContent } from "@/lib/empty-content";
+import { ContainerNode, EditorState } from "@/lib/types";
 import HeroSection from "@/components/landing";
 import { Editor } from "@/components/Editor";
 
 export default function Home() {
   const [readOnly, setReadOnly] = useState(false);
   const [showHero, setShowHero] = useState(true);
+  
+  // Toggle between modes: true = Notion-style (with cover & header), false = Rich Editor (clean blocks)
+  const [notionBased, setNotionBased] = useState(true);
 
   // Scroll to top when editor is shown
   useEffect(() => {
@@ -19,17 +23,30 @@ export default function Home() {
     }
   }, [showHero]);
 
-  // Create initial demo content - memoized to ensure stable IDs
-  // The empty dependency array ensures this is only created once per component mount
-  const initialContainer = useMemo<ContainerNode>(
-    () => ({
+  // Create initial content based on mode
+  // Notion mode: Full demo content with header and cover image
+  // Normal mode: Empty paragraph blocks, no cover
+  const initialState = useMemo<EditorState>(() => {
+    const container: ContainerNode = {
       id: "root",
       type: "container",
-      children: createDemoContent(), // Uses default stable timestamp
+      children: notionBased ? createDemoContent() : createEmptyContent(),
       attributes: {},
-    }),
-    []
-  );
+    };
+    
+    const state = createInitialState(container);
+    
+    // Add cover image for Notion mode
+    if (notionBased) {
+      state.coverImage = {
+        url: "/backgrounds/cover.png",
+        alt: "Cover Image",
+        position: 50,
+      };
+    }
+    
+    return state;
+  }, [notionBased]);
 
   // Example custom upload handler
   // In a real app, this would upload to your backend/cloud storage
@@ -102,12 +119,14 @@ export default function Home() {
                 className="w-full flex-1 min-h-screen flex flex-col"
               >
                 <EditorProvider
-                  // initialContainer={initialContainer}
+                  initialState={initialState}
                   debug={true}
                 >
                   <Editor
                     readOnly={readOnly}
                     onUploadImage={handleImageUpload}
+                    notionBased={notionBased}
+                    onNotionBasedChange={setNotionBased}
                   />
                 </EditorProvider>
               </motion.div>

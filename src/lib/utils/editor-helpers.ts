@@ -37,15 +37,19 @@ export function parseDOMToInlineChildren(element: HTMLElement): TextNode["childr
     if (node.nodeType === Node.TEXT_NODE) {
       // Direct text node - use inherited formatting
       const content = node.textContent || "";
-      if (content) {
-        const hasAnyFormatting =
-          inheritedFormats.bold ||
-          inheritedFormats.italic ||
-          inheritedFormats.underline ||
-          inheritedFormats.strikethrough ||
-          inheritedFormats.code ||
-          inheritedFormats.className ||
-          inheritedFormats.elementType;
+      
+      const hasAnyFormatting =
+        inheritedFormats.bold ||
+        inheritedFormats.italic ||
+        inheritedFormats.underline ||
+        inheritedFormats.strikethrough ||
+        inheritedFormats.code ||
+        inheritedFormats.className ||
+        inheritedFormats.elementType;
+      
+      // Always add content if it exists OR if it's empty but has formatting
+      // This prevents structure changes when user deletes the last character
+      if (content || hasAnyFormatting) {
         if (hasAnyFormatting) {
           children.push({
             content,
@@ -155,8 +159,35 @@ export function parseDOMToInlineChildren(element: HTMLElement): TextNode["childr
 
       // If it's a span with formatting, walk its children with inherited formats
       if (el.tagName === "SPAN") {
-        for (let i = 0; i < node.childNodes.length; i++) {
-          walkNode(node.childNodes[i], currentFormats);
+        // Check if the span is empty (no child nodes)
+        if (node.childNodes.length === 0) {
+          // Empty span with formatting - preserve it
+          const hasAnyFormatting =
+            currentFormats.bold ||
+            currentFormats.italic ||
+            currentFormats.underline ||
+            currentFormats.strikethrough ||
+            currentFormats.code ||
+            currentFormats.className ||
+            currentFormats.elementType;
+          
+          if (hasAnyFormatting) {
+            children.push({
+              content: "",
+              bold: currentFormats.bold || undefined,
+              italic: currentFormats.italic || undefined,
+              underline: currentFormats.underline || undefined,
+              strikethrough: currentFormats.strikethrough || undefined,
+              code: currentFormats.code || undefined,
+              className: currentFormats.className || undefined,
+              elementType: currentFormats.elementType,
+            });
+          }
+        } else {
+          // Span has children, walk them with inherited formats
+          for (let i = 0; i < node.childNodes.length; i++) {
+            walkNode(node.childNodes[i], currentFormats);
+          }
         }
       } else {
         // For other elements (like the main div), just walk children
@@ -171,8 +202,29 @@ export function parseDOMToInlineChildren(element: HTMLElement): TextNode["childr
     walkNode(element.childNodes[i]);
   }
 
-  // Filter out empty content
-  return children.filter((child) => child.content && child.content.length > 0);
+  // Filter out empty content ONLY if it has no formatting
+  // Keep empty spans with formatting so user can continue typing in them
+  return children.filter((child) => {
+    // If content exists and is not empty, always keep it
+    if (child.content && child.content.length > 0) {
+      return true;
+    }
+    
+    // If content is empty, only keep it if it has any formatting attributes
+    // This prevents the structure from changing when user deletes the last character
+    const hasFormatting = 
+      child.bold ||
+      child.italic ||
+      child.underline ||
+      child.strikethrough ||
+      child.code ||
+      child.className ||
+      child.elementType ||
+      child.href ||
+      child.styles;
+    
+    return hasFormatting;
+  });
 }
 
 /**

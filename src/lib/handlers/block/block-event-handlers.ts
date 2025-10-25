@@ -78,10 +78,11 @@ export function createHandleInput(params: Pick<BlockEventHandlerParams, 'textNod
     // Call the parent onInput handler
     onInput(element);
 
-    // Reset the flag after user stops typing (longer delay to prevent innerHTML updates during typing)
+    // Reset the flag quickly to allow Block component to sync with state
+    // Reduced from 200ms since we're no longer debouncing state updates
     setTimeout(() => {
       shouldPreserveSelectionRef.current = false;
-    }, 200);
+    }, 50);
   };
 }
 

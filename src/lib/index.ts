@@ -155,3 +155,4 @@ export type { TailwindClassGroup } from './tailwind-classes';
 // Demo Content
 // ============================================================================
 export { createDemoContent } from './demo-content';
+export { createEmptyContent } from './empty-content';

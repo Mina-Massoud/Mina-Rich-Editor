@@ -104,6 +104,7 @@ import {
 import { Block } from "./Block";
 import { CoverImage } from "./CoverImage";
 import { ExportFloatingButton } from "./ExportFloatingButton";
+import { Button } from "./ui/button";
 
 /**
  * Editor Component Props
@@ -111,11 +112,15 @@ import { ExportFloatingButton } from "./ExportFloatingButton";
 interface EditorProps {
   readOnly?: boolean; // View-only mode - renders content without editing capabilities
   onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler - should return the uploaded image URL
+  notionBased?: boolean; // Enable Notion-style features (cover image, first header spacing) - default: true
+  onNotionBasedChange?: (notionBased: boolean) => void; // Callback when notion mode is toggled
 }
 
 export function Editor({
   readOnly: initialReadOnly = false,
   onUploadImage,
+  notionBased = true,
+  onNotionBasedChange,
 }: EditorProps = {}) {
   const [state, dispatch] = useEditor();
   const selectionManager = useSelectionManager();
@@ -849,6 +854,114 @@ export function Editor({
           dispatch(EditorActions.redo());
         }
       }
+
+      // F2 - Trigger re-render (for testing)
+      if (e.key === "F2") {
+        e.preventDefault();
+        const {
+          parseDOMToInlineChildren,
+        } = require("@/lib/utils/editor-helpers");
+
+        // Test Case 1: Empty bold span (the main issue)
+        console.group("🧪 Test 1: Empty bold span");
+        const test1 = document.createElement("div");
+        test1.innerHTML = 'test <span class="font-bold"></span>';
+        const result1 = parseDOMToInlineChildren(test1);
+        console.log("Input:", test1.innerHTML);
+        console.log("Result:", result1);
+        const pass1 = result1.some(
+          (child: any) => child.content === "" && child.bold === true
+        );
+        console.log(pass1 ? "✅ PASS" : "❌ FAIL");
+        console.groupEnd();
+
+        // Test Case 2: Empty italic + underline span
+        console.group("🧪 Test 2: Empty italic + underline span");
+        const test2 = document.createElement("div");
+        test2.innerHTML = 'hello <span class="italic underline"></span> world';
+        const result2 = parseDOMToInlineChildren(test2);
+        console.log("Input:", test2.innerHTML);
+        console.log("Result:", result2);
+        const pass2 = result2.some(
+          (child: any) =>
+            child.content === "" &&
+            child.italic === true &&
+            child.underline === true
+        );
+        console.log(pass2 ? "✅ PASS" : "❌ FAIL");
+        console.groupEnd();
+
+        // Test Case 3: Empty span with custom class
+        console.group("🧪 Test 3: Empty span with custom class");
+        const test3 = document.createElement("div");
+        test3.innerHTML = 'text <span class="text-red-500"></span>';
+        const result3 = parseDOMToInlineChildren(test3);
+        console.log("Input:", test3.innerHTML);
+        console.log("Result:", result3);
+        const pass3 = result3.some(
+          (child: any) =>
+            child.content === "" && child.className === "text-red-500"
+        );
+        console.log(pass3 ? "✅ PASS" : "❌ FAIL");
+        console.groupEnd();
+
+        // Test Case 4: Non-empty span should always be preserved
+        console.group("🧪 Test 4: Non-empty span (control test)");
+        const test4 = document.createElement("div");
+        test4.innerHTML = 'test <span class="font-bold">bold</span>';
+        const result4 = parseDOMToInlineChildren(test4);
+        console.log("Input:", test4.innerHTML);
+        console.log("Result:", result4);
+        const pass4 = result4.some(
+          (child: any) => child.content === "bold" && child.bold === true
+        );
+        console.log(pass4 ? "✅ PASS" : "❌ FAIL");
+        console.groupEnd();
+
+        // Test Case 5: Multiple formatting on empty span
+        console.group("🧪 Test 5: Multiple formatting on empty span");
+        const test5 = document.createElement("div");
+        test5.innerHTML =
+          '<span class="font-bold italic underline line-through"></span>';
+        const result5 = parseDOMToInlineChildren(test5);
+        console.log("Input:", test5.innerHTML);
+        console.log("Result:", result5);
+        const pass5 = result5.some(
+          (child: any) =>
+            child.content === "" &&
+            child.bold === true &&
+            child.italic === true &&
+            child.underline === true &&
+            child.strikethrough === true
+        );
+        console.log(pass5 ? "✅ PASS" : "❌ FAIL");
+        console.groupEnd();
+
+        const allPassed = pass1 && pass2 && pass3 && pass4 && pass5;
+
+        if (allPassed) {
+          toast({
+            title: "✅ All Tests Passed!",
+            description:
+              "Empty formatted spans are preserved. Focus should remain stable during editing.",
+          });
+        } else {
+          const failed = [];
+          if (!pass1) failed.push("Test 1 (empty bold)");
+          if (!pass2) failed.push("Test 2 (empty italic+underline)");
+          if (!pass3) failed.push("Test 3 (empty custom class)");
+          if (!pass4) failed.push("Test 4 (non-empty span)");
+          if (!pass5) failed.push("Test 5 (multiple formats)");
+
+          toast({
+            variant: "destructive",
+            title: "❌ Some Tests Failed",
+            description: `Failed: ${failed.join(
+              ", "
+            )}. Check console for details.`,
+          });
+        }
+      }
     };
 
     document.addEventListener("keydown", handleGlobalKeyDown);
@@ -861,7 +974,12 @@ export function Editor({
     <div className="bg-background transition-colors flex flex-col flex-1 duration-300">
       {/* Editor with integrated toolbar */}
       <div className="mx-auto flex flex-col flex-1 w-full">
-        <QuickModeToggle readOnly={readOnly} onReadOnlyChange={setReadOnly} />
+        <QuickModeToggle 
+          readOnly={readOnly} 
+          onReadOnlyChange={setReadOnly}
+          notionBased={notionBased}
+          onNotionBasedChange={onNotionBasedChange}
+        />
         {/* Toolbar - hidden in readOnly mode */}
         {!readOnly && (
           <EditorToolbar
@@ -917,28 +1035,25 @@ export function Editor({
             }`}
           >
             <div ref={editorContentRef}>
-              {/* Cover Image */}
-              <CoverImage onUploadImage={onUploadImage} readOnly={readOnly} />
+              {/* Cover Image - Only in Notion mode */}
+              {notionBased && <CoverImage onUploadImage={onUploadImage} readOnly={readOnly} />}
 
               <div
                 data-editor-content
                 className={`${
-                  state.coverImage ? "pt-[350px]" : "pt-[50px]"
+                  notionBased && state.coverImage ? "pt-[350px]" : notionBased ? "pt-[50px]" : "pt-4"
                 } transition-all duration-300`}
               >
                 {container.children.map((node, index) => {
                   const isText = isTextNode(node);
                   const textNode = isText ? (node as TextNode) : null;
 
-                  const hasChildren =
-                    textNode &&
-                    Array.isArray(textNode.children) &&
-                    textNode.children.length > 0;
-                  const nodeKey = hasChildren
-                    ? `${node.id}-children-${textNode?.children?.length}`
-                    : `${node.id}-content`;
+                  // Use stable key based only on node.id to prevent unnecessary remounts
+                  // Previously included children.length which caused remounts on every edit
+                  const nodeKey = node.id;
 
                   const isFirstBlock = index === 0;
+                  const isSecondBlock = index === 1;
 
                   return (
                     <div className="mx-auto max-w-6xl w-full" key={nodeKey}>
@@ -957,6 +1072,7 @@ export function Editor({
                         onDrop={(e) => handleDrop(e, node.id)}
                         className={`
                         relative transition-all
+                        ${notionBased && isSecondBlock ? "pt-14" : ""}
                         ${
                           dragOverNodeId === node.id &&
                           dropPosition === "before" &&
@@ -992,6 +1108,7 @@ export function Editor({
                           node={node}
                           isActive={state.activeNodeId === node.id}
                           isFirstBlock={isFirstBlock}
+                          notionBased={notionBased}
                           hasCoverImage={!!state.coverImage}
                           onUploadCoverImage={onUploadImage}
                           nodeRef={(el) => {
@@ -1023,9 +1140,15 @@ export function Editor({
                                   );
                                 }
 
+                                // Check if node has inline children
+                                const nodeHasChildren =
+                                  textNode &&
+                                  Array.isArray(textNode.children) &&
+                                  textNode.children.length > 0;
+
                                 if (
                                   !isCurrentlyFocused &&
-                                  !hasChildren &&
+                                  !nodeHasChildren &&
                                   !hasActiveSelection &&
                                   !selectionInThisElement
                                 ) {

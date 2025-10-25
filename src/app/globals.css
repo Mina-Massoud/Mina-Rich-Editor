@@ -4,11 +4,14 @@
 @custom-variant dark (&:is(.dark *));
 
 body {
-  font-family: "DM Sans", sans-serif;
-  letter-spacing: var(--tracking-tight);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
   width: 100%;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 @theme inline {
@@ -112,6 +115,8 @@ html {
   width: 100%;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 :root {

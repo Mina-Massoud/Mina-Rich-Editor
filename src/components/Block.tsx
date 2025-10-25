@@ -53,12 +53,11 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   ListOrdered,
 };
 
-// Import all block handlers
+// Import all block handlers and utilities
 import {
   buildHTML,
   saveSelection,
   restoreSelection,
-  getTypeClassName,
   createHandleCompositionStart,
   createHandleCompositionEnd,
   createHandleInput,
@@ -68,7 +67,19 @@ import {
   createHandleBackgroundColorChange,
   createHandleBlockDragStart,
   createHandleBlockDragEnd,
+  getTypeClassName,
 } from "../lib/handlers/block";
+import {
+  getNodeRenderType,
+  getElementType,
+  getContainerElementType,
+  getContainerClasses,
+} from "../lib/handlers/block/block-renderer";
+import {
+  buildBlockClassName,
+  buildBlockStyles,
+  parseCustomClassName,
+} from "../lib/handlers/block/block-styles";
 
 interface BlockProps {
   node: EditorNode;
@@ -97,6 +108,7 @@ interface BlockProps {
   dragOverFlexId?: string | null;
   flexDropPosition?: "left" | "right" | null;
   isFirstBlock?: boolean;
+  notionBased?: boolean;
   hasCoverImage?: boolean;
   onUploadCoverImage?: (file: File) => Promise<string>;
 }
@@ -128,6 +140,7 @@ export function Block({
   dragOverFlexId,
   flexDropPosition,
   isFirstBlock = false,
+  notionBased = true,
   hasCoverImage = false,
   onUploadCoverImage,
 }: BlockProps) {
@@ -149,18 +162,13 @@ export function Block({
   // Add block popover state
   const [addBlockPopoverOpen, setAddBlockPopoverOpen] = useState(false);
 
+  // Determine how to render this node
+  const renderType = getNodeRenderType(node);
+
   // Handle container nodes (recursive rendering)
-  if (isContainerNode(node)) {
-    const containerNode = node as ContainerNode;
-
-    // Get first child
-    const firstChild = containerNode.children[0];
-
-    // Check if this is a table wrapper container
-    const isTableWrapper = firstChild?.type === "table";
-
-    // If this container wraps a table, render the TableBuilder
-    if (isTableWrapper) {
+  switch (renderType) {
+    case "table": {
+      const containerNode = node as ContainerNode;
       return (
         <TableBuilder
           key={node.id}
@@ -179,45 +187,8 @@ export function Block({
       );
     }
 
-    // Check if this is a flex container for images
-    const layoutType = containerNode.attributes?.layoutType as
-      | string
-      | undefined;
-    const isFlexContainer = layoutType === "flex";
-    const gap = containerNode.attributes?.gap as string | undefined;
-    const flexWrap = containerNode.attributes?.flexWrap as string | undefined;
-
-    // Determine if this container holds list items
-    const listTypeFromAttribute = containerNode.attributes?.listType as
-      | string
-      | undefined;
-    const listTypeFromChild =
-      firstChild &&
-      (firstChild.type === "ul" ||
-        firstChild.type === "ol" ||
-        firstChild.type === "li")
-        ? firstChild.type === "li"
-          ? "ul"
-          : firstChild.type
-        : null;
-
-    const listType = listTypeFromAttribute || listTypeFromChild;
-    const isListContainer = !!listType;
-
-    // Use ul/ol for list containers, div for regular nested containers
-    const ContainerElement =
-      listType === "ul" ? "ul" : listType === "ol" ? "ol" : "div";
-
-    const containerClasses = isFlexContainer
-      ? ``
-      : isListContainer
-      ? `list-none pl-0 ml-6`
-      : `border-l-2 border-border/50 pl-2 ml-6 transition-all ${
-          isActive ? "border-primary" : "hover:border-border"
-        }`;
-
-    // Render flex container with FlexContainer component
-    if (isFlexContainer) {
+    case "flex": {
+      const containerNode = node as ContainerNode;
       return (
         <FlexContainer
           key={node.id}
@@ -289,70 +260,80 @@ export function Block({
       );
     }
 
-    return (
-      <ContainerElement
-        key={node.id}
-        data-node-id={node.id}
-        data-node-type="container"
-        data-list-type={listType || undefined}
-        className={containerClasses}
-      >
-        {containerNode.children.map((childNode) => {
-          const isChildMedia =
-            childNode && "type" in childNode && (childNode.type === "img" || childNode.type === "video");
+    case "list-container":
+    case "nested-container": {
+      const containerNode = node as ContainerNode;
+      
+      // Determine list type for list containers
+      const firstChild = containerNode.children[0];
+      const listTypeFromAttribute = containerNode.attributes?.listType as string | undefined;
+      const listTypeFromChild =
+        firstChild &&
+        (firstChild.type === "ul" || firstChild.type === "ol" || firstChild.type === "li")
+          ? firstChild.type === "li"
+            ? "ul"
+            : firstChild.type
+          : null;
+      const listType = listTypeFromAttribute || listTypeFromChild;
+      
+      // Determine container element type
+      const ContainerElement = getContainerElementType(listType);
+      
+      // Get container classes
+      const isListContainer = renderType === "list-container";
+      const containerClasses = getContainerClasses(false, isListContainer, isActive);
 
-          const blockContent = (
-            <Block
-              key={childNode.id}
-              node={childNode}
-              isActive={isActive}
-              nodeRef={nodeRef}
-              onInput={onInput}
-              onKeyDown={(e) => {
-                onKeyDown(e);
-              }}
-              onClick={onClick}
-              onDelete={
-                isChildMedia && onDelete
-                  ? () => onDelete(childNode.id)
-                  : undefined
-              }
-              onCreateNested={onCreateNested}
-              depth={depth + 1}
-              readOnly={readOnly}
-              onImageDragStart={onImageDragStart}
-              onChangeBlockType={onChangeBlockType}
-              onInsertImage={onInsertImage}
-              onCreateList={onCreateList}
-              onCreateTable={onCreateTable}
-              onUploadImage={onUploadImage}
-              selectedImageIds={selectedImageIds}
-              onToggleImageSelection={onToggleImageSelection}
-              onClickWithModifier={onClickWithModifier}
-              onFlexContainerDragOver={onFlexContainerDragOver}
-              onFlexContainerDragLeave={onFlexContainerDragLeave}
-              onFlexContainerDrop={onFlexContainerDrop}
-              dragOverFlexId={dragOverFlexId}
-              flexDropPosition={flexDropPosition}
-            />
-          );
+      return (
+        <ContainerElement
+          key={node.id}
+          data-node-id={node.id}
+          data-node-type="container"
+          data-list-type={listType || undefined}
+          className={containerClasses}
+        >
+          {containerNode.children.map((childNode: EditorNode) => {
+            const isChildMedia =
+              childNode && "type" in childNode && (childNode.type === "img" || childNode.type === "video");
 
-          // If it's a flex container, wrap in a flex item div
-          if (isFlexContainer) {
             return (
-              <div
+              <Block
                 key={childNode.id}
-                className="flex-1 min-w-[280px] max-w-full"
-              >
-                {blockContent}
-              </div>
+                node={childNode}
+                isActive={isActive}
+                nodeRef={nodeRef}
+                onInput={onInput}
+                onKeyDown={(e) => {
+                  onKeyDown(e);
+                }}
+                onClick={onClick}
+                onDelete={
+                  isChildMedia && onDelete
+                    ? () => onDelete(childNode.id)
+                    : undefined
+                }
+                onCreateNested={onCreateNested}
+                depth={depth + 1}
+                readOnly={readOnly}
+                onImageDragStart={onImageDragStart}
+                onChangeBlockType={onChangeBlockType}
+                onInsertImage={onInsertImage}
+                onCreateList={onCreateList}
+                onCreateTable={onCreateTable}
+                onUploadImage={onUploadImage}
+                selectedImageIds={selectedImageIds}
+                onToggleImageSelection={onToggleImageSelection}
+                onClickWithModifier={onClickWithModifier}
+                onFlexContainerDragOver={onFlexContainerDragOver}
+                onFlexContainerDragLeave={onFlexContainerDragLeave}
+                onFlexContainerDrop={onFlexContainerDrop}
+                dragOverFlexId={dragOverFlexId}
+                flexDropPosition={flexDropPosition}
+              />
             );
-          }
-
-          return blockContent;
-        })}
-      </ContainerElement>
-    );
+          })}
+        </ContainerElement>
+      );
+    }
   }
 
   // Cast to TextNode for remaining cases
@@ -625,7 +606,8 @@ export function Block({
       ${getTypeClassName(textNode.type)}
       ${className}
       ${readOnly ? "" : "outline-none"}
-      ${isListItem ? "px-3 py-1 mb-1" : "px-3 py-2 mb-2"}
+      ${isListItem ? "px-3 py-0.5 mb-1" : textNode.type.startsWith('h') ? "px-3 py-2 mb-2" : "px-3 py-1.5 mb-2"}
+      ${notionBased && isFirstBlock && textNode.type === 'h1' ? "mt-8 pb-4" : ""}
       transition-all
       ${!readOnly && isActive ? "border-b bg-accent/5" : ""}
       ${!readOnly ? "hover:bg-accent/5" : ""}
@@ -647,15 +629,15 @@ export function Block({
         currentBackgroundColor={backgroundColor}
       >
         <div
-          className="flex items-stretch gap-1 group"
+          className="relative group"
           onMouseEnter={() => !readOnly && setIsHovering(true)}
           onMouseLeave={() => !readOnly && setIsHovering(false)}
         >
           {/* Drag Handle & Add Button */}
           {!readOnly && onBlockDragStart && (
-            <div className="flex items-center gap-0.5 mr-5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
-              {/* Add Cover Button - Only show on first block if no cover */}
-              {isFirstBlock && !hasCoverImage && onUploadCoverImage && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-0.5 -ml-[4.5rem] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+              {/* Add Cover Button - Only show on first block in Notion mode if no cover */}
+              {notionBased && isFirstBlock && !hasCoverImage && onUploadCoverImage && (
                 <>
                   <input
                     ref={coverImageInputRef}
@@ -756,8 +738,7 @@ export function Block({
             </div>
           )}
 
-          <div className="flex-1 min-w-0">
-            <ElementType
+          <ElementType
             {...commonProps}
             key={textNode.id}
             ref={(el: HTMLElement | null) => {
@@ -770,7 +751,6 @@ export function Block({
             onCompositionStart={readOnly ? undefined : handleCompositionStart}
             onCompositionEnd={readOnly ? undefined : handleCompositionEnd}
           />
-          </div>
         </div>
       </BlockContextMenu>
 
