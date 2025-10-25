@@ -34,9 +34,15 @@ export function createHandleBlockDragStart(
 /**
  * Create handle block drag end
  */
-export function createHandleBlockDragEnd() {
+export function createHandleBlockDragEnd(
+  onDragEnd?: () => void
+) {
   return (e: React.DragEvent) => {
     e.stopPropagation();
+    // Clear dragging state
+    if (onDragEnd) {
+      onDragEnd();
+    }
   };
 }
 

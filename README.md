@@ -77,6 +77,7 @@ List handling is now much simpler and more intuitive:
 
 ### 🐛 Bug Fixes & Improvements
 
+- ✅ **Mobile drag & drop** - Full touch support for dragging blocks on mobile devices with visual feedback
 - ✅ **Selection improvements** - Fixed text selection and cursor positioning bugs
 - ✅ **Better image handling** - Improved upload and display logic
 - ✅ **Video block updates** - Enhanced video embedding and playback

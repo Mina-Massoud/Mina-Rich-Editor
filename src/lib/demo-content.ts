@@ -439,13 +439,22 @@ export function createDemoContent(
           id: `li-${timestamp}-version-7a-1`,
           type: "li",
           children: [
+            { content: "✅ Mobile drag & drop", bold: true },
+            { content: " - Full touch support for dragging blocks on mobile devices with visual feedback", bold: false },
+          ],
+          attributes: {},
+        } as TextNode,
+        {
+          id: `li-${timestamp}-version-7a-2`,
+          type: "li",
+          children: [
             { content: "✅ Selection improvements", bold: true },
             { content: " - Fixed text selection and cursor positioning bugs", bold: false },
           ],
           attributes: {},
         } as TextNode,
         {
-          id: `li-${timestamp}-version-7a-2`,
+          id: `li-${timestamp}-version-7a-3`,
           type: "li",
           children: [
             { content: "✅ Better image handling", bold: true },
@@ -454,7 +463,7 @@ export function createDemoContent(
           attributes: {},
         } as TextNode,
         {
-          id: `li-${timestamp}-version-7a-3`,
+          id: `li-${timestamp}-version-7a-4`,
           type: "li",
           children: [
             { content: "✅ Video block updates", bold: true },
@@ -463,7 +472,7 @@ export function createDemoContent(
           attributes: {},
         } as TextNode,
         {
-          id: `li-${timestamp}-version-7a-4`,
+          id: `li-${timestamp}-version-7a-5`,
           type: "li",
           children: [
             { content: "✅ Component modal", bold: true },
@@ -472,7 +481,7 @@ export function createDemoContent(
           attributes: {},
         } as TextNode,
         {
-          id: `li-${timestamp}-version-7a-5`,
+          id: `li-${timestamp}-version-7a-6`,
           type: "li",
           children: [
             { content: "✅ Performance optimizations", bold: true },
@@ -2802,7 +2811,7 @@ const initialContent = {
         isFreePositioned: true,
         styles: {
           left: "140px",
-          top: "320px",
+          top: "0px",
           width: "150px",
           height: "auto",
           position: "fixed",

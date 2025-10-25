@@ -3755,7 +3755,7 @@ export function createHalloweenPartyTemplate(): Template {
           isFreePositioned: true,
           styles: {
             left: "140px",
-            top: "320px",
+            top: "0px",
             width: "150px",
             height: "auto",
             position: "fixed",

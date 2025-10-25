@@ -1095,8 +1095,8 @@ export function Editor({
               <div
                 data-editor-content
                 className={`${
-                  notionBased && state.coverImage ? "pt-[420px]" : notionBased ? "pt-[50px]" : "pt-4"
-                } transition-all duration-300`}
+                  notionBased && state.coverImage ? "pt-[280px] lg:pt-[420px]" : notionBased ? "pt-[50px]" : "pt-4"
+                } px-10 transition-all duration-300`}
               >
                 {container.children.map((node, index) => {
                   const isText = isTextNode(node);
@@ -1249,6 +1249,10 @@ export function Editor({
                           onFlexContainerDrop={handleFlexContainerDrop}
                           dragOverFlexId={dragOverFlexId}
                           flexDropPosition={flexDropPosition}
+                          onSetDragOverNodeId={setDragOverNodeId}
+                          onSetDropPosition={setDropPosition}
+                          draggingNodeId={draggingNodeId}
+                          onSetDraggingNodeId={setDraggingNodeId}
                         />
                       </div>
 

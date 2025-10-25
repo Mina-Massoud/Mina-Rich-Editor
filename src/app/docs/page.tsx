@@ -48,7 +48,7 @@ export default function DocsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="container py-10 md:py-16">
+      <main className="container px-10 py-10 md:py-16">
         <div className="mx-auto max-w-4xl">
           {/* Title Section */}
           <div className="mb-8 space-y-2">

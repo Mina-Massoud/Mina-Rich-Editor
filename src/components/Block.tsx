@@ -110,6 +110,10 @@ interface BlockProps {
   notionBased?: boolean;
   hasCoverImage?: boolean;
   onUploadCoverImage?: (file: File) => Promise<string>;
+  onSetDragOverNodeId?: (nodeId: string | null) => void;
+  onSetDropPosition?: (position: "before" | "after" | "left" | "right" | null) => void;
+  draggingNodeId?: string | null;
+  onSetDraggingNodeId?: (nodeId: string | null) => void;
 }
 
 export function Block({
@@ -142,6 +146,10 @@ export function Block({
   notionBased = true,
   hasCoverImage = false,
   onUploadCoverImage,
+  onSetDragOverNodeId,
+  onSetDropPosition,
+  draggingNodeId,
+  onSetDraggingNodeId,
 }: BlockProps) {
   const localRef = useRef<HTMLElement | null>(null);
   const isComposingRef = useRef(false);
@@ -160,6 +168,10 @@ export function Block({
 
   // Add block popover state
   const [addBlockPopoverOpen, setAddBlockPopoverOpen] = useState(false);
+
+  // Touch/drag state for mobile
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [isDraggingTouch, setIsDraggingTouch] = useState(false);
 
   // Determine how to render this node
   const renderType = getNodeRenderType(node);
@@ -242,6 +254,10 @@ export function Block({
               onFlexContainerDrop={onFlexContainerDrop}
               dragOverFlexId={dragOverFlexId}
               flexDropPosition={flexDropPosition}
+              onSetDragOverNodeId={onSetDragOverNodeId}
+              onSetDropPosition={onSetDropPosition}
+              draggingNodeId={draggingNodeId}
+              onSetDraggingNodeId={onSetDraggingNodeId}
             />
           );
 
@@ -309,6 +325,10 @@ export function Block({
                 onFlexContainerDrop={onFlexContainerDrop}
                 dragOverFlexId={dragOverFlexId}
                 flexDropPosition={flexDropPosition}
+                onSetDragOverNodeId={onSetDragOverNodeId}
+                onSetDropPosition={onSetDropPosition}
+                draggingNodeId={draggingNodeId}
+                onSetDraggingNodeId={onSetDraggingNodeId}
               />
             );
           })}
@@ -495,7 +515,101 @@ export function Block({
     [textNode, onBlockDragStart]
   );
 
-  const handleBlockDragEndFn = useCallback(createHandleBlockDragEnd(), []);
+  const handleBlockDragEndFn = useCallback(
+    createHandleBlockDragEnd(() => {
+      // Clear all drag states when drag ends (including cancelled drags)
+      if (onSetDragOverNodeId && onSetDropPosition && onSetDraggingNodeId) {
+        onSetDragOverNodeId(null);
+        onSetDropPosition(null);
+        onSetDraggingNodeId(null);
+      }
+    }),
+    [onSetDragOverNodeId, onSetDropPosition, onSetDraggingNodeId]
+  );
+
+  // Touch handlers for mobile drag support
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Prevent default to stop scrolling
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    setIsDraggingTouch(true);
+    
+    // Trigger drag start
+    if (onBlockDragStart && textNode?.id) {
+      onBlockDragStart(textNode.id);
+    }
+  }, [onBlockDragStart, textNode?.id]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current || !isDraggingTouch) return;
+    
+    // Prevent default scrolling while dragging
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Highlight the drop target using the same state as desktop
+    const touch = e.touches[0];
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    const targetBlock = elementBelow?.closest('[data-node-id]');
+    
+    if (targetBlock && onSetDragOverNodeId && onSetDropPosition) {
+      const targetId = targetBlock.getAttribute('data-node-id');
+      if (targetId && targetId !== textNode?.id) {
+        onSetDragOverNodeId(targetId);
+        onSetDropPosition('after'); // Default to after position on mobile
+      } else {
+        onSetDragOverNodeId(null);
+        onSetDropPosition(null);
+      }
+    }
+  }, [isDraggingTouch, textNode?.id, onSetDragOverNodeId, onSetDropPosition]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const touch = e.changedTouches[0];
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    // Find the closest block node
+    const targetBlock = elementBelow?.closest('[data-node-id]');
+    if (targetBlock && textNode?.id) {
+      const targetId = targetBlock.getAttribute('data-node-id');
+      if (targetId && targetId !== textNode.id && dispatch) {
+        // Move the block
+        dispatch({
+          type: "MOVE_NODE",
+          payload: {
+            nodeId: textNode.id,
+            targetId,
+            position: "after",
+          },
+        });
+      }
+    }
+    
+    // Clean up
+    touchStartRef.current = null;
+    setIsDraggingTouch(false);
+    
+    // Clear drop indicators using the same state as desktop
+    if (onSetDragOverNodeId && onSetDropPosition) {
+      onSetDragOverNodeId(null);
+      onSetDropPosition(null);
+    }
+  }, [textNode?.id, dispatch, onSetDragOverNodeId, onSetDropPosition]);
+
+  const handleTouchCancel = useCallback(() => {
+    // Clean up on touch cancel (e.g., user scrolled or drag was interrupted)
+    touchStartRef.current = null;
+    setIsDraggingTouch(false);
+    
+    // Clear drop indicators
+    if (onSetDragOverNodeId && onSetDropPosition) {
+      onSetDragOverNodeId(null);
+      onSetDropPosition(null);
+    }
+  }, [onSetDragOverNodeId, onSetDropPosition]);
 
   // Handle cover image upload
   const handleCoverImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -612,13 +726,21 @@ export function Block({
         currentBackgroundColor={backgroundColor}
       >
         <div
-          className="relative group"
+          className={`relative group transition-all ${
+            (isDraggingTouch || (draggingNodeId === textNode?.id)) 
+              ? 'opacity-50 scale-95' 
+              : ''
+          }`}
           onMouseEnter={() => !readOnly && setIsHovering(true)}
           onMouseLeave={() => !readOnly && setIsHovering(false)}
+          style={{
+            borderTop: '2px solid transparent',
+            borderBottom: '2px solid transparent',
+          }}
         >
-          {/* Drag Handle & Add Button */}
+          {/* Drag Handle & Add Button - Mobile: inline, Desktop: absolute positioned */}
           {!readOnly && onBlockDragStart && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center gap-0.5 -ml-[4.5rem] opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+            <div className="flex md:absolute items-center gap-0.5 mb-1 md:mb-0 md:left-0 md:top-1/2 md:-translate-y-1/2 md:-ml-[4.5rem] md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
               {/* Add Cover Button - Only show on first block in Notion mode if no cover */}
               {notionBased && isFirstBlock && !hasCoverImage && onUploadCoverImage && (
                 <>
@@ -709,7 +831,12 @@ export function Block({
                 draggable
                 onDragStart={handleBlockDragStartFn}
                 onDragEnd={handleBlockDragEndFn}
-                className="p-0.5 cursor-grab active:cursor-grabbing"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchCancel}
+                className={`p-0.5 cursor-grab active:cursor-grabbing ${isDraggingTouch ? 'opacity-50' : ''}`}
+                style={{ touchAction: 'none' }}
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
               >

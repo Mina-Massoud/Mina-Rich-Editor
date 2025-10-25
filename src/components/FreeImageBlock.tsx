@@ -35,8 +35,8 @@ export function FreeImageBlock({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeSide, setResizeSide] = useState<"left" | "right" | null>(null);
   const [position, setPosition] = useState({
-    x: parseFloat((node.attributes?.styles as any)?.left || "100") || 100,
-    y: parseFloat((node.attributes?.styles as any)?.top || "100") || 100,
+    x: parseFloat((node.attributes?.styles as any)?.left || "100") || 0,
+    y: parseFloat((node.attributes?.styles as any)?.top || "100") || 0,
   });
   const [size, setSize] = useState<{ width: number; height: number | "auto" }>({
     width: parseFloat((node.attributes?.styles as any)?.width || "400") || 400,
