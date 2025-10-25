@@ -9,6 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import {
   FileText,
@@ -23,6 +33,7 @@ import type { EditorState } from "../lib/types";
 
 interface TemplateSwitcherButtonProps {
   onTemplateChange: (state: EditorState) => void;
+  currentState: EditorState;
 }
 
 // Category icons
@@ -43,10 +54,13 @@ const categoryColors: Record<TemplateMetadata["category"], string> = {
 
 export function TemplateSwitcherButton({
   onTemplateChange,
+  currentState,
 }: TemplateSwitcherButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<TemplateMetadata["category"] | "all">("all");
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
 
   const allTemplates = getAllTemplateMetadata();
   
@@ -62,7 +76,38 @@ export function TemplateSwitcherButton({
     { value: "personal", label: "Personal" },
   ];
 
+  // Check if there's existing content
+  const hasExistingContent = () => {
+    const container = currentState.history[currentState.historyIndex];
+    if (!container || !container.children || container.children.length === 0) {
+      return false;
+    }
+    
+    // Check if there's any non-empty content
+    return container.children.some((child) => {
+      if ('content' in child && child.content && child.content.trim() !== '') {
+        return true;
+      }
+      if ('children' in child && child.children && child.children.length > 0) {
+        return true;
+      }
+      return false;
+    });
+  };
+
   const handleTemplateSelect = (templateId: string) => {
+    // Check if there's existing content
+    if (hasExistingContent()) {
+      setPendingTemplateId(templateId);
+      setShowConfirmDialog(true);
+      return;
+    }
+
+    // No existing content, proceed directly
+    applyTemplate(templateId);
+  };
+
+  const applyTemplate = (templateId: string) => {
     const template = getTemplateById(templateId);
     if (!template) return;
 
@@ -83,11 +128,28 @@ export function TemplateSwitcherButton({
       selectionKey: 0,
       currentSelection: null,
       selectedBlocks: new Set(),
-      coverImage: null,
+      coverImage: template.coverImage || null,
+      metadata: {
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     };
 
     onTemplateChange(newState);
     setIsOpen(false);
+    setShowConfirmDialog(false);
+    setPendingTemplateId(null);
+  };
+
+  const handleConfirmReplace = () => {
+    if (pendingTemplateId) {
+      applyTemplate(pendingTemplateId);
+    }
+  };
+
+  const handleCancelReplace = () => {
+    setShowConfirmDialog(false);
+    setPendingTemplateId(null);
   };
 
   return (
@@ -116,19 +178,21 @@ export function TemplateSwitcherButton({
 
       {/* Template Selector Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+        <DialogContent className="max-w-6xl min-w-fit max-h-[85vh] overflow-hidden flex flex-col backdrop-blur-xl bg-background/95 border-border/50 shadow-2xl">
+          <DialogHeader className="space-y-3 pb-6">
+            <DialogTitle className="flex items-center gap-3 text-2xl">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
               Choose a Template
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-base">
               Select a template to get started quickly with pre-built layouts and content
             </DialogDescription>
           </DialogHeader>
 
           {/* Category Filter */}
-          <div className="flex flex-wrap gap-2 pb-4 border-b">
+          <div className="flex flex-wrap gap-2 pb-6 border-b border-border/50">
             {categories.map((category) => {
               const Icon = category.value === "all" ? BookOpen : categoryIcons[category.value as TemplateMetadata["category"]];
               const isActive = selectedCategory === category.value;
@@ -139,7 +203,10 @@ export function TemplateSwitcherButton({
                   variant={isActive ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedCategory(category.value)}
-                  className="gap-2"
+                  className={cn(
+                    "gap-2 transition-all duration-200",
+                    isActive && "shadow-md scale-105"
+                  )}
                 >
                   <Icon className="h-4 w-4" />
                   {category.label}
@@ -149,8 +216,8 @@ export function TemplateSwitcherButton({
           </div>
 
           {/* Templates Grid */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
+          <div className="flex-1 overflow-y-auto pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 px-1 pb-2">
               {filteredTemplates.map((template) => {
                 const CategoryIcon = categoryIcons[template.category];
                 
@@ -159,26 +226,28 @@ export function TemplateSwitcherButton({
                     key={template.id}
                     onClick={() => handleTemplateSelect(template.id)}
                     className={cn(
-                      "group relative p-5 rounded-lg border border-border",
-                      "hover:border-primary/50 hover:shadow-md hover:bg-accent/50",
-                      "transition-all duration-200",
+                      "group relative p-6 rounded-xl border border-border/60",
+                      "hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10",
+                      "hover:bg-accent/30 hover:scale-[1.02]",
+                      "transition-all duration-300 ease-out",
+                      "backdrop-blur-sm bg-background/50",
                       "text-left"
                     )}
                   >
                     {/* Category badge */}
-                    <div className="absolute top-3 right-3">
-                      <div className="p-1.5 rounded-md bg-muted">
-                        <CategoryIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="absolute top-4 right-4">
+                      <div className="p-2 rounded-lg bg-muted/80 backdrop-blur-sm border border-border/40">
+                        <CategoryIcon className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
 
                     {/* Icon */}
-                    <div className="text-4xl mb-3">
+                    <div className="text-5xl mb-4 transition-transform duration-200 group-hover:scale-110">
                       {template.icon}
                     </div>
 
                     {/* Template Info */}
-                    <h3 className="font-semibold text-base mb-1.5 pr-10 group-hover:text-primary transition-colors">
+                    <h3 className="font-semibold text-base mb-2 pr-10 group-hover:text-primary transition-colors duration-200">
                       {template.name}
                     </h3>
                     <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
@@ -190,14 +259,46 @@ export function TemplateSwitcherButton({
             </div>
 
             {filteredTemplates.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <BookOpen className="h-12 w-12 mb-3 opacity-50" />
-                <p>No templates found in this category</p>
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <div className="p-4 rounded-full bg-muted/50 mb-4">
+                  <BookOpen className="h-12 w-12 opacity-50" />
+                </div>
+                <p className="text-base">No templates found in this category</p>
               </div>
             )}
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="backdrop-blur-xl bg-background/95 border-border/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <FileText className="h-5 w-5 text-destructive" />
+              </div>
+              Replace Existing Content?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base leading-relaxed">
+              You have existing content in the editor. Applying this template will replace all current content. 
+              <br />
+              <span className="font-semibold text-destructive">This action cannot be undone.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelReplace}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmReplace}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Replace Content
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -43,6 +43,11 @@ export interface TemplateMetadata {
 export interface Template {
   metadata: TemplateMetadata;
   content: EditorNode[];
+  coverImage?: {
+    url: string;
+    alt: string;
+    position: number;
+  };
 }
 
 /**
@@ -3048,6 +3053,708 @@ export function createRecipeTemplate(): Template {
 }
 
 // ========================================
+// HALLOWEEN PARTY INVITATION TEMPLATE
+// ========================================
+
+export function createHalloweenPartyTemplate(): Template {
+  const tid = "halloween-party";
+  return {
+    metadata: {
+      id: tid,
+      name: "Halloween Party Invitation",
+      description: "Spooky party invitation with timeline and RSVP table",
+      category: "personal",
+      icon: "🎃",
+    },
+    coverImage: {
+      url: "/templates/haloween/haloween.webp",
+      alt: "Halloween Party Cover",
+      position: 50,
+    },
+    content: [
+      {
+        id: id(tid, "title"),
+        type: "h1",
+        content: "Halloween Party Invitation",
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "subtitle"),
+        type: "h3",
+        children: [
+          { content: "You are invited to our Halloween Party! ", className: "text-orange-600 dark:text-orange-400", bold: false },
+          { content: "👻", bold: false },
+          { content: " ", bold: false },
+          { content: "🎃", bold: false },
+        ],
+        attributes: {},
+      } as TextNode,
+
+      // Two-column layout
+      {
+        id: id(tid, "main-columns"),
+        type: "container",
+        attributes: { className: "flex-container" },
+        children: [
+          // LEFT COLUMN - Intro Quote
+          {
+            id: id(tid, "left-column"),
+            type: "container",
+            attributes: { className: "flex-50" },
+            children: [
+              {
+                id: id(tid, "intro"),
+                type: "blockquote",
+                children: [
+                  { content: "On a dark Halloween night,", bold: false },
+                  { content: "\nmusic and delicious food? All ready!", bold: false },
+                ],
+                attributes: {
+                  className: "bg-gray-100 dark:bg-gray-800/30 border-l-4 border-gray-400 dark:border-gray-600",
+                },
+              } as TextNode,
+            ],
+          } as ContainerNode,
+
+          // RIGHT COLUMN - Timeline Preview
+          {
+            id: id(tid, "right-column"),
+            type: "container",
+            attributes: { className: "flex-50" },
+            children: [
+              {
+                id: id(tid, "timeline-preview-heading"),
+                type: "h3",
+                children: [
+                  { content: "Timeline ", bold: true },
+                  { content: "🥳", bold: false },
+                ],
+                attributes: {},
+              } as TextNode,
+              {
+                id: id(tid, "timeline-preview-1"),
+                type: "p",
+                children: [
+                  { content: "🍸 ", bold: false },
+                  { content: "19:00 ~ 19:30", bold: true },
+                  { content: "      Entrance & Welcome Drinks", bold: false, className: "text-purple-600 dark:text-purple-400" },
+                ],
+                attributes: { className: "text-sm" },
+              } as TextNode,
+              {
+                id: id(tid, "timeline-preview-2"),
+                type: "p",
+                children: [
+                  { content: "🧙🏻‍♀️ ", bold: false },
+                  { content: "19:30 ~ 20:00", bold: true },
+                  { content: "      Costume Photo Session", bold: false, className: "text-purple-600 dark:text-purple-400" },
+                ],
+                attributes: { className: "text-sm" },
+              } as TextNode,
+              {
+                id: id(tid, "timeline-preview-3"),
+                type: "p",
+                children: [
+                  { content: "🍽️ ", bold: false },
+                  { content: "20:00 ~ 21:00", bold: true },
+                  { content: "      Dinner & Light Networking", bold: false, className: "text-purple-600 dark:text-purple-400" },
+                ],
+                attributes: { className: "text-sm" },
+              } as TextNode,
+              {
+                id: id(tid, "timeline-preview-4"),
+                type: "p",
+                children: [
+                  { content: "🕹️ ", bold: false },
+                  { content: "21:00 ~ 22:00", bold: true },
+                  { content: "      Halloween Games Mystery Box Challenge!", bold: false, className: "text-purple-600 dark:text-purple-400" },
+                ],
+                attributes: { className: "text-sm" },
+              } as TextNode,
+              {
+                id: id(tid, "timeline-preview-5"),
+                type: "p",
+                children: [
+                  { content: "🎃 ", bold: false },
+                  { content: "22:00 ~ 22:30", bold: true },
+                  { content: "      Best Costume Contest", bold: false, className: "text-purple-600 dark:text-purple-400" },
+                ],
+                attributes: { className: "text-sm" },
+              } as TextNode,
+              {
+                id: id(tid, "timeline-preview-6"),
+                type: "p",
+                children: [
+                  { content: "🎥 ", bold: false },
+                  { content: "22:30 ~ 늦은 밤", bold: true },
+                  { content: "      Horror Movie Clip Screening", bold: false, className: "text-purple-600 dark:text-purple-400" },
+                ],
+                attributes: { className: "text-sm" },
+              } as TextNode,
+            ],
+          } as ContainerNode,
+        ],
+      } as ContainerNode,
+
+      // Party details as a simple list (mimicking Notion properties)
+      {
+        id: id(tid, "detail-date"),
+        type: "p",
+        children: [
+          { content: "📅 Date", bold: true, className: "text-gray-600 dark:text-gray-400" },
+          { content: "      Friday, October 31st, 2025", bold: false },
+        ],
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "detail-time"),
+        type: "p",
+        children: [
+          { content: "⏰ Time", bold: true, className: "text-gray-600 dark:text-gray-400" },
+          { content: "      7 PM ~ Late night! 🌙", bold: false },
+        ],
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "detail-venue"),
+        type: "p",
+        children: [
+          { content: "📍 Venue", bold: true, className: "text-gray-600 dark:text-gray-400" },
+          { content: "      Halloween Party Room 👻", bold: false },
+        ],
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "detail-dress"),
+        type: "p",
+        children: [
+          { content: "👔 Dress Code", bold: true, className: "text-gray-600 dark:text-gray-400" },
+          { content: "      Costumes required! (Light makeup OK too) 🎃", bold: false },
+        ],
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "detail-contact"),
+        type: "p",
+        children: [
+          { content: "📞 Contact", bold: true, className: "text-gray-600 dark:text-gray-400" },
+          { content: "      Ava / 010-1234-5678", bold: false },
+        ],
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "detail-bring"),
+        type: "p",
+        children: [
+          { content: "🎒 What to Bring", bold: true, className: "text-gray-600 dark:text-gray-400" },
+          { content: "      TBD", bold: false },
+        ],
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "detail-rsvp"),
+        type: "p",
+        children: [
+          { content: "✉️ RSVP", bold: true, className: "text-gray-600 dark:text-gray-400" },
+          { content: "      ", bold: false },
+          { content: "Please let us know by October 25th!", bold: true, className: "text-orange-600 dark:text-orange-400" },
+        ],
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "divider-1"),
+        type: "p",
+        content: "",
+        attributes: {},
+      } as TextNode,
+
+      // Two-column layout for Location and RSVP
+      {
+        id: id(tid, "location-rsvp-columns"),
+        type: "container",
+        attributes: { className: "flex-container" },
+        children: [
+          // LEFT COLUMN - Location
+          {
+            id: id(tid, "location-column"),
+            type: "container",
+            attributes: { className: "flex-50" },
+            children: [
+              {
+                id: id(tid, "location-heading"),
+                type: "h2",
+                content: "📍 Party Location",
+                attributes: {},
+              } as TextNode,
+
+              {
+                id: id(tid, "location-address"),
+                type: "p",
+                children: [
+                  { content: "Address: ", bold: true },
+                  { content: "[Enter detailed address here]", bold: false },
+                ],
+                attributes: {},
+              } as TextNode,
+
+              {
+                id: id(tid, "transportation-heading"),
+                type: "h3",
+                content: "🚗 Transportation Information",
+                attributes: {},
+              } as TextNode,
+
+              {
+                id: id(tid, "transportation-list"),
+                type: "container",
+                attributes: { listType: "ul" },
+                children: [
+                  {
+                    id: id(tid, "transport-1"),
+                    type: "li",
+                    content: "🚇 Subway exit information and how long it takes to walk to the party venue",
+                    attributes: {},
+                  } as TextNode,
+                  {
+                    id: id(tid, "transport-2"),
+                    type: "li",
+                    content: "🚍 Bus stops near the party venue and bus numbers",
+                    attributes: {},
+                  } as TextNode,
+                ],
+              } as ContainerNode,
+
+              {
+                id: id(tid, "parking-heading"),
+                type: "h3",
+                content: "🚗 Parking Information",
+                attributes: {},
+              } as TextNode,
+
+              {
+                id: id(tid, "parking-list"),
+                type: "container",
+                attributes: { listType: "ul" },
+                children: [
+                  {
+                    id: id(tid, "parking-1"),
+                    type: "li",
+                    content: "Underground parking available in the building",
+                    attributes: {},
+                  } as TextNode,
+                  {
+                    id: id(tid, "parking-2"),
+                    type: "li",
+                    content: "Nearby public parking lots available",
+                    attributes: {},
+                  } as TextNode,
+                ],
+              } as ContainerNode,
+            ],
+          } as ContainerNode,
+
+          // RIGHT COLUMN - RSVP
+          {
+            id: id(tid, "rsvp-column"),
+            type: "container",
+            attributes: { className: "flex-50" },
+            children: [
+              {
+                id: id(tid, "rsvp-heading"),
+                type: "h2",
+                content: "✉️ RSVP 👇🏻",
+                attributes: {},
+              } as TextNode,
+
+              {
+                id: id(tid, "rsvp-deadline"),
+                type: "p",
+                children: [
+                  { content: "Please reply by ", bold: true },
+                  { content: "October 25th!", bold: true, elementType: "code", className: "text-purple-600 dark:text-purple-400" },
+                ],
+                attributes: {},
+              } as TextNode,
+
+              {
+                id: id(tid, "guest-list-heading"),
+                type: "h3",
+                content: "👥 Guest List",
+                attributes: {},
+              } as TextNode,
+            ],
+          } as ContainerNode,
+        ],
+      } as ContainerNode,
+
+      {
+        id: id(tid, "guest-list-table-wrapper"),
+        type: "container",
+        children: [
+          {
+            id: id(tid, "guest-list-table"),
+            type: "table",
+            children: [
+              {
+                id: id(tid, "guest-list-thead"),
+                type: "thead",
+                children: [
+                  {
+                    id: id(tid, "guest-list-tr-header"),
+                    type: "tr",
+                    children: [
+                      {
+                        id: id(tid, "th-guest-name"),
+                        type: "th",
+                        content: "Guest Name",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "th-rsvp-status"),
+                        type: "th",
+                        content: "RSVP Status",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "th-plus-ones"),
+                        type: "th",
+                        content: "Plus Ones",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "th-dietary"),
+                        type: "th",
+                        content: "Dietary Restrictions",
+                        attributes: {},
+                      } as TextNode,
+                    ],
+                    attributes: {},
+                  },
+                ],
+                attributes: {},
+              },
+              {
+                id: id(tid, "guest-list-tbody"),
+                type: "tbody",
+                children: [
+                  {
+                    id: id(tid, "guest-tr-1"),
+                    type: "tr",
+                    children: [
+                      {
+                        id: id(tid, "td-name-1"),
+                        type: "td",
+                        content: "🎃 Ethan",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-status-1"),
+                        type: "td",
+                        content: "Attending",
+                        attributes: { className: "text-green-600 dark:text-green-400 font-semibold" },
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-plus-1"),
+                        type: "td",
+                        content: "0",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-dietary-1"),
+                        type: "td",
+                        content: "Vegetarian",
+                        attributes: {},
+                      } as TextNode,
+                    ],
+                    attributes: {},
+                  },
+                  {
+                    id: id(tid, "guest-tr-2"),
+                    type: "tr",
+                    children: [
+                      {
+                        id: id(tid, "td-name-2"),
+                        type: "td",
+                        content: "🎃 Joshua",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-status-2"),
+                        type: "td",
+                        content: "Attending",
+                        attributes: { className: "text-green-600 dark:text-green-400 font-semibold" },
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-plus-2"),
+                        type: "td",
+                        content: "1",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-dietary-2"),
+                        type: "td",
+                        content: "Shellfish",
+                        attributes: {},
+                      } as TextNode,
+                    ],
+                    attributes: {},
+                  },
+                  {
+                    id: id(tid, "guest-tr-3"),
+                    type: "tr",
+                    children: [
+                      {
+                        id: id(tid, "td-name-3"),
+                        type: "td",
+                        content: "🎃 Michael",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-status-3"),
+                        type: "td",
+                        content: "Not Attending",
+                        attributes: { className: "text-red-600 dark:text-red-400 font-semibold" },
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-plus-3"),
+                        type: "td",
+                        content: "-",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-dietary-3"),
+                        type: "td",
+                        content: "-",
+                        attributes: {},
+                      } as TextNode,
+                    ],
+                    attributes: {},
+                  },
+                  {
+                    id: id(tid, "guest-tr-4"),
+                    type: "tr",
+                    children: [
+                      {
+                        id: id(tid, "td-name-4"),
+                        type: "td",
+                        content: "🎃 Daniel",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-status-4"),
+                        type: "td",
+                        content: "Maybe",
+                        attributes: { className: "text-yellow-600 dark:text-yellow-400 font-semibold" },
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-plus-4"),
+                        type: "td",
+                        content: "-",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-dietary-4"),
+                        type: "td",
+                        content: "-",
+                        attributes: {},
+                      } as TextNode,
+                    ],
+                    attributes: {},
+                  },
+                  {
+                    id: id(tid, "guest-tr-5"),
+                    type: "tr",
+                    children: [
+                      {
+                        id: id(tid, "td-name-5"),
+                        type: "td",
+                        content: "🎃 Sophia",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-status-5"),
+                        type: "td",
+                        content: "Maybe",
+                        attributes: { className: "text-yellow-600 dark:text-yellow-400 font-semibold" },
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-plus-5"),
+                        type: "td",
+                        content: "2",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-dietary-5"),
+                        type: "td",
+                        content: "Dairy, Peanuts",
+                        attributes: {},
+                      } as TextNode,
+                    ],
+                    attributes: {},
+                  },
+                  {
+                    id: id(tid, "guest-tr-6"),
+                    type: "tr",
+                    children: [
+                      {
+                        id: id(tid, "td-name-6"),
+                        type: "td",
+                        content: "🎃 Ava",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-status-6"),
+                        type: "td",
+                        content: "Maybe",
+                        attributes: { className: "text-yellow-600 dark:text-yellow-400 font-semibold" },
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-plus-6"),
+                        type: "td",
+                        content: "-",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-dietary-6"),
+                        type: "td",
+                        content: "-",
+                        attributes: {},
+                      } as TextNode,
+                    ],
+                    attributes: {},
+                  },
+                  {
+                    id: id(tid, "guest-tr-7"),
+                    type: "tr",
+                    children: [
+                      {
+                        id: id(tid, "td-name-7"),
+                        type: "td",
+                        content: "🎃 Emma",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-status-7"),
+                        type: "td",
+                        content: "Maybe",
+                        attributes: { className: "text-yellow-600 dark:text-yellow-400 font-semibold" },
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-plus-7"),
+                        type: "td",
+                        content: "-",
+                        attributes: {},
+                      } as TextNode,
+                      {
+                        id: id(tid, "td-dietary-7"),
+                        type: "td",
+                        content: "-",
+                        attributes: {},
+                      } as TextNode,
+                    ],
+                    attributes: {},
+                  },
+                ],
+                attributes: {},
+              },
+            ],
+            attributes: {},
+          },
+        ],
+        attributes: {},
+      } as ContainerNode,
+
+      {
+        id: id(tid, "guestbook-heading"),
+        type: "h2",
+        content: "✍🏻 Guestbook",
+        attributes: {},
+      } as TextNode,
+
+      {
+        id: id(tid, "guestbook-note"),
+        type: "blockquote",
+        children: [
+          { content: "💬 ", bold: false },
+          { content: "Leave a message or share your excitement about the party!", italic: true },
+        ],
+        attributes: {
+          className: "bg-blue-50 dark:bg-blue-900/20 border-blue-500",
+        },
+      } as TextNode,
+
+      {
+        id: id(tid, "guestbook-1"),
+        type: "blockquote",
+        children: [
+          { content: "Sophia: ", bold: true, className: "text-orange-600 dark:text-orange-400" },
+          { content: "\"So excited for this year's Halloween party! It's going to be even more fun than last year~~\"", italic: true },
+        ],
+        attributes: {
+          className: "bg-gray-50 dark:bg-gray-900/20 border-gray-400",
+        },
+      } as TextNode,
+
+      {
+        id: id(tid, "guestbook-2"),
+        type: "blockquote",
+        children: [
+          { content: "Ethan: ", bold: true, className: "text-orange-600 dark:text-orange-400" },
+          { content: "\"I've prepared the perfect costume to fully enjoy the Halloween atmosphere!\"", italic: true },
+        ],
+        attributes: {
+          className: "bg-gray-50 dark:bg-gray-900/20 border-gray-400",
+        },
+      } as TextNode,
+
+      {
+        id: id(tid, "guestbook-3"),
+        type: "blockquote",
+        children: [
+          { content: "Daniel: ", bold: true, className: "text-orange-600 dark:text-orange-400" },
+          { content: "\"I've prepared some scary stories!\"", italic: true },
+        ],
+        attributes: {
+          className: "bg-gray-50 dark:bg-gray-900/20 border-gray-400",
+        },
+      } as TextNode,
+
+      {
+        id: id(tid, "guestbook-4"),
+        type: "blockquote",
+        children: [
+          { content: "Emma: ", bold: true, className: "text-orange-600 dark:text-orange-400" },
+          { content: "\"I have plans until late afternoon, so I'm still thinking about it!\"", italic: true },
+        ],
+        attributes: {
+          className: "bg-gray-50 dark:bg-gray-900/20 border-gray-400",
+        },
+      } as TextNode,
+
+      {
+        id: id(tid, "footer"),
+        type: "p",
+        children: [
+          { content: "🎃 ", bold: false },
+          { content: "Can't wait to see everyone in their amazing costumes! Let's make this Halloween unforgettable! 👻", bold: false, italic: true },
+        ],
+        attributes: {
+          className: "text-center text-orange-600 dark:text-orange-400 text-lg mt-8",
+        },
+      } as TextNode,
+    ],
+  };
+}
+
+// ========================================
 // TEMPLATE REGISTRY
 // ========================================
 
@@ -3063,6 +3770,7 @@ export const TEMPLATES: Record<string, () => Template> = {
   financial: createFinancialReportTemplate,
   blog: createBlogPostTemplate,
   recipe: createRecipeTemplate,
+  "halloween-party": createHalloweenPartyTemplate,
 };
 
 /**

@@ -104,6 +104,7 @@ import {
 import { Block } from "./Block";
 import { CoverImage } from "./CoverImage";
 import { ExportFloatingButton } from "./ExportFloatingButton";
+import { TemplateSwitcherButton } from "./TemplateSwitcherButton";
 import { Button } from "./ui/button";
 
 /**
@@ -1247,6 +1248,16 @@ export function Editor({
           copiedJson={copiedJson}
           enhanceSpaces={enhanceSpaces}
           onEnhanceSpacesChange={setEnhanceSpaces}
+        />
+      )}
+
+      {/* Template Switcher Button - Bottom Left */}
+      {!readOnly && (
+        <TemplateSwitcherButton
+          currentState={state}
+          onTemplateChange={(newState) => {
+            dispatch({ type: "SET_STATE", payload: { state: newState } });
+          }}
         />
       )}
     </div>
