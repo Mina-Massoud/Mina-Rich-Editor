@@ -41,6 +41,7 @@ export function parseDOMToInlineChildren(
         | "h6"
         | "li"
         | "blockquote";
+      styles?: Record<string, string>;
     } = {}
   ) => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -54,7 +55,8 @@ export function parseDOMToInlineChildren(
         inheritedFormats.strikethrough ||
         inheritedFormats.code ||
         inheritedFormats.className ||
-        inheritedFormats.elementType;
+        inheritedFormats.elementType ||
+        inheritedFormats.styles;
 
       // Always add content if it exists OR if it's empty but has formatting
       // This prevents structure changes when user deletes the last character
@@ -69,6 +71,7 @@ export function parseDOMToInlineChildren(
             code: inheritedFormats.code || undefined,
             className: inheritedFormats.className || undefined,
             elementType: inheritedFormats.elementType,
+            styles: inheritedFormats.styles,
           });
         } else {
           children.push({ content });
@@ -84,6 +87,26 @@ export function parseDOMToInlineChildren(
       const underline = classList.includes("underline");
       const strikethrough = classList.includes("line-through");
       const code = classList.includes("font-mono");
+
+      // Extract inline styles from the element
+      let inlineStyles: Record<string, string> | undefined = undefined;
+      if (el.style && el.style.length > 0) {
+        inlineStyles = {};
+        // Iterate through all inline styles
+        for (let i = 0; i < el.style.length; i++) {
+          const property = el.style[i];
+          const value = el.style.getPropertyValue(property);
+          if (value) {
+            // Convert kebab-case to camelCase (font-size -> fontSize)
+            const camelCaseProperty = property.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+            inlineStyles[camelCaseProperty] = value;
+          }
+        }
+        // If no styles were actually extracted, set to undefined
+        if (Object.keys(inlineStyles).length === 0) {
+          inlineStyles = undefined;
+        }
+      }
 
       // Detect element type from classes
       let elementType:
@@ -155,6 +178,12 @@ export function parseDOMToInlineChildren(
       const customClassName =
         customClasses.length > 0 ? customClasses.join(" ") : undefined;
 
+      // Merge inline styles with inherited styles
+      const mergedStyles = 
+        inlineStyles || inheritedFormats.styles
+          ? { ...inheritedFormats.styles, ...inlineStyles }
+          : undefined;
+
       // Merge with inherited formatting
       const currentFormats = {
         bold: bold || inheritedFormats.bold,
@@ -164,6 +193,7 @@ export function parseDOMToInlineChildren(
         code: code || inheritedFormats.code,
         className: customClassName || inheritedFormats.className,
         elementType: elementType || inheritedFormats.elementType,
+        styles: mergedStyles,
       };
 
       // If it's a span with formatting, walk its children with inherited formats
@@ -178,7 +208,8 @@ export function parseDOMToInlineChildren(
             currentFormats.strikethrough ||
             currentFormats.code ||
             currentFormats.className ||
-            currentFormats.elementType;
+            currentFormats.elementType ||
+            currentFormats.styles;
 
           if (hasAnyFormatting) {
             children.push({
@@ -190,6 +221,7 @@ export function parseDOMToInlineChildren(
               code: currentFormats.code || undefined,
               className: currentFormats.className || undefined,
               elementType: currentFormats.elementType,
+              styles: currentFormats.styles,
             });
           }
         } else {
