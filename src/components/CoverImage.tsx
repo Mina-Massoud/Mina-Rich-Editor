@@ -149,7 +149,7 @@ export function CoverImage({ onUploadImage, readOnly = false }: CoverImageProps)
   return (
     <div
       ref={containerRef}
-      className="group absolute top-0 w-full h-[300px] lg:h-[420px] overflow-hidden rounded-lg mb-8"
+      className="group absolute top-0 w-full h-[250px] lg:h-[420px] overflow-hidden rounded-lg mb-8"
       onMouseEnter={() => !readOnly && setIsHovered(true)}
       onMouseLeave={() => !readOnly && setIsHovered(false)}
     >

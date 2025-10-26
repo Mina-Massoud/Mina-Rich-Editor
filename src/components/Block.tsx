@@ -735,7 +735,7 @@ export const Block = React.memo(function Block({
       ${className}
       ${readOnly ? "" : "outline-none"}
       ${isListItem ? "px-3 py-0.5 mb-1" : textNode.type.startsWith('h') ? "px-3 py-2 mb-2" : "px-3 py-1.5 mb-2"}
-      ${notionBased && isFirstBlock && textNode.type === 'h1' ? "mt-8 pb-4" : ""}
+      ${notionBased && isFirstBlock && textNode.type === 'h1' ? "lg:mt-8 pb-4" : ""}
       transition-all
       ${!readOnly && isActive ? "border-b bg-accent/5" : ""}
       ${!readOnly ? "hover:bg-accent/5" : ""}
@@ -757,11 +757,7 @@ export const Block = React.memo(function Block({
         currentBackgroundColor={backgroundColor}
       >
         <div
-          className={`relative group transition-all ${
-            (isDraggingTouch || (draggingNodeId === textNode?.id)) 
-              ? 'opacity-50 scale-95' 
-              : ''
-          }`}
+          className={`relative group transition-all flex flex-col gap-3`}
           onMouseEnter={() => !readOnly && setIsHovering(true)}
           onMouseLeave={() => !readOnly && setIsHovering(false)}
           style={{
