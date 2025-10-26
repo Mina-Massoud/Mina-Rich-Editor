@@ -52,6 +52,40 @@ export function createHandleDeleteNode(
   return (nodeId: string) => {
     const { container, dispatch, toast } = params;
 
+    // Find the node being deleted to determine its type
+    const findNode = (nodes: EditorNode[]): EditorNode | null => {
+      for (const node of nodes) {
+        if (node.id === nodeId) return node;
+        if (isContainerNode(node)) {
+          const found = findNode((node as ContainerNode).children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const nodeToDelete = findNode(container.children);
+    
+    // Determine the type of content being deleted
+    let contentType = "Block";
+    let contentDescription = "The block has been deleted.";
+    
+    if (nodeToDelete) {
+      if (isContainerNode(nodeToDelete)) {
+        const firstChild = (nodeToDelete as ContainerNode).children[0];
+        if (firstChild?.type === "table") {
+          contentType = "Table removed";
+          contentDescription = "The table has been deleted.";
+        }
+      } else if (nodeToDelete.type === "img") {
+        contentType = "Image removed";
+        contentDescription = "The image has been deleted.";
+      } else if (nodeToDelete.type === "video") {
+        contentType = "Video removed";
+        contentDescription = "The video has been deleted.";
+      }
+    }
+
     // Check if the node is inside a flex container
     const parentContainer = container.children.find(
       (child) =>
@@ -102,8 +136,8 @@ export function createHandleDeleteNode(
     }
 
     toast({
-      title: "Image removed",
-      description: "The image has been deleted.",
+      title: contentType,
+      description: contentDescription,
     });
   };
 }
@@ -235,17 +269,13 @@ export function createHandleChangeBlockType(
 ) {
   return (nodeId: string, newType: string) => {
     const { dispatch, nodeRefs } = params;
-    // Special handling for list items - initialize with empty content
-    if (newType === "li") {
-      dispatch(
-        EditorActions.updateNode(nodeId, {
-          type: newType as any,
-          content: "",
-        })
-      );
-    } else {
-      dispatch(EditorActions.updateNode(nodeId, { type: newType as any }));
-    }
+    // When changing block type from command menu, clear the content (removes the "/" character)
+    dispatch(
+      EditorActions.updateNode(nodeId, {
+        type: newType as any,
+        content: "",
+      })
+    );
 
     // Focus the updated node after a brief delay
     setTimeout(() => {
@@ -277,59 +307,47 @@ export function createHandleInsertImageFromCommand(
 }
 
 /**
- * Handle create list
+ * Handle create list - Creates a simple list item (li, ol, or ul type based on listType)
  */
 export function createHandleCreateList(params: NodeOperationHandlerParams) {
-  return (listType: "ul" | "ol") => {
+  return (listType: "ul" | "ol" | "li") => {
     const { container, dispatch, toast, editorContentRef } = params;
     const timestamp = Date.now();
 
-    // Create a container with a header and 1 nested item
-    const listContainer: ContainerNode = {
-      id: `container-${timestamp}`,
-      type: "container",
-      children: [
-        {
-          id: `h3-${timestamp}`,
-          type: "h3",
-          content: "List Title",
-          attributes: {},
-        } as TextNode,
-        {
-          id: `li-${timestamp}-1`,
-          type: "li",
-          content: "First item",
-          attributes: {},
-        } as TextNode,
-      ],
-      attributes: {
-        listType: listType,
-      },
+    // For 'ul' and 'ol', we create 'ol' type items (numbered)
+    // For 'li', we create 'li' type items (bulleted)
+    const itemType = listType === "ul" ? "li" : listType === "ol" ? "ol" : "li";
+    
+    // Create a simple list item
+    const listItem: TextNode = {
+      id: `${itemType}-${timestamp}`,
+      type: itemType as any,
+      content: "",
+      attributes: {},
     };
 
-    // Insert the list container at the end
+    // Insert the list item at the end
     const lastNode = container.children[container.children.length - 1];
     if (lastNode) {
-      dispatch(EditorActions.insertNode(listContainer, lastNode.id, "after"));
+      dispatch(EditorActions.insertNode(listItem, lastNode.id, "after"));
     } else {
       // If no nodes exist, replace the container
       dispatch(
         EditorActions.replaceContainer({
           ...container,
-          children: [listContainer],
+          children: [listItem],
         })
       );
     }
 
-    const listTypeLabel = listType === "ol" ? "ordered" : "unordered";
+    const listTypeLabel = listType === "ol" ? "numbered" : "bulleted";
     toast({
-      title: "List Created",
-      description: `Added a new ${listTypeLabel} list with header and 3 items`,
+      title: "List Item Added",
+      description: `Added a new ${listTypeLabel} list item`,
     });
 
-    // Smooth scroll to the newly created list
+    // Smooth scroll to the newly created list item
     setTimeout(() => {
-      // Find the last element in the editor (the newly created list container)
       const editorContent = editorContentRef.current;
       if (editorContent) {
         const lastChild = editorContent.querySelector(
@@ -348,63 +366,35 @@ export function createHandleCreateList(params: NodeOperationHandlerParams) {
 }
 
 /**
- * Handle create list from command menu
+ * Handle create list from command menu - converts current block to a list item
  */
 export function createHandleCreateListFromCommand(
   params: Pick<NodeOperationHandlerParams, "dispatch" | "toast" | "nodeRefs">
 ) {
   return (nodeId: string, listType: string) => {
     const { dispatch, toast, nodeRefs } = params;
-    const timestamp = Date.now();
-    const firstItemId = `li-${timestamp}-1`;
 
-    // Create a container with 1 list item (always "li", regardless of ul/ol)
-    // The container's attributes will store whether it's ul or ol
-    const listContainer: ContainerNode = {
-      id: `container-${timestamp}`,
-      type: "container",
-      attributes: {
-        listType: listType, // Store 'ul' or 'ol' in the container attributes
-      },
-      children: [
-        {
-          id: firstItemId,
-          type: "li",
-          content: "",
-          attributes: {},
-        } as TextNode,
-      ],
-    };
-
-    // Insert the list container after the current node, then delete the current node
-    dispatch(EditorActions.insertNode(listContainer, nodeId, "after"));
-    dispatch(EditorActions.deleteNode(nodeId));
+    // Convert the current block to a list item
+    // listType can be 'li' (bulleted) or 'ol' (numbered)
+    dispatch(EditorActions.updateNode(nodeId, {
+      type: listType as any,
+      content: "", // Clear content when converting
+    }));
 
     const listTypeLabel = listType === "ol" ? "numbered" : "bulleted";
     toast({
-      title: "List Created",
-      description: `Created a ${listTypeLabel} list with 3 items`,
+      title: "List Item Created",
+      description: `Converted to ${listTypeLabel} list item`,
     });
 
-    // Focus the first item after a longer delay to ensure nested elements are registered
-    // Nested elements take longer to mount and register their refs
+    // Focus the converted item
     setTimeout(() => {
-      const element = nodeRefs.current.get(firstItemId);
+      const element = nodeRefs.current.get(nodeId);
       if (element) {
         element.focus();
-        // Also set it as active node
-        dispatch(EditorActions.setActiveNode(firstItemId));
-      } else {
-        // Retry after another delay
-        setTimeout(() => {
-          const retryElement = nodeRefs.current.get(firstItemId);
-          if (retryElement) {
-            retryElement.focus();
-            dispatch(EditorActions.setActiveNode(firstItemId));
-          }
-        }, 100);
+        dispatch(EditorActions.setActiveNode(nodeId));
       }
-    }, 150);
+    }, 50);
   };
 }
 
@@ -470,7 +460,10 @@ export function createHandleCreateLink(params: NodeOperationHandlerParams) {
 /**
  * Handle create table
  */
-export function createHandleCreateTable(params: NodeOperationHandlerParams) {
+export function createHandleCreateTable(
+  params: NodeOperationHandlerParams,
+  activeNodeId?: string
+) {
   return (rows: number, cols: number) => {
     const { container, dispatch, toast, editorContentRef } = params;
     const timestamp = Date.now();
@@ -540,10 +533,24 @@ export function createHandleCreateTable(params: NodeOperationHandlerParams) {
       attributes: {},
     };
 
-    // Insert the table at the end
-    const lastNode = container.children[container.children.length - 1];
-    if (lastNode) {
-      dispatch(EditorActions.insertNode(tableWrapper, lastNode.id, "after"));
+    // Determine where to insert the table
+    let targetNode = null;
+    let targetPosition: "after" | "before" = "after";
+
+    if (activeNodeId) {
+      // If we have an active node (from command menu), insert after it
+      targetNode = container.children.find((n) => n.id === activeNodeId);
+      targetPosition = "after";
+    }
+
+    if (!targetNode) {
+      // Fallback: insert at the end
+      targetNode = container.children[container.children.length - 1];
+      targetPosition = "after";
+    }
+
+    if (targetNode) {
+      dispatch(EditorActions.insertNode(tableWrapper, targetNode.id, targetPosition));
     } else {
       // If no nodes exist, replace the container
       dispatch(
@@ -563,13 +570,13 @@ export function createHandleCreateTable(params: NodeOperationHandlerParams) {
     setTimeout(() => {
       const editorContent = editorContentRef.current;
       if (editorContent) {
-        const lastChild = editorContent.querySelector(
-          "[data-editor-content]"
-        )?.lastElementChild;
-        if (lastChild) {
-          lastChild.scrollIntoView({
+        const tableElement = editorContent.querySelector(
+          `[data-node-id="${tableWrapper.id}"]`
+        );
+        if (tableElement) {
+          tableElement.scrollIntoView({
             behavior: "smooth",
-            block: "end",
+            block: "center",
             inline: "nearest",
           });
         }

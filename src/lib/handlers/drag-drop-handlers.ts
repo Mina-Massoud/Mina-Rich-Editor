@@ -458,19 +458,11 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
 
       // If the dragging node is in a flex container, we need to extract it
       if (draggingResult.parentId && draggingResult.parent) {
-        console.log('🔍 DEBUG: Extracting from flex container');
-        console.log('  Dragging node ID:', draggingNodeId);
-        console.log('  Target node ID:', nodeId);
-        console.log('  Drop position:', dropPosition);
-        console.log('  Parent container ID:', draggingResult.parentId);
         
         const parent = draggingResult.parent;
         const remainingChildren = parent.children.filter(
           (c) => c.id !== draggingNodeId
         );
-        
-        console.log('  Parent children count:', parent.children.length);
-        console.log('  Remaining children count:', remainingChildren.length);
         
         const insertPos =
           dropPosition === "before" || dropPosition === "after"
@@ -482,18 +474,13 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
 
         // If only one child remains, unwrap the container
         if (remainingChildren.length === 1) {
-          console.log('  ⚠️ Only 1 child remaining - unwrapping container');
           // Find where to insert the remaining child
           const parentIndex = container.children.findIndex(
             (c) => c.id === parent.id
           );
           
-          console.log('  Parent index in container:', parentIndex);
-          console.log('  Container children count:', container.children.length);
-          
           // Check if target is the flex container itself
           const isTargetTheFlexContainer = nodeId === parent.id;
-          console.log('  Is target the flex container?', isTargetTheFlexContainer);
           
           if (isTargetTheFlexContainer) {
             // We're trying to drop on the flex container itself
@@ -512,10 +499,7 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
             }
             
             if (referenceNodeId) {
-              console.log('  Using alternative reference:', referenceNodeId, referencePosition);
-              
               // Insert remaining child first (it will replace the flex container position)
-              console.log('  Action 1: Insert remaining child', referencePosition, referenceNodeId);
               actions.push(
                 EditorActions.insertNode(
                   remainingChildren[0],
@@ -525,7 +509,6 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
               );
               
               // Now insert the dragged node next to the remaining child
-              console.log('  Action 2: Insert dragged node', insertPos, 'remaining child');
               actions.push(
                 EditorActions.insertNode(
                   draggingNode,
@@ -535,11 +518,9 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
               );
               
               // Delete the flex container (which also removes dragging node)
-              console.log('  Action 3: Delete flex container:', parent.id);
               actions.push(EditorActions.deleteNode(parent.id));
             } else {
               // Fallback: no siblings, use container
-              console.log('  No siblings found - using container as reference');
               actions.push(EditorActions.insertNode(remainingChildren[0], container.id, "append"));
               actions.push(EditorActions.insertNode(draggingNode, remainingChildren[0].id, insertPos));
               actions.push(EditorActions.deleteNode(parent.id));
@@ -552,23 +533,16 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
             const isTargetBeforeFlex = targetIndex === parentIndex - 1 && insertPos === "after";
             const isTargetAfterFlex = targetIndex === parentIndex + 1 && insertPos === "before";
             
-            console.log('  Target index:', targetIndex);
-            console.log('  Is target before flex?', isTargetBeforeFlex);
-            console.log('  Is target after flex?', isTargetAfterFlex);
-            
             if (isTargetBeforeFlex || isTargetAfterFlex) {
               // We're inserting right next to where the flex container is
               // Need to be careful about ordering
-              console.log('  ⚠️ Inserting adjacent to flex container');
               
               // Insert dragged node at the target position
-              console.log('  Action 1: Insert dragged node', draggingNodeId, insertPos, 'target:', nodeId);
               actions.push(EditorActions.insertNode(draggingNode, nodeId, insertPos));
               
               // Insert remaining child next to the dragged node (maintaining order)
               if (isTargetBeforeFlex) {
                 // Inserting before flex, so remaining child should be after dragged node
-                console.log('  Action 2: Insert remaining child after dragged node');
                 actions.push(
                   EditorActions.insertNode(
                     remainingChildren[0],
@@ -578,7 +552,6 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
                 );
               } else {
                 // Inserting after flex, so remaining child should be before dragged node
-                console.log('  Action 2: Insert remaining child before dragged node');
                 actions.push(
                   EditorActions.insertNode(
                     remainingChildren[0],
@@ -589,24 +562,19 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
               }
               
               // Delete the flex container (also removes old dragged node reference)
-              console.log('  Action 3: Delete flex container:', parent.id);
               actions.push(EditorActions.deleteNode(parent.id));
             } else {
               // Target is somewhere else - use standard logic
-              console.log('  Standard extraction (target not adjacent)');
               
               // Insert dragged node at new position first
-              console.log('  Action 1: Insert dragged node', draggingNodeId, insertPos, 'target:', nodeId);
               actions.push(EditorActions.insertNode(draggingNode, nodeId, insertPos));
               
               // Delete the dragging node from flex
-              console.log('  Action 2: Delete dragged node from original position');
               actions.push(EditorActions.deleteNode(draggingNodeId));
               
               // Insert remaining child where the flex container was
               if (parentIndex > 0) {
                 const prevNode = container.children[parentIndex - 1];
-                console.log('  Action 3: Insert remaining child after prevNode:', prevNode.id);
                 actions.push(
                   EditorActions.insertNode(
                     remainingChildren[0],
@@ -616,7 +584,6 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
                 );
               } else if (parentIndex === 0 && container.children.length > 1) {
                 const nextNode = container.children[1];
-                console.log('  Action 3: Insert remaining child before nextNode:', nextNode.id);
                 actions.push(
                   EditorActions.insertNode(
                     remainingChildren[0],
@@ -626,7 +593,6 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
                 );
               } else {
                 // Only the flex container exists, just insert at root
-                console.log('  Action 3: Append remaining child to container');
                 actions.push(
                   EditorActions.insertNode(
                     remainingChildren[0],
@@ -637,12 +603,10 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
               }
               
               // Delete the flex container
-              console.log('  Action 4: Delete flex container:', parent.id);
               actions.push(EditorActions.deleteNode(parent.id));
             }
           }
-        } else {
-          console.log('  ✓ Multiple children remain - updating container');
+        } else {    
           // Multiple children remain, just update the flex container
           actions.push(
             EditorActions.updateNode(parent.id, {
@@ -651,12 +615,9 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
           );
           
           // Insert dragged node at new position
-          console.log('  Action: Insert dragged node', draggingNodeId, insertPos, 'target:', nodeId);
           actions.push(EditorActions.insertNode(draggingNode, nodeId, insertPos));
         }
         
-        console.log('  📦 Total actions:', actions.length);
-
         actions.push(EditorActions.setActiveNode(draggingNodeId));
 
         dispatch(EditorActions.batch(actions));

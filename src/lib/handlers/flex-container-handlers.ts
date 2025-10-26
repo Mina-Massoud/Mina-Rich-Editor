@@ -99,11 +99,6 @@ export function createHandleFlexContainerDrop(params: FlexContainerHandlerParams
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('🎯 Flex Container Drop');
-    console.log('  Flex Container ID:', flexContainerId);
-    console.log('  Drop Position:', position);
-    console.log('  Dragging Node ID:', draggingNodeId);
-
     if (!position || !draggingNodeId) {
       setDragOverFlexId(null);
       setFlexDropPosition(null);
@@ -115,7 +110,6 @@ export function createHandleFlexContainerDrop(params: FlexContainerHandlerParams
     const flexResult = findNodeAnywhere(flexContainerId, container);
 
     if (!draggingResult || !flexResult) {
-      console.log('  ❌ Could not find nodes');
       setDragOverFlexId(null);
       setFlexDropPosition(null);
       return;
@@ -126,7 +120,6 @@ export function createHandleFlexContainerDrop(params: FlexContainerHandlerParams
 
     // Only handle image nodes
     if (draggingNode.type !== 'img') {
-      console.log('  ❌ Not an image node');
       setDragOverFlexId(null);
       setFlexDropPosition(null);
       return;
@@ -135,11 +128,8 @@ export function createHandleFlexContainerDrop(params: FlexContainerHandlerParams
     // Check if the dragging node is already in this flex container
     const isInSameContainer = draggingResult.parentId === flexContainerId;
 
-    console.log('  Is in same container:', isInSameContainer);
-
     if (isInSameContainer) {
       // Case 1: Reordering within the same flex container
-      console.log('  📝 Reordering within same container');
       
       const currentIndex = flexContainer.children.findIndex(c => c.id === draggingNodeId);
       const newChildren = [...flexContainer.children];
@@ -150,10 +140,8 @@ export function createHandleFlexContainerDrop(params: FlexContainerHandlerParams
       // Insert at new position
       if (position === "left") {
         newChildren.unshift(movedNode);
-        console.log('  Moving to start');
       } else {
         newChildren.push(movedNode);
-        console.log('  Moving to end');
       }
       
       dispatch(EditorActions.updateNode(flexContainerId, {
@@ -166,16 +154,13 @@ export function createHandleFlexContainerDrop(params: FlexContainerHandlerParams
       });
     } else {
       // Case 2: Adding image from outside to the flex container
-      console.log('  ➕ Adding image to container');
       
       const newChildren = [...flexContainer.children];
       
       if (position === "left") {
-        newChildren.unshift(draggingNode);
-        console.log('  Adding to start');
+        newChildren.unshift(draggingNode);    
       } else {
         newChildren.push(draggingNode);
-        console.log('  Adding to end');
       }
       
       // Batch: delete from old location and update container

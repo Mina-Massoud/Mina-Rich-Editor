@@ -32,28 +32,44 @@ import { applyFormatting } from "../utils/inline-formatting";
 const MAX_HISTORY_SIZE = 100;
 
 /**
- * Deep clone a container node to preserve history immutability
+ * NOTE: We removed the deepCloneContainer function that was here before.
+ * 
+ * Deep cloning was destroying structural sharing! The tree operations 
+ * (updateNodeById, deleteNodeById, etc.) already return new immutable trees 
+ * with structural sharing - unchanged nodes keep their original references.
+ * 
+ * Deep cloning would create new references for ALL nodes, causing ALL React 
+ * components to re-render even when their data didn't change. By removing it,
+ * only components whose nodes actually changed will re-render.
  */
-function deepCloneContainer(container: ContainerNode): ContainerNode {
-  return JSON.parse(JSON.stringify(container));
-}
 
 /**
  * Add a new container state to history
  * This truncates any "future" history if we're not at the end
+ * 
+ * TEMPORARY: History disabled - directly update current state without tracking
  */
 function addToHistory(
   state: EditorState,
   newContainer: ContainerNode
 ): EditorState {
-  // Clone the new container to ensure immutability
-  const clonedContainer = deepCloneContainer(newContainer);
+  // HISTORY DISABLED: Update current position instead of adding to history
+  const newHistory = [...state.history];
+  newHistory[state.historyIndex] = newContainer;
+
+  return {
+    ...state,
+    history: newHistory,
+  };
+
+  /* ORIGINAL CODE - RE-ENABLE TO RESTORE HISTORY:
+  // No need to clone - the container is already immutable from tree operations
 
   // Get current history up to the current index
   const newHistory = state.history.slice(0, state.historyIndex + 1);
 
-  // Add the new state
-  newHistory.push(clonedContainer);
+  // Add the new state (already immutable with structural sharing)
+  newHistory.push(newContainer);
 
   // Limit history size
   if (newHistory.length > MAX_HISTORY_SIZE) {
@@ -70,6 +86,7 @@ function addToHistory(
     history: newHistory,
     historyIndex: newHistory.length - 1,
   };
+  */
 }
 
 /**
@@ -159,12 +176,69 @@ export function editorReducer(
     case "DELETE_NODE": {
       const { id } = action.payload;
       const currentContainer = state.history[state.historyIndex];
+      
+      // Check if this is the only h1 header block in the root container
+      const isH1Block = currentContainer.children.find((child) => {
+        if (isTextNode(child)) {
+          const textChild = child as TextNode;
+          return textChild.id === id && textChild.type === 'h1';
+        }
+        return false;
+      });
+      
+      // If it's an h1 and it's the only child, don't delete - just clear content
+      if (isH1Block && currentContainer.children.length === 1) {
+        console.warn("Cannot delete the last h1 header block. Clearing content instead.");
+        const newContainer = updateNodeById(currentContainer, id, () => ({
+          content: "",
+          children: undefined,
+        })) as ContainerNode;
+        
+        return addToHistory(
+          {
+            ...state,
+            metadata: {
+              ...state.metadata,
+              updatedAt: new Date().toISOString(),
+            },
+          },
+          newContainer
+        );
+      }
+      
       const result = deleteNodeById(currentContainer, id);
 
       // If the root container was deleted, prevent it
       if (result === null) {
         console.warn("Cannot delete the root container");
         return state;
+      }
+
+      // If after deletion there are no children left, create a default h1 header
+      const resultContainer = result as ContainerNode;
+      if (resultContainer.children.length === 0) {
+        const timestamp = Date.now();
+        const defaultNode: TextNode = {
+          id: `h1-${timestamp}`,
+          type: "h1",
+          content: "",
+          attributes: {
+            placeholder: "New page",
+          },
+        };
+        resultContainer.children = [defaultNode];
+        
+        return addToHistory(
+          {
+            ...state,
+            activeNodeId: defaultNode.id,
+            metadata: {
+              ...state.metadata,
+              updatedAt: new Date().toISOString(),
+            },
+          },
+          resultContainer
+        );
       }
 
       return addToHistory(
@@ -175,7 +249,7 @@ export function editorReducer(
             updatedAt: new Date().toISOString(),
           },
         },
-        result as ContainerNode
+        resultContainer
       );
     }
 
@@ -189,9 +263,12 @@ export function editorReducer(
         position
       ) as ContainerNode;
 
+      // Automatically set the newly inserted node as active for better UX
+      // This ensures the node is focused immediately after insertion
       return addToHistory(
         {
           ...state,
+          activeNodeId: node.id,
           metadata: {
             ...state.metadata,
             updatedAt: new Date().toISOString(),
@@ -521,6 +598,8 @@ export function editorReducer(
             bold: format === "bold" ? !isActive : child.bold,
             italic: format === "italic" ? !isActive : child.italic,
             underline: format === "underline" ? !isActive : child.underline,
+            strikethrough: format === "strikethrough" ? !isActive : child.strikethrough,
+            code: format === "code" ? !isActive : child.code,
           });
 
           // After overlap (within this child)
@@ -533,6 +612,15 @@ export function editorReducer(
         }
 
         currentPos = childEnd;
+      }
+
+      // Ensure there's always a text node at the end to allow cursor escape
+      const lastChild = newChildren[newChildren.length - 1];
+      const hasFormatting = lastChild && (lastChild.bold || lastChild.italic || lastChild.underline || lastChild.strikethrough || lastChild.code || lastChild.elementType);
+      
+      if (hasFormatting) {
+        // Add non-breaking space for cursor positioning (regular space gets collapsed by browser)
+        newChildren.push({ content: "\u00A0" });
       }
 
       // Update the node in the tree
@@ -1045,6 +1133,48 @@ export function editorReducer(
       return state;
     }
 
+    case "SET_COVER_IMAGE": {
+      const { coverImage } = action.payload;
+      return {
+        ...state,
+        coverImage,
+        metadata: {
+          ...state.metadata,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    case "REMOVE_COVER_IMAGE": {
+      return {
+        ...state,
+        coverImage: null,
+        metadata: {
+          ...state.metadata,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    case "UPDATE_COVER_IMAGE_POSITION": {
+      const { position } = action.payload;
+      if (!state.coverImage) {
+        console.warn("Cannot update position: no cover image set");
+        return state;
+      }
+      return {
+        ...state,
+        coverImage: {
+          ...state.coverImage,
+          position,
+        },
+        metadata: {
+          ...state.metadata,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    }
+
     default:
       // Exhaustiveness check
       const _exhaustive: never = action;
@@ -1071,14 +1201,16 @@ export function createInitialState(
   // If container is provided, use it; otherwise create with at least one empty block
   let defaultChildren = container?.children;
   
-  // If no children provided or empty array, create a default empty paragraph
+  // If no children provided or empty array, create a default empty heading
   if (!defaultChildren || defaultChildren.length === 0) {
     const timestamp = Date.now();
     const defaultNode: TextNode = {
-      id: `p-${timestamp}`,
-      type: "p",
+      id: `h1-${timestamp}`,
+      type: "h1",
       content: "",
-      attributes: {},
+      attributes: {
+        placeholder: "New page",
+      },
     };
     defaultChildren = [defaultNode];
   }
@@ -1090,18 +1222,18 @@ export function createInitialState(
     ...container,
   };
 
-  // Clone the container first, then get the activeNodeId from the cloned version
-  const clonedContainer = deepCloneContainer(initialContainer);
-
+  // No need to clone - the container is already a new object
+  // Structural sharing will be maintained as we make edits
   return {
     version: "1.0.0",
-    history: [clonedContainer],
+    history: [initialContainer],
     historyIndex: 0,
-    activeNodeId: clonedContainer.children[0].id,
+    activeNodeId: initialContainer.children[0].id,
     hasSelection: false,
     selectionKey: 0,
     currentSelection: null,
     selectedBlocks: new Set(),
+    coverImage: null,
     metadata: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

@@ -50,6 +50,7 @@ export type {
   SelectionInfo,
   InlineText,
   BlockLine,
+  CoverImage,
 } from './types';
 
 export { isContainerNode, isStructuralNode, isTextNode, hasInlineChildren, getNodeTextContent } from './types';
@@ -79,20 +80,23 @@ export { EditorActions } from './reducer/actions';
 export { editorReducer, createInitialState } from './reducer/editor-reducer';
 
 // ============================================================================
-// Context and Hooks
+// Zustand Store and Hooks
 // ============================================================================
 export {
   EditorProvider,
   useEditorState,
   useEditorDispatch,
-  useEditor,
-  useEditorSelector,
-  useNode,
+  useBlockNode,
+  useIsNodeActive,
+  useActiveNodeId,
+  useContainerChildrenIds,
+  useContainer,
   useSelectionManager,
   useSelection,
-} from './context/EditorContext';
+} from './store/editor-store';
 
-export type { EditorProviderProps } from './context/EditorContext';
+export type { EditorProviderProps } from './store/editor-store';
+
 
 // ============================================================================
 // Utilities
@@ -154,3 +158,4 @@ export type { TailwindClassGroup } from './tailwind-classes';
 // Demo Content
 // ============================================================================
 export { createDemoContent } from './demo-content';
+export { createEmptyContent } from './empty-content';

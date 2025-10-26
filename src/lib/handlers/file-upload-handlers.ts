@@ -185,6 +185,11 @@ export function createHandleMultipleFilesChange(params: FileUploadHandlerParams)
         );
       }
 
+      // For flex containers, set the first child as active (containers themselves aren't focusable)
+      if (mediaNodes.length > 0) {
+        dispatch(EditorActions.setActiveNode(mediaNodes[0].id));
+      }
+
       const videoCount = validFiles.filter((f) => f.type.startsWith('video/')).length;
       const imageCount = validFiles.filter((f) => f.type.startsWith('image/')).length;
       let description = "";
@@ -234,6 +239,96 @@ export function createHandleImageUploadClick(fileInputRef: React.RefObject<HTMLI
 export function createHandleMultipleImagesUploadClick(multipleFileInputRef: React.RefObject<HTMLInputElement | null>) {
   return () => {
     multipleFileInputRef.current?.click();
+  };
+}
+
+/**
+ * Handle free image file change - creates free-positioned image
+ */
+export function createHandleFreeImageFileChange(params: FileUploadHandlerParams) {
+  return async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { dispatch, toast, setIsUploading, fileInputRef, onUploadImage } = params;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload an image file.",
+      });
+      setIsUploading(false);
+      return;
+    }
+
+    try {
+      // Use custom upload handler if provided, otherwise use default
+      let fileUrl: string;
+
+      if (onUploadImage) {
+        fileUrl = await onUploadImage(file);
+      } else {
+        const result = await uploadImage(file);
+        if (!result.success || !result.url) {
+          throw new Error(result.error || "Upload failed");
+        }
+        fileUrl = result.url;
+      }
+
+      // Create new free-positioned image node
+      const freeImageNode: TextNode = {
+        id: `free-img-${Date.now()}`,
+        type: "img",
+        content: "", // Optional caption
+        attributes: {
+          src: fileUrl,
+          alt: file.name,
+          isFreePositioned: true, // Flag to identify free-positioned images
+          styles: {
+            left: "100px",
+            top: "100px",
+            width: "400px",
+            height: "auto",
+            position: "fixed",
+            zIndex: "10",
+          },
+        },
+      };
+
+      // Insert the free image node at the end of container
+      dispatch(EditorActions.insertNode(freeImageNode, "root", "append"));
+
+      toast({
+        title: 'Free image added',
+        description: 'You can drag the image to position it anywhere.',
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+}
+
+/**
+ * Handle free image upload click
+ */
+export function createHandleFreeImageUploadClick(freeImageInputRef: React.RefObject<HTMLInputElement | null>) {
+  return () => {
+    freeImageInputRef.current?.click();
   };
 }
 

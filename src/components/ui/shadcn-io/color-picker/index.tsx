@@ -121,7 +121,7 @@ export const ColorPicker = ({
       }}
     >
       <div
-        className={cn('flex size-full flex-col gap-4', className)}
+        className={cn('flex flex-col gap-4', className)}
         {...props}
       />
     </ColorPickerContext.Provider>
@@ -185,7 +185,7 @@ export const ColorPickerSelection = memo(
 
     return (
       <div
-        className={cn('relative size-full cursor-crosshair rounded', className)}
+        className={cn('relative cursor-crosshair rounded h-[100px]', className)}
         onPointerDown={(e) => {
           e.preventDefault();
           setIsDragging(true);

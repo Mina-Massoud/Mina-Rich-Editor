@@ -35,8 +35,9 @@ import {
   ListOrdered,
   Image,
   Video,
+  Table,
 } from 'lucide-react';
-import { useEditor, EditorActions } from '@/lib';
+import { useEditorDispatch, EditorActions } from '@/lib';
 
 export interface CommandOption {
   label: string;
@@ -121,16 +122,16 @@ const commands: CommandOption[] = [
   },
   {
     label: 'Bulleted List',
-    value: 'ul',
+    value: 'li',
     icon: <List className="w-4 h-4" />,
-    description: 'Unordered list with bullets',
+    description: 'Simple list item with bullet',
     keywords: ['list', 'bullet', 'unordered', 'ul', 'li'],
   },
   {
     label: 'Numbered List',
     value: 'ol',
     icon: <ListOrdered className="w-4 h-4" />,
-    description: 'Ordered list with numbers',
+    description: 'Numbered list item',
     keywords: ['list', 'numbered', 'ordered', 'ol', 'li'],
   },
   {
@@ -147,6 +148,13 @@ const commands: CommandOption[] = [
     description: 'Upload or embed a video',
     keywords: ['video', 'vid', 'movie', 'mp4', 'upload'],
   },
+  {
+    label: 'Table',
+    value: 'table',
+    icon: <Table className="w-4 h-4" />,
+    description: 'Create a table',
+    keywords: ['table', 'grid', 'rows', 'columns', 'cells'],
+  },
 ];
 
 export function CommandMenu({ 
@@ -162,7 +170,7 @@ export function CommandMenu({
   const [isUploading, setIsUploading] = useState(false);
   const commandRef = useRef<HTMLDivElement>(null);
 
-  const [, dispatch] = useEditor();
+  const dispatch = useEditorDispatch();
 
   // Handle command selection - for image/video, we'll use dispatch directly here
   const handleSelect = useCallback(async (commandValue: string) => {
@@ -348,8 +356,15 @@ export function CommandMenu({
       fileInput.click();
       return;
     }
+
+    // Special handling for table - just call onSelect which will open the table dialog
+    if (commandValue === 'table') {
+      onClose();
+      onSelect(commandValue);
+      return;
+    }
     
-    // For all other commands, call the original onSelect handler AFTER closing menu
+    // For all other commands (including 'li' and 'ol'), call the original onSelect handler AFTER closing menu
     onClose();
     onSelect(commandValue);
   }, [dispatch, nodeId, onSelect, onClose, onUploadImage]);

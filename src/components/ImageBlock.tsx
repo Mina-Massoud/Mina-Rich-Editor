@@ -6,13 +6,13 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { TextNode } from "../lib";
 import { Card } from "./ui/card";
-import { Skeleton } from "./ui/skeleton";
 import { X, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
+import { useEditorDispatch } from "../lib/store/editor-store";
 
 interface ImageBlockProps {
   node: TextNode;
@@ -35,9 +35,33 @@ export function ImageBlock({
   onToggleSelection,
   onClickWithModifier,
 }: ImageBlockProps) {
+  const dispatch = useEditorDispatch();
   const [imageError, setImageError] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeSide, setResizeSide] = useState<"left" | "right" | null>(null);
+  const [currentWidth, setCurrentWidth] = useState<number>(100);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(100);
+
+  // Initialize width from node attributes styles
+  useEffect(() => {
+    const styles = node.attributes?.styles;
+    if (styles && typeof styles === 'object' && !Array.isArray(styles)) {
+      const width = (styles as Record<string, string>).width;
+      if (width && typeof width === 'string' && width.endsWith('%')) {
+        const widthValue = parseFloat(width);
+        if (!isNaN(widthValue)) {
+          setCurrentWidth(widthValue);
+        }
+      }
+    }
+  }, [node.attributes?.styles]);
 
   const handleClick = (e: React.MouseEvent) => {
+    // Don't trigger click when resizing
+    if (isResizing) return;
+    
     // Check for Ctrl/Cmd click first
     if (onClickWithModifier) {
       onClickWithModifier(e, node.id);
@@ -49,6 +73,71 @@ export function ImageBlock({
     }
   };
 
+  const handleResizeStart = (e: React.MouseEvent, side: "left" | "right") => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeSide(side);
+    startXRef.current = e.clientX;
+    startWidthRef.current = currentWidth;
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+
+      const containerWidth = containerRef.current.offsetWidth;
+      const deltaX = e.clientX - startXRef.current;
+      
+      // For left handle, invert the delta (dragging left decreases width)
+      const adjustedDelta = resizeSide === "left" ? -deltaX : deltaX;
+      const deltaPercent = (adjustedDelta / containerWidth) * 100;
+      
+      // Calculate new width, constrained between 20% and 100%
+      let newWidth = startWidthRef.current + deltaPercent;
+      newWidth = Math.max(20, Math.min(100, newWidth));
+      
+      setCurrentWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setResizeSide(null);
+      
+      // Update node attributes with new width
+      const existingStyles = node.attributes?.styles;
+      const stylesObj = existingStyles && typeof existingStyles === 'object' && !Array.isArray(existingStyles)
+        ? (existingStyles as Record<string, string>)
+        : {};
+      
+      const newStyles = {
+        ...stylesObj,
+        width: `${currentWidth.toFixed(2)}%`,
+      };
+
+      dispatch({
+        type: 'UPDATE_ATTRIBUTES',
+        payload: {
+          id: node.id,
+          attributes: {
+            ...node.attributes,
+            styles: newStyles,
+          },
+          merge: false,
+        },
+      });
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, resizeSide, currentWidth, node.id, node.attributes, dispatch]);
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
@@ -76,8 +165,6 @@ export function ImageBlock({
   const hasError =
     node.attributes?.error === "true" || node.attributes?.error === true;
 
-
-
   const handleImageLoad = () => {
     setImageError(false);
   };
@@ -87,17 +174,24 @@ export function ImageBlock({
   };
 
   return (
-    <Card
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      className={`
-        relative !border-0 mb-4 p-4 transition-all duration-200 cursor-move group
-        ${isActive ? "ring-2 ring-primary/50 bg-accent/5" : "hover:bg-accent/5"}
-        ${isSelected ? "ring-2 ring-blue-500 bg-blue-500/10" : ""}
-      `}
-      onClick={handleClick}
+    <div
+      ref={containerRef}
+      className="relative mb-4"
+      style={{ width: '100%' }}
     >
+      <Card
+        draggable={!isResizing}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        className={`
+          relative !border-0 p-4 duration-200 group
+          ${!isResizing ? 'cursor-move' : ''}
+          ${isActive ? "ring-2 ring-primary/[0.05] bg-accent/5" : "hover:bg-accent/5"}
+          ${isSelected ? "ring-2 ring-blue-500 bg-blue-500/10" : ""}
+        `}
+        style={{ width: `${currentWidth}%`, margin: '0 auto' }}
+        onClick={handleClick}
+      >
       {/* Selection checkbox */}
       {onToggleSelection && (
         <div
@@ -196,6 +290,28 @@ export function ImageBlock({
           </>
         )}
       </div>
+
+      {/* Resize handles */}
+      {!isUploading && !hasError && imageUrl && (
+        <>
+          {/* Left resize handle */}
+          <div
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-16 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-20 flex items-center justify-center"
+            onMouseDown={(e) => handleResizeStart(e, "left")}
+          >
+            <div className="w-1 h-12 bg-primary/50 rounded-full hover:bg-primary transition-colors" />
+          </div>
+
+          {/* Right resize handle */}
+          <div
+            className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-16 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-20 flex items-center justify-center"
+            onMouseDown={(e) => handleResizeStart(e, "right")}
+          >
+            <div className="w-1 h-12 bg-primary/50 rounded-full hover:bg-primary transition-colors" />
+          </div>
+        </>
+      )}
     </Card>
+    </div>
   );
 }

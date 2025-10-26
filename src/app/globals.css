@@ -1,14 +1,17 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 body {
-  font-family: "DM Sans", sans-serif;
-  letter-spacing: var(--tracking-tight);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
   width: 100%;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 @theme inline {
@@ -49,12 +52,39 @@ body {
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  @keyframes marquee {
+  from {
+    transform: translateX(0);
+    }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+    }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
 }
 
-/* Placeholder styling for contentEditable */
-[contenteditable][data-placeholder]:empty:before {
-  content: attr(data-placeholder);
-  color: #9ca3af;
+/* Placeholder styling for contentEditable - Notion-like */
+[contenteditable]:empty:before {
+  content: attr(placeholder);
+  color: var(--muted-foreground);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Command menu placeholder - shows "Type / for commands..." */
+[contenteditable][data-show-command-placeholder="true"]:empty:before {
+  content: "Type / for commands...";
+  color: var(--muted-foreground);
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -85,6 +115,8 @@ html {
   width: 100%;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 :root {
@@ -193,6 +225,17 @@ button:focus {
   outline: none;
 }
 
-span {
+/* Fix placeholder for list items - prevent overlap with list marker */
+li[contenteditable]::marker {
+  margin-right: 0.5rem;
+}
+
+li[contenteditable]:empty:before {
   display: inline-block;
+  padding-left: 0.25rem;
+}
+
+li[contenteditable][data-show-command-placeholder="true"]:empty:before {
+  display: inline-block;
+  padding-left: 0.25rem;
 }
