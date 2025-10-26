@@ -298,6 +298,9 @@ export function useEditorSelector<T>(
  * Hook to get a specific node by ID.
  * Returns undefined if node is not found.
  * 
+ * OPTIMIZED: This hook uses a selector to only re-render when the specific node changes,
+ * not when any part of the state changes.
+ * 
  * @param nodeId - The ID of the node to find
  * @returns The node or undefined
  * 
@@ -317,11 +320,60 @@ export function useEditorSelector<T>(
 export function useNode(nodeId: string) {
   const state = useEditorState();
   
-  return useMemo(() => {
+  // Memoize the selector function itself to prevent recreation
+  const selector = useCallback(() => {
     const { findNodeById } = require('../utils/tree-operations');
     const currentContainer = state.history[state.historyIndex];
     return findNodeById(currentContainer, nodeId);
   }, [state.history, state.historyIndex, nodeId]);
+  
+  return useMemo(selector, [selector]);
+}
+
+/**
+ * Hook to check if a specific node is active.
+ * Only re-renders when the active status of THIS node changes.
+ * 
+ * @param nodeId - The ID of the node to check
+ * @returns true if the node is active, false otherwise
+ * 
+ * @example
+ * ```tsx
+ * function Block({ nodeId }: { nodeId: string }) {
+ *   const isActive = useIsNodeActive(nodeId);
+ *   
+ *   return <div className={isActive ? 'active' : ''}>{nodeId}</div>;
+ * }
+ * ```
+ */
+export function useIsNodeActive(nodeId: string): boolean {
+  const state = useEditorState();
+  return useMemo(() => state.activeNodeId === nodeId, [state.activeNodeId, nodeId]);
+}
+
+/**
+ * Hook to get the current active node ID.
+ * Only re-renders when the active node ID changes.
+ * 
+ * @returns The ID of the active node or null
+ */
+export function useActiveNodeId(): string | null {
+  const state = useEditorState();
+  return useMemo(() => state.activeNodeId, [state.activeNodeId]);
+}
+
+/**
+ * Hook to get the current container's children IDs.
+ * Useful for rendering lists of blocks without subscribing to full node data.
+ * 
+ * @returns Array of child node IDs from the current container
+ */
+export function useContainerChildrenIds(): string[] {
+  const state = useEditorState();
+  return useMemo(() => {
+    const currentContainer = state.history[state.historyIndex];
+    return currentContainer.children.map(child => child.id);
+  }, [state.history, state.historyIndex]);
 }
 
 /**

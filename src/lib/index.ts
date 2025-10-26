@@ -80,7 +80,7 @@ export { EditorActions } from './reducer/actions';
 export { editorReducer, createInitialState } from './reducer/editor-reducer';
 
 // ============================================================================
-// Context and Hooks
+// Context and Hooks (Legacy - for gradual migration)
 // ============================================================================
 export {
   EditorProvider,
@@ -89,11 +89,33 @@ export {
   useEditor,
   useEditorSelector,
   useNode,
+  useIsNodeActive,
+  useActiveNodeId,
+  useContainerChildrenIds,
   useSelectionManager,
   useSelection,
 } from './context/EditorContext';
 
 export type { EditorProviderProps } from './context/EditorContext';
+
+// ============================================================================
+// Zustand Store (New - Optimized for Performance)
+// ============================================================================
+export {
+  useEditorStore,
+  useZustandNode,
+  useZustandIsNodeActive,
+  useZustandActiveNodeId,
+  useZustandContainerChildrenIds,
+  useZustandContainerChildren,
+  useZustandDispatch,
+  useZustandCoverImage,
+  useZustandCanUndo,
+  useZustandCanRedo,
+  useZustandEditorState,
+} from './store/editor-store';
+
+export type { EditorStore } from './store/editor-store';
 
 // ============================================================================
 // Utilities

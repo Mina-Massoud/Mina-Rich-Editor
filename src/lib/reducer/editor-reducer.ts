@@ -32,11 +32,16 @@ import { applyFormatting } from "../utils/inline-formatting";
 const MAX_HISTORY_SIZE = 100;
 
 /**
- * Deep clone a container node to preserve history immutability
+ * NOTE: We removed the deepCloneContainer function that was here before.
+ * 
+ * Deep cloning was destroying structural sharing! The tree operations 
+ * (updateNodeById, deleteNodeById, etc.) already return new immutable trees 
+ * with structural sharing - unchanged nodes keep their original references.
+ * 
+ * Deep cloning would create new references for ALL nodes, causing ALL React 
+ * components to re-render even when their data didn't change. By removing it,
+ * only components whose nodes actually changed will re-render.
  */
-function deepCloneContainer(container: ContainerNode): ContainerNode {
-  return JSON.parse(JSON.stringify(container));
-}
 
 /**
  * Add a new container state to history
@@ -46,14 +51,13 @@ function addToHistory(
   state: EditorState,
   newContainer: ContainerNode
 ): EditorState {
-  // Clone the new container to ensure immutability
-  const clonedContainer = deepCloneContainer(newContainer);
+  // No need to clone - the container is already immutable from tree operations
 
   // Get current history up to the current index
   const newHistory = state.history.slice(0, state.historyIndex + 1);
 
-  // Add the new state
-  newHistory.push(clonedContainer);
+  // Add the new state (already immutable with structural sharing)
+  newHistory.push(newContainer);
 
   // Limit history size
   if (newHistory.length > MAX_HISTORY_SIZE) {
@@ -1205,14 +1209,13 @@ export function createInitialState(
     ...container,
   };
 
-  // Clone the container first, then get the activeNodeId from the cloned version
-  const clonedContainer = deepCloneContainer(initialContainer);
-
+  // No need to clone - the container is already a new object
+  // Structural sharing will be maintained as we make edits
   return {
     version: "1.0.0",
-    history: [clonedContainer],
+    history: [initialContainer],
     historyIndex: 0,
-    activeNodeId: clonedContainer.children[0].id,
+    activeNodeId: initialContainer.children[0].id,
     hasSelection: false,
     selectionKey: 0,
     currentSelection: null,

@@ -52,6 +52,40 @@ export function createHandleDeleteNode(
   return (nodeId: string) => {
     const { container, dispatch, toast } = params;
 
+    // Find the node being deleted to determine its type
+    const findNode = (nodes: EditorNode[]): EditorNode | null => {
+      for (const node of nodes) {
+        if (node.id === nodeId) return node;
+        if (isContainerNode(node)) {
+          const found = findNode((node as ContainerNode).children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const nodeToDelete = findNode(container.children);
+    
+    // Determine the type of content being deleted
+    let contentType = "Block";
+    let contentDescription = "The block has been deleted.";
+    
+    if (nodeToDelete) {
+      if (isContainerNode(nodeToDelete)) {
+        const firstChild = (nodeToDelete as ContainerNode).children[0];
+        if (firstChild?.type === "table") {
+          contentType = "Table removed";
+          contentDescription = "The table has been deleted.";
+        }
+      } else if (nodeToDelete.type === "img") {
+        contentType = "Image removed";
+        contentDescription = "The image has been deleted.";
+      } else if (nodeToDelete.type === "video") {
+        contentType = "Video removed";
+        contentDescription = "The video has been deleted.";
+      }
+    }
+
     // Check if the node is inside a flex container
     const parentContainer = container.children.find(
       (child) =>
@@ -102,8 +136,8 @@ export function createHandleDeleteNode(
     }
 
     toast({
-      title: "Image removed",
-      description: "The image has been deleted.",
+      title: contentType,
+      description: contentDescription,
     });
   };
 }
@@ -235,17 +269,13 @@ export function createHandleChangeBlockType(
 ) {
   return (nodeId: string, newType: string) => {
     const { dispatch, nodeRefs } = params;
-    // Special handling for list items - initialize with empty content
-    if (newType === "li") {
-      dispatch(
-        EditorActions.updateNode(nodeId, {
-          type: newType as any,
-          content: "",
-        })
-      );
-    } else {
-      dispatch(EditorActions.updateNode(nodeId, { type: newType as any }));
-    }
+    // When changing block type from command menu, clear the content (removes the "/" character)
+    dispatch(
+      EditorActions.updateNode(nodeId, {
+        type: newType as any,
+        content: "",
+      })
+    );
 
     // Focus the updated node after a brief delay
     setTimeout(() => {
@@ -430,7 +460,10 @@ export function createHandleCreateLink(params: NodeOperationHandlerParams) {
 /**
  * Handle create table
  */
-export function createHandleCreateTable(params: NodeOperationHandlerParams) {
+export function createHandleCreateTable(
+  params: NodeOperationHandlerParams,
+  activeNodeId?: string
+) {
   return (rows: number, cols: number) => {
     const { container, dispatch, toast, editorContentRef } = params;
     const timestamp = Date.now();
@@ -500,10 +533,24 @@ export function createHandleCreateTable(params: NodeOperationHandlerParams) {
       attributes: {},
     };
 
-    // Insert the table at the end
-    const lastNode = container.children[container.children.length - 1];
-    if (lastNode) {
-      dispatch(EditorActions.insertNode(tableWrapper, lastNode.id, "after"));
+    // Determine where to insert the table
+    let targetNode = null;
+    let targetPosition: "after" | "before" = "after";
+
+    if (activeNodeId) {
+      // If we have an active node (from command menu), insert after it
+      targetNode = container.children.find((n) => n.id === activeNodeId);
+      targetPosition = "after";
+    }
+
+    if (!targetNode) {
+      // Fallback: insert at the end
+      targetNode = container.children[container.children.length - 1];
+      targetPosition = "after";
+    }
+
+    if (targetNode) {
+      dispatch(EditorActions.insertNode(tableWrapper, targetNode.id, targetPosition));
     } else {
       // If no nodes exist, replace the container
       dispatch(
@@ -523,13 +570,13 @@ export function createHandleCreateTable(params: NodeOperationHandlerParams) {
     setTimeout(() => {
       const editorContent = editorContentRef.current;
       if (editorContent) {
-        const lastChild = editorContent.querySelector(
-          "[data-editor-content]"
-        )?.lastElementChild;
-        if (lastChild) {
-          lastChild.scrollIntoView({
+        const tableElement = editorContent.querySelector(
+          `[data-node-id="${tableWrapper.id}"]`
+        );
+        if (tableElement) {
+          tableElement.scrollIntoView({
             behavior: "smooth",
-            block: "end",
+            block: "center",
             inline: "nearest",
           });
         }

@@ -167,7 +167,11 @@ export function Editor({
     "left" | "right" | null
   >(null);
   const [tableDialogOpen, setTableDialogOpen] = useState(false);
-  const [insertComponentModalOpen, setInsertComponentModalOpen] = useState(false);
+  const [tableInsertionTargetId, setTableInsertionTargetId] = useState<
+    string | undefined
+  >(undefined);
+  const [insertComponentModalOpen, setInsertComponentModalOpen] =
+    useState(false);
 
   // Get the current container from history
   const container = state.history[state.historyIndex];
@@ -362,13 +366,14 @@ export function Editor({
   );
 
   const handleCreateTable = useCallback(
-    createHandleCreateTable(nodeOperationParams),
-    [container, dispatch, toast, editorContentRef]
+    createHandleCreateTable(nodeOperationParams, tableInsertionTargetId),
+    [container, dispatch, toast, editorContentRef, tableInsertionTargetId]
   );
 
   const handleCreateTableFromCommand = useCallback(
     (nodeId: string) => {
       // Store the node ID for later use when table is created
+      setTableInsertionTargetId(nodeId);
       dispatch(EditorActions.setActiveNode(nodeId));
       // Open the table dialog
       setTableDialogOpen(true);
@@ -388,10 +393,28 @@ export function Editor({
         attributes: {},
       };
 
-      // Insert the table at the end
-      const lastNode = container.children[container.children.length - 1];
-      if (lastNode) {
-        dispatch(EditorActions.insertNode(tableWrapper, lastNode.id, "after"));
+      // Determine where to insert the table
+      let targetNode = null;
+      let targetPosition: "after" | "before" = "after";
+
+      if (tableInsertionTargetId) {
+        // If we have a target node (from command menu), insert after it
+        targetNode = container.children.find(
+          (n) => n.id === tableInsertionTargetId
+        );
+        targetPosition = "after";
+      }
+
+      if (!targetNode) {
+        // Fallback: insert at the end
+        targetNode = container.children[container.children.length - 1];
+        targetPosition = "after";
+      }
+
+      if (targetNode) {
+        dispatch(
+          EditorActions.insertNode(tableWrapper, targetNode.id, targetPosition)
+        );
       } else {
         // If no nodes exist, replace the container
         dispatch(
@@ -411,21 +434,23 @@ export function Editor({
       setTimeout(() => {
         const editorContent = editorContentRef.current;
         if (editorContent) {
-          const lastChild = editorContent.querySelector(
-            "[data-editor-content]"
-          )?.lastElementChild;
-          if (lastChild) {
-            lastChild.scrollIntoView({
+          const tableElement = editorContent.querySelector(
+            `[data-node-id="${tableWrapper.id}"]`
+          );
+          if (tableElement) {
+            tableElement.scrollIntoView({
               behavior: "smooth",
-              block: "end",
+              block: "center",
               inline: "nearest",
             });
           }
         }
       }, 150);
     },
-    [container, dispatch, toast, editorContentRef]
+    [container, dispatch, toast, editorContentRef, tableInsertionTargetId]
   );
+
+  console.log("🎨 [Editor] Table Insertion Target ID:", tableInsertionTargetId);
 
   const handleCopyHtml = useCallback(
     () =>
@@ -516,12 +541,15 @@ export function Editor({
     setInsertComponentModalOpen(true);
   }, []);
 
-  const handleInsertComponentSelect = useCallback((componentId: string) => {
-    if (componentId === "free-image") {
-      handleFreeImageUploadClick();
-    }
-    // Future: handle other component types here
-  }, [handleFreeImageUploadClick]);
+  const handleInsertComponentSelect = useCallback(
+    (componentId: string) => {
+      if (componentId === "free-image") {
+        handleFreeImageUploadClick();
+      }
+      // Future: handle other component types here
+    },
+    [handleFreeImageUploadClick]
+  );
 
   const handleClearImageSelection = useCallback(
     createHandleClearImageSelection(setSelectedImageIds),
@@ -896,9 +924,14 @@ export function Editor({
       }
 
       // Arrow Up/Down - Navigate between blocks
-      if ((e.key === "ArrowUp" || e.key === "ArrowDown") && isInEditor && state.activeNodeId) {
+      if (
+        (e.key === "ArrowUp" || e.key === "ArrowDown") &&
+        isInEditor &&
+        state.activeNodeId
+      ) {
         const currentElement = activeElement as HTMLElement;
-        const currentNodeId = currentElement?.getAttribute("data-node-id") || state.activeNodeId;
+        const currentNodeId =
+          currentElement?.getAttribute("data-node-id") || state.activeNodeId;
 
         // Find the current node and its siblings
         const result = findNodeInTree(currentNodeId, container);
@@ -913,7 +946,7 @@ export function Editor({
           e.preventDefault();
           const prevNode = siblings[currentIndex - 1];
           dispatch(EditorActions.setActiveNode(prevNode.id));
-          
+
           // Focus and place cursor at the end of the previous node
           setTimeout(() => {
             const prevElement = nodeRefs.current.get(prevNode.id);
@@ -921,9 +954,10 @@ export function Editor({
               prevElement.focus();
               const range = document.createRange();
               const sel = window.getSelection();
-              
+
               // Place cursor at the end
-              const lastChild = prevElement.childNodes[prevElement.childNodes.length - 1];
+              const lastChild =
+                prevElement.childNodes[prevElement.childNodes.length - 1];
               if (lastChild?.nodeType === Node.TEXT_NODE) {
                 range.setStart(lastChild, lastChild.textContent?.length || 0);
               } else if (lastChild) {
@@ -943,7 +977,7 @@ export function Editor({
           e.preventDefault();
           const nextNode = siblings[currentIndex + 1];
           dispatch(EditorActions.setActiveNode(nextNode.id));
-          
+
           // Focus and place cursor at the end of the next node
           setTimeout(() => {
             const nextElement = nodeRefs.current.get(nextNode.id);
@@ -951,9 +985,10 @@ export function Editor({
               nextElement.focus();
               const range = document.createRange();
               const sel = window.getSelection();
-              
+
               // Place cursor at the end
-              const lastChild = nextElement.childNodes[nextElement.childNodes.length - 1];
+              const lastChild =
+                nextElement.childNodes[nextElement.childNodes.length - 1];
               if (lastChild?.nodeType === Node.TEXT_NODE) {
                 range.setStart(lastChild, lastChild.textContent?.length || 0);
               } else if (lastChild) {
@@ -968,7 +1003,6 @@ export function Editor({
           }, 10);
         }
       }
-
     };
 
     document.addEventListener("keydown", handleGlobalKeyDown);
@@ -979,10 +1013,11 @@ export function Editor({
 
   return (
     <div className="bg-background transition-colors flex flex-col flex-1 duration-300">
+      <Button onClick={() => dispatch(EditorActions.redo())}>Redo</Button>
       {/* Editor with integrated toolbar */}
       <div className="mx-auto flex flex-col flex-1 w-full">
-        <QuickModeToggle 
-          readOnly={readOnly} 
+        <QuickModeToggle
+          readOnly={readOnly}
           onReadOnlyChange={setReadOnly}
           notionBased={notionBased}
           onNotionBasedChange={onNotionBasedChange}
@@ -1003,7 +1038,13 @@ export function Editor({
           {/* Table Dialog */}
           <TableDialog
             open={tableDialogOpen}
-            onOpenChange={setTableDialogOpen}
+            onOpenChange={(open) => {
+              setTableDialogOpen(open);
+              // Clear the target ID when dialog closes
+              if (!open) {
+                setTableInsertionTargetId(undefined);
+              }
+            }}
             onCreateTable={handleCreateTable}
             onImportMarkdown={handleImportMarkdownTable}
           />
@@ -1058,12 +1099,18 @@ export function Editor({
           >
             <div ref={editorContentRef}>
               {/* Cover Image - Only in Notion mode */}
-              {notionBased && <CoverImage onUploadImage={onUploadImage} readOnly={readOnly} />}
+              {notionBased && (
+                <CoverImage onUploadImage={onUploadImage} readOnly={readOnly} />
+              )}
 
               <div
                 data-editor-content
                 className={`${
-                  notionBased && state.coverImage ? "pt-[280px] lg:pt-[420px]" : notionBased ? "pt-[50px]" : "pt-4"
+                  notionBased && state.coverImage
+                    ? "pt-[280px] lg:pt-[420px]"
+                    : notionBased
+                    ? "pt-[50px]"
+                    : "pt-4"
                 } px-10 transition-all duration-300`}
               >
                 {container.children.map((node, index) => {
@@ -1071,7 +1118,11 @@ export function Editor({
                   const textNode = isText ? (node as TextNode) : null;
 
                   // Skip free-positioned images - they'll be rendered separately
-                  if (textNode && textNode.type === "img" && textNode.attributes?.isFreePositioned) {
+                  if (
+                    textNode &&
+                    textNode.type === "img" &&
+                    textNode.attributes?.isFreePositioned
+                  ) {
                     return null;
                   }
 
@@ -1242,7 +1293,11 @@ export function Editor({
           {container.children
             .filter((node) => {
               const textNode = isTextNode(node) ? (node as TextNode) : null;
-              return textNode && textNode.type === "img" && textNode.attributes?.isFreePositioned;
+              return (
+                textNode &&
+                textNode.type === "img" &&
+                textNode.attributes?.isFreePositioned
+              );
             })
             .map((node) => (
               <FreeImageBlock
@@ -1250,7 +1305,9 @@ export function Editor({
                 node={node as TextNode}
                 isActive={state.activeNodeId === node.id}
                 onClick={() => handleNodeClick(node.id)}
-                onDelete={readOnly ? undefined : () => handleDeleteNode(node.id)}
+                onDelete={
+                  readOnly ? undefined : () => handleDeleteNode(node.id)
+                }
                 readOnly={readOnly}
               />
             ))}

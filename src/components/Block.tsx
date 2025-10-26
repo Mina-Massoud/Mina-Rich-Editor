@@ -158,6 +158,7 @@ export function Block({
   const coverImageInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
 
+  console.log("🎨 [Block] Node:", node);
   // Get editor context for direct state manipulation (needed for table updates)
   const [state, dispatch] = useEditor();
 
@@ -194,6 +195,7 @@ export function Block({
           }}
           readOnly={readOnly}
           onBlockDragStart={onBlockDragStart}
+          onDelete={onDelete}
         />
       );
     }

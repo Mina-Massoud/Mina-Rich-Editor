@@ -38,6 +38,7 @@ export function ImageBlock({
   const [, dispatch] = useEditor();
   const [imageError, setImageError] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [resizeSide, setResizeSide] = useState<"left" | "right" | null>(null);
   const [currentWidth, setCurrentWidth] = useState<number>(100);
   const containerRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef<number>(0);
@@ -72,10 +73,11 @@ export function ImageBlock({
     }
   };
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  const handleResizeStart = (e: React.MouseEvent, side: "left" | "right") => {
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
+    setResizeSide(side);
     startXRef.current = e.clientX;
     startWidthRef.current = currentWidth;
   };
@@ -88,7 +90,10 @@ export function ImageBlock({
 
       const containerWidth = containerRef.current.offsetWidth;
       const deltaX = e.clientX - startXRef.current;
-      const deltaPercent = (deltaX / containerWidth) * 100;
+      
+      // For left handle, invert the delta (dragging left decreases width)
+      const adjustedDelta = resizeSide === "left" ? -deltaX : deltaX;
+      const deltaPercent = (adjustedDelta / containerWidth) * 100;
       
       // Calculate new width, constrained between 20% and 100%
       let newWidth = startWidthRef.current + deltaPercent;
@@ -99,6 +104,7 @@ export function ImageBlock({
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      setResizeSide(null);
       
       // Update node attributes with new width
       const existingStyles = node.attributes?.styles;
@@ -131,7 +137,7 @@ export function ImageBlock({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, currentWidth, node.id, node.attributes, dispatch]);
+  }, [isResizing, resizeSide, currentWidth, node.id, node.attributes, dispatch]);
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
@@ -291,19 +297,7 @@ export function ImageBlock({
           {/* Left resize handle */}
           <div
             className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-16 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-20 flex items-center justify-center"
-            onMouseDown={(e) => {
-              const originalHandler = handleResizeStart;
-              const mirroredEvent = {
-                ...e,
-                clientX: 2 * containerRef.current!.getBoundingClientRect().left + containerRef.current!.offsetWidth * (currentWidth / 100) - e.clientX,
-              } as React.MouseEvent;
-              
-              startXRef.current = -e.clientX;
-              startWidthRef.current = currentWidth;
-              setIsResizing(true);
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onMouseDown={(e) => handleResizeStart(e, "left")}
           >
             <div className="w-1 h-12 bg-primary/50 rounded-full hover:bg-primary transition-colors" />
           </div>
@@ -311,7 +305,7 @@ export function ImageBlock({
           {/* Right resize handle */}
           <div
             className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-16 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-20 flex items-center justify-center"
-            onMouseDown={handleResizeStart}
+            onMouseDown={(e) => handleResizeStart(e, "right")}
           >
             <div className="w-1 h-12 bg-primary/50 rounded-full hover:bg-primary transition-colors" />
           </div>
