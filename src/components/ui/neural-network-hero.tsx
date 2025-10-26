@@ -415,7 +415,7 @@ export default function Hero({
             </a>
             <span>|</span>
             <a 
-              href="https://github.com/mina-massoud" 
+              href="https://github.com/Mina-Massoud/Mina-Rich-Editor" 
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white/70 transition-colors underline-offset-4 hover:underline"

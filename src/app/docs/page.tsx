@@ -631,7 +631,7 @@ function MyComponent() {
                     </Button>
                     <Button variant="outline" size="sm" asChild>
                       <a
-                        href="https://github.com/Mina-Massoud"
+                        href="https://github.com/Mina-Massoud/Mina-Rich-Editor"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
