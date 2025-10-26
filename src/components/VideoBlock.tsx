@@ -170,7 +170,7 @@ export function VideoBlock({
                   Video files need a custom upload handler. The default handler only supports images.
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-md text-center px-4">
-                  Pass <code className="px-1 py-0.5 bg-muted rounded text-xs">onUploadImage</code> prop to the Editor component.
+                  Pass <code className="px-1 py-0.5 bg-muted rounded text-xs">onUploadVideo</code> prop to the Editor component.
                 </p>
               </div>
             )}

@@ -123,6 +123,7 @@ import { VirtualizedBlockList } from "./archieve/VirtualizedBlockList";
 interface EditorProps {
   readOnly?: boolean; // View-only mode - renders content without editing capabilities
   onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler - should return the uploaded image URL
+  onUploadVideo?: (file: File) => Promise<string>; // Custom video upload handler - should return the uploaded video URL
   notionBased?: boolean; // Enable Notion-style features (cover image, first header spacing) - default: true
   onNotionBasedChange?: (notionBased: boolean) => void; // Callback when notion mode is toggled
   // enableVirtualization?: boolean; // Enable virtualization for better performance with many blocks - default: false
@@ -132,6 +133,7 @@ interface EditorProps {
 export function Editor({
   readOnly: initialReadOnly = false,
   onUploadImage,
+  onUploadVideo,
   notionBased = true,
   onNotionBasedChange,
 }: // enableVirtualization = false,
@@ -1286,6 +1288,7 @@ EditorProps = {}) {
                             onCreateList={handleCreateListFromCommand}
                             onCreateTable={handleCreateTableFromCommand}
                             onUploadImage={onUploadImage}
+                            onUploadVideo={onUploadVideo}
                             selectedImageIds={selectedImageIds}
                             onToggleImageSelection={handleToggleImageSelection}
                             onClickWithModifier={handleClickWithModifier}

@@ -102,6 +102,7 @@ interface BlockProps {
   onCreateList?: (nodeId: string, listType: string) => void;
   onCreateTable?: (nodeId: string) => void;
   onUploadImage?: (file: File) => Promise<string>;
+  onUploadVideo?: (file: File) => Promise<string>;
   onBlockDragStart?: (nodeId: string) => void;
   selectedImageIds?: Set<string>;
   onToggleImageSelection?: (nodeId: string) => void;
@@ -141,6 +142,7 @@ export const Block = React.memo(function Block({
   onCreateList,
   onCreateTable,
   onUploadImage,
+  onUploadVideo,
   onBlockDragStart,
   selectedImageIds,
   onToggleImageSelection,
@@ -162,6 +164,9 @@ export const Block = React.memo(function Block({
   // ✅ OPTIMIZATION: Subscribe to ONLY this node's data
   // Thanks to structural sharing, this only causes re-render when THIS node changes
   const node = useBlockNode(nodeId);
+  
+  // Determine how to render this node EARLY - before any conditional returns
+  const renderType = node ? getNodeRenderType(node) : null;
   
   // If node not found, return null (shouldn't happen but safe guard)
   if (!node) {
@@ -199,9 +204,6 @@ export const Block = React.memo(function Block({
   // Touch/drag state for mobile
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [isDraggingTouch, setIsDraggingTouch] = useState(false);
-
-  // Determine how to render this node
-  const renderType = getNodeRenderType(node);
 
   // Handle container nodes (recursive rendering)
   switch (renderType) {
@@ -274,6 +276,7 @@ export const Block = React.memo(function Block({
               onCreateList={onCreateList}
               onCreateTable={onCreateTable}
               onUploadImage={onUploadImage}
+              onUploadVideo={onUploadVideo}
               selectedImageIds={selectedImageIds}
               onToggleImageSelection={onToggleImageSelection}
               onClickWithModifier={onClickWithModifier}
@@ -368,51 +371,7 @@ export const Block = React.memo(function Block({
   // Cast to TextNode for remaining cases
   const textNode = node as TextNode;
 
-  // BR elements render as empty space
-  if (textNode.type === "br") {
-    return (
-      <div
-        key={textNode.id}
-        data-node-id={textNode.id}
-        className="h-6"
-        onClick={onClick}
-      />
-    );
-  }
-
-  // Image nodes render as ImageBlock
-  if (textNode.type === "img") {
-    return (
-      <ImageBlock
-        node={textNode}
-        isActive={isActive}
-        onClick={onClick}
-        onDelete={onDelete}
-        onDragStart={onImageDragStart}
-        isSelected={selectedImageIds?.has(textNode.id)}
-        onToggleSelection={onToggleImageSelection}
-        onClickWithModifier={onClickWithModifier}
-      />
-    );
-  }
-
-  // Video nodes render as VideoBlock
-  if (textNode.type === "video") {
-    return (
-      <VideoBlock
-        node={textNode}
-        isActive={isActive}
-        onClick={onClick}
-        onDelete={onDelete}
-        onDragStart={onImageDragStart}
-        isSelected={selectedImageIds?.has(textNode.id)}
-        onToggleSelection={onToggleImageSelection}
-        onClickWithModifier={onClickWithModifier}
-      />
-    );
-  }
-
-  // Build HTML callback
+  // Build HTML callback (declare this hook for ALL render paths to maintain hook order)
   const memoizedBuildHTML = useCallback(() => {
     return buildHTML(textNode, readOnly);
   }, [textNode, readOnly]);
@@ -714,6 +673,53 @@ export const Block = React.memo(function Block({
     | string
     | undefined;
 
+  // ⚠️ IMPORTANT: Handle special block types AFTER all hooks are declared
+  // This ensures React's Rules of Hooks are followed (hooks must be called in the same order every render)
+  
+  // BR elements render as empty space
+  if (textNode.type === "br") {
+    return (
+      <div
+        key={textNode.id}
+        data-node-id={textNode.id}
+        className="h-6"
+        onClick={onClick}
+      />
+    );
+  }
+
+  // Image nodes render as ImageBlock
+  if (textNode.type === "img") {
+    return (
+      <ImageBlock
+        node={textNode}
+        isActive={isActive}
+        onClick={onClick}
+        onDelete={onDelete}
+        onDragStart={onImageDragStart}
+        isSelected={selectedImageIds?.has(textNode.id)}
+        onToggleSelection={onToggleImageSelection}
+        onClickWithModifier={onClickWithModifier}
+      />
+    );
+  }
+
+  // Video nodes render as VideoBlock
+  if (textNode.type === "video") {
+    return (
+      <VideoBlock
+        node={textNode}
+        isActive={isActive}
+        onClick={onClick}
+        onDelete={onDelete}
+        onDragStart={onImageDragStart}
+        isSelected={selectedImageIds?.has(textNode.id)}
+        onToggleSelection={onToggleImageSelection}
+        onClickWithModifier={onClickWithModifier}
+      />
+    );
+  }
+
   // Common props for all elements
   const commonProps = {
     key: textNode.id,
@@ -898,6 +904,7 @@ export const Block = React.memo(function Block({
           anchorElement={commandMenuAnchor}
           nodeId={textNode.id}
           onUploadImage={onUploadImage}
+          onUploadVideo={onUploadVideo}
         />
       )}
     </>

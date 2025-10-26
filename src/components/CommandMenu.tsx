@@ -54,6 +54,7 @@ interface CommandMenuProps {
   anchorElement: HTMLElement | null;
   nodeId: string; // ID of the block being transformed
   onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler
+  onUploadVideo?: (file: File) => Promise<string>; // Custom video upload handler
 }
 
 const commands: CommandOption[] = [
@@ -163,7 +164,8 @@ export function CommandMenu({
   onSelect, 
   anchorElement,
   nodeId,
-  onUploadImage
+  onUploadImage,
+  onUploadVideo
 }: CommandMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [search, setSearch] = useState('');
@@ -302,17 +304,15 @@ export function CommandMenu({
           // Use custom upload handler if provided
           let videoUrl: string;
           
-          if (onUploadImage) {
-            // Reuse the same handler for video uploads
+          if (onUploadVideo) {
+            // Use the dedicated video upload handler
+            videoUrl = await onUploadVideo(file);
+          } else if (onUploadImage) {
+            // Fallback: try to use image handler for videos (may work for some backends)
             videoUrl = await onUploadImage(file);
           } else {
-            // Fallback: use default upload (works for videos too)
-            const { uploadImage } = await import('../lib/utils/image-upload');
-            const result = await uploadImage(file);
-            if (!result.success || !result.url) {
-              throw new Error(result.error || "Upload failed");
-            }
-            videoUrl = result.url;
+            // No custom handler: default only supports images
+            throw new Error("Video upload requires a custom handler. Pass onUploadVideo prop to the Editor component.");
           }
           
           // Update with actual video URL
