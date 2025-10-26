@@ -243,7 +243,7 @@ export interface SelectionInfo {
   };
   
   /** Active element type on the selection (if all selected text has the same type) */
-  elementType?: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'li' | 'blockquote' | null;
+  elementType?: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote' | 'li' | 'ol' | null;
   
   /** Active link href on the selection (if all selected text has the same href) */
   href?: string | null;

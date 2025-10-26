@@ -21,7 +21,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { Switch } from "./ui/switch";
-import { useEditor, EditorActions } from "../lib";
+import { useEditorState, useEditorDispatch, EditorActions } from "../lib";
 import { useToast } from "@/hooks/use-toast";
 import { tailwindClasses } from "../lib/tailwind-classes";
 import {
@@ -36,7 +36,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function CustomClassPopover() {
-  const [state, dispatch] = useEditor();
+  const state = useEditorState();
+  const dispatch = useEditorDispatch();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -153,7 +154,7 @@ export function CustomClassPopover() {
     dispatch(
       EditorActions.setCurrentSelection({
         ...savedSelectionRef.current,
-        formats: { bold: false, italic: false, underline: false },
+        formats: { bold: false, italic: false, underline: false, strikethrough: false, code: false },
       })
     );
 

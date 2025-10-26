@@ -13,32 +13,20 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
-import { useEditor, EditorActions } from '../lib';
+import { useEditorState, useEditorDispatch, EditorActions, type SelectionInfo } from '../lib';
 import { useToast } from '@/hooks/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export function LinkPopover() {
-  const [state, dispatch] = useEditor();
+  const state = useEditorState();
+  const dispatch = useEditorDispatch();
   const { toast } = useToast();
   const [hrefInput, setHrefInput] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   
   // Store the selection in a ref so it persists when focus changes
-  const savedSelectionRef = useRef<{
-    nodeId: string;
-    start: number;
-    end: number;
-    text: string;
-    href?: string | null;
-    formats: {
-      bold: boolean;
-      italic: boolean;
-      underline: boolean;
-    };
-    elementType?: 'p' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'code' | 'blockquote' | null;
-    className?: string | null;
-  } | null>(null);
+  const savedSelectionRef = useRef<SelectionInfo | null>(null);
 
   // Track selection and position the floating icon
   useEffect(() => {
@@ -50,8 +38,14 @@ export function LinkPopover() {
         end: state.currentSelection.end,
         text: state.currentSelection.text,
         href: state.currentSelection.href,
-        formats: state.currentSelection.formats,
-        elementType: state.currentSelection.elementType,
+        formats: {
+          bold: state.currentSelection.formats.bold || false,
+          italic: state.currentSelection.formats.italic || false,
+          underline: state.currentSelection.formats.underline || false,
+          strikethrough: (state.currentSelection.formats as any).strikethrough || false,
+          code: (state.currentSelection.formats as any).code || false,
+        },
+        elementType: state.currentSelection.elementType as any,
         className: state.currentSelection.className,
       };
       

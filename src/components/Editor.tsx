@@ -11,7 +11,6 @@
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
-  useEditor,
   EditorActions,
   type TextNode,
   type EditorNode,
@@ -23,10 +22,15 @@ import {
   isTextNode,
   isContainerNode,
   ContainerNode,
-  useSelectionManager,
-  useSelection,
   findNodeById,
 } from "../lib";
+import {
+  useEditorStore,
+  useEditorDispatch,
+  useContainer,
+  useSelectionManager,
+  useSelection,
+} from "../lib/store/editor-store";
 import { findNodeInTree } from "../lib/utils/editor-helpers";
 import { AddBlockButton } from "./AddBlockButton";
 import { CustomClassPopover } from "./CustomClassPopover";
@@ -111,6 +115,7 @@ import { CoverImage } from "./CoverImage";
 import { ExportFloatingButton } from "./ExportFloatingButton";
 import { TemplateSwitcherButton } from "./TemplateSwitcherButton";
 import { Button } from "./ui/button";
+import { VirtualizedBlockList } from "./archieve/VirtualizedBlockList";
 
 /**
  * Editor Component Props
@@ -120,6 +125,8 @@ interface EditorProps {
   onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler - should return the uploaded image URL
   notionBased?: boolean; // Enable Notion-style features (cover image, first header spacing) - default: true
   onNotionBasedChange?: (notionBased: boolean) => void; // Callback when notion mode is toggled
+  // enableVirtualization?: boolean; // Enable virtualization for better performance with many blocks - default: false
+  // virtualizationThreshold?: number; // Number of blocks before virtualization kicks in - default: 50
 }
 
 export function Editor({
@@ -127,8 +134,19 @@ export function Editor({
   onUploadImage,
   notionBased = true,
   onNotionBasedChange,
-}: EditorProps = {}) {
-  const [state, dispatch] = useEditor();
+}: // enableVirtualization = false,
+// virtualizationThreshold = 50,
+EditorProps = {}) {
+  // ✅ OPTIMIZATION: Subscribe to specific state pieces instead of full state
+  // This prevents Editor from re-rendering on every state change
+  const activeNodeId = useEditorStore((state) => state.activeNodeId);
+  const historyIndex = useEditorStore((state) => state.historyIndex);
+  const historyLength = useEditorStore((state) => state.history.length);
+  const coverImage = useEditorStore((state) => state.coverImage);
+  const currentSelection = useEditorStore((state) => state.currentSelection);
+
+  const dispatch = useEditorDispatch();
+  const container = useContainer();
   const selectionManager = useSelectionManager();
   const { toast } = useToast();
   const lastEnterTime = useRef<number>(0);
@@ -173,17 +191,13 @@ export function Editor({
   const [insertComponentModalOpen, setInsertComponentModalOpen] =
     useState(false);
 
-  // Get the current container from history
-  const container = state.history[state.historyIndex];
+  // Container is now obtained from useContainer hook above
 
-  const currentNode = state.activeNodeId
-    ? (container.children.find((n) => n.id === state.activeNodeId) as
+  const currentNode = activeNodeId
+    ? (container.children.find((n) => n.id === activeNodeId) as
         | TextNode
         | undefined)
     : (container.children[0] as TextNode | undefined);
-
-  console.log("🎨 [Editor] Current Node:", currentNode);
-  console.log("🎨 [Editor] Current Selection:", state.currentSelection);
 
   // Debounced dispatch for selection state updates
   const selectionDispatchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -191,7 +205,12 @@ export function Editor({
   // Create handler parameters
   const selectionParams = {
     container,
-    state,
+    state: {
+      activeNodeId,
+      historyIndex,
+      history: [container],
+      currentSelection,
+    } as any, // Minimal state object for handlers
     dispatch,
     selectionManager,
     nodeRefs,
@@ -222,7 +241,7 @@ export function Editor({
   const fileUploadParams = {
     container,
     dispatch,
-    state,
+    state: { activeNodeId, historyIndex, history: [container] } as any,
     toast,
     setIsUploading,
     fileInputRef,
@@ -233,7 +252,7 @@ export function Editor({
   const videoUploadParams = {
     container,
     dispatch,
-    state,
+    state: { activeNodeId, historyIndex, history: [container] } as any,
     toast,
     setIsUploading,
     fileInputRef: videoInputRef,
@@ -244,7 +263,7 @@ export function Editor({
   const freeImageUploadParams = {
     container,
     dispatch,
-    state,
+    state: { activeNodeId, historyIndex, history: [container] } as any,
     toast,
     setIsUploading,
     fileInputRef: freeImageInputRef,
@@ -255,7 +274,7 @@ export function Editor({
   // Create all handlers
   const handleSelectionChange = useCallback(
     createHandleSelectionChange(selectionParams, selectionDispatchTimerRef),
-    [container, state.activeNodeId, selectionManager, dispatch]
+    [container, activeNodeId, selectionManager, dispatch]
   );
 
   const handleFormat = useCallback(createHandleFormat(selectionParams), [
@@ -450,8 +469,6 @@ export function Editor({
     [container, dispatch, toast, editorContentRef, tableInsertionTargetId]
   );
 
-  console.log("🎨 [Editor] Table Insertion Target ID:", tableInsertionTargetId);
-
   const handleCopyHtml = useCallback(
     () =>
       createHandleCopyHtml({ toast }, enhanceSpaces, setCopiedHtml)(container),
@@ -499,12 +516,12 @@ export function Editor({
 
   const handleFileChange = useCallback(
     createHandleFileChange(fileUploadParams),
-    [container, dispatch, state, toast, onUploadImage]
+    [container, dispatch, activeNodeId, toast, onUploadImage]
   );
 
   const handleMultipleFilesChange = useCallback(
     createHandleMultipleFilesChange(fileUploadParams),
-    [container, dispatch, state, toast, onUploadImage]
+    [container, dispatch, activeNodeId, toast, onUploadImage]
   );
 
   const handleImageUploadClick = useCallback(
@@ -524,12 +541,12 @@ export function Editor({
 
   const handleVideoFileChange = useCallback(
     createHandleFileChange(videoUploadParams),
-    [container, dispatch, state.activeNodeId, toast, onUploadImage]
+    [container, dispatch, activeNodeId, toast, onUploadImage]
   );
 
   const handleFreeImageFileChange = useCallback(
     createHandleFreeImageFileChange(freeImageUploadParams),
-    [container, dispatch, state, toast, onUploadImage]
+    [container, dispatch, activeNodeId, toast, onUploadImage]
   );
 
   const handleFreeImageUploadClick = useCallback(
@@ -641,9 +658,9 @@ export function Editor({
 
   // Focus on current node when it changes
   useEffect(() => {
-    if (!state.activeNodeId) return;
+    if (!activeNodeId) return;
 
-    const activeId = state.activeNodeId;
+    const activeId = activeNodeId;
 
     const attemptFocus = (retries = 0) => {
       const element = nodeRefs.current.get(activeId);
@@ -661,7 +678,7 @@ export function Editor({
     };
 
     attemptFocus();
-  }, [state.activeNodeId]);
+  }, [activeNodeId]);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -742,8 +759,7 @@ export function Editor({
 
         // Insert media nodes after current active node
         const targetId =
-          state.activeNodeId ||
-          container.children[container.children.length - 1]?.id;
+          activeNodeId || container.children[container.children.length - 1]?.id;
 
         if (mediaFiles.length === 1) {
           // Single media file - insert directly
@@ -811,7 +827,7 @@ export function Editor({
     };
   }, [
     readOnly,
-    state.activeNodeId,
+    activeNodeId,
     container,
     dispatch,
     toast,
@@ -900,7 +916,7 @@ export function Editor({
           return;
         }
         e.preventDefault();
-        if (state.historyIndex > 0) {
+        if (historyIndex > 0) {
           dispatch(EditorActions.undo());
         }
       }
@@ -918,7 +934,7 @@ export function Editor({
           return;
         }
         e.preventDefault();
-        if (state.historyIndex < state.history.length - 1) {
+        if (historyIndex < historyLength - 1) {
           dispatch(EditorActions.redo());
         }
       }
@@ -927,11 +943,11 @@ export function Editor({
       if (
         (e.key === "ArrowUp" || e.key === "ArrowDown") &&
         isInEditor &&
-        state.activeNodeId
+        activeNodeId
       ) {
         const currentElement = activeElement as HTMLElement;
         const currentNodeId =
-          currentElement?.getAttribute("data-node-id") || state.activeNodeId;
+          currentElement?.getAttribute("data-node-id") || activeNodeId;
 
         // Find the current node and its siblings
         const result = findNodeInTree(currentNodeId, container);
@@ -1009,11 +1025,19 @@ export function Editor({
     return () => {
       document.removeEventListener("keydown", handleGlobalKeyDown);
     };
-  }, [state.historyIndex, state.history.length, dispatch, toast, handleFormat]);
+  }, [
+    historyIndex,
+    historyLength,
+    activeNodeId,
+    dispatch,
+    toast,
+    handleFormat,
+    container,
+  ]);
 
+  console.log("Editor re-rendered");
   return (
     <div className="bg-background transition-colors flex flex-col flex-1 duration-300">
-      <Button onClick={() => dispatch(EditorActions.redo())}>Redo</Button>
       {/* Editor with integrated toolbar */}
       <div className="mx-auto flex flex-col flex-1 w-full">
         <QuickModeToggle
@@ -1034,7 +1058,7 @@ export function Editor({
             onCreateTable={() => setTableDialogOpen(true)}
           />
         )}
-        <Card className="shadow-2xl relative flex flex-col flex-1 rounded-none border-2 gap-3 transition-all duration-300">
+        <Card className="shadow-2xl py-0 relative flex flex-col flex-1 rounded-none border-2 gap-3 transition-all duration-300">
           {/* Table Dialog */}
           <TableDialog
             open={tableDialogOpen}
@@ -1097,195 +1121,202 @@ export function Editor({
               readOnly ? "py-14 md:py-20" : ""
             }`}
           >
-            <div ref={editorContentRef}>
-              {/* Cover Image - Only in Notion mode */}
-              {notionBased && (
-                <CoverImage onUploadImage={onUploadImage} readOnly={readOnly} />
-              )}
+            <div ref={editorContentRef} className="h-full">
+              <>
+                {/* Cover Image - Only in Notion mode for non-virtualized */}
+                {notionBased && (
+                  <CoverImage
+                    onUploadImage={onUploadImage}
+                    readOnly={readOnly}
+                  />
+                )}
 
-              <div
-                data-editor-content
-                className={`${
-                  notionBased && state.coverImage
-                    ? "pt-[280px] lg:pt-[420px]"
-                    : notionBased
-                    ? "pt-[50px]"
-                    : "pt-4"
-                } px-10 transition-all duration-300`}
-              >
-                {container.children.map((node, index) => {
-                  const isText = isTextNode(node);
-                  const textNode = isText ? (node as TextNode) : null;
+                <div
+                  data-editor-content
+                  className={`${
+                    notionBased && coverImage
+                      ? "pt-[280px] lg:pt-[420px]"
+                      : notionBased
+                      ? "pt-[50px]"
+                      : "pt-4"
+                  } px-10 transition-all duration-300`}
+                >
+                  {container.children.map((node, index) => {
+                    const isText = isTextNode(node);
+                    const textNode = isText ? (node as TextNode) : null;
 
-                  // Skip free-positioned images - they'll be rendered separately
-                  if (
-                    textNode &&
-                    textNode.type === "img" &&
-                    textNode.attributes?.isFreePositioned
-                  ) {
-                    return null;
-                  }
+                    // Skip free-positioned images - they'll be rendered separately
+                    if (
+                      textNode &&
+                      textNode.type === "img" &&
+                      textNode.attributes?.isFreePositioned
+                    ) {
+                      return null;
+                    }
 
-                  // Use stable key based only on node.id to prevent unnecessary remounts
-                  // Previously included children.length which caused remounts on every edit
-                  const nodeKey = node.id;
+                    // Use stable key based only on node.id to prevent unnecessary remounts
+                    // Previously included children.length which caused remounts on every edit
+                    const nodeKey = node.id;
 
-                  const isFirstBlock = index === 0;
-                  const isSecondBlock = index === 1;
+                    const isFirstBlock = index === 0;
+                    const isSecondBlock = index === 1;
 
-                  return (
-                    <div className="mx-auto max-w-6xl w-full" key={nodeKey}>
-                      {/* Add block button before first block */}
-                      {!readOnly && isFirstBlock && (
-                        <AddBlockButton
-                          onAdd={() => handleAddBlock(node.id, "before")}
-                          position="before"
-                        />
-                      )}
+                    return (
+                      <div className="mx-auto max-w-6xl w-full" key={nodeKey}>
+                        {/* Add block button before first block */}
+                        {!readOnly && isFirstBlock && (
+                          <AddBlockButton
+                            onAdd={() => handleAddBlock(node.id, "before")}
+                            position="before"
+                          />
+                        )}
 
-                      <div
-                        onDragEnter={(e) => handleDragEnter(e, node.id)}
-                        onDragOver={(e) => handleDragOver(e, node.id)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, node.id)}
-                        className={`
-                        relative transition-all
-                        ${
-                          dragOverNodeId === node.id &&
-                          dropPosition === "before" &&
-                          draggingNodeId !== node.id
-                            ? "before:absolute before:inset-x-0 before:-top-1 before:h-1 before:bg-primary/30 before:z-10 before:rounded-full"
-                            : ""
-                        }
-                        ${
-                          dragOverNodeId === node.id &&
-                          dropPosition === "after" &&
-                          draggingNodeId !== node.id
-                            ? "after:absolute after:inset-x-0 after:-bottom-1 after:h-1 after:bg-primary/30 after:z-10 after:rounded-full"
-                            : ""
-                        }
-                        ${
-                          dragOverNodeId === node.id &&
-                          dropPosition === "left" &&
-                          draggingNodeId !== node.id
-                            ? "before:absolute before:inset-y-0 before:-left-1 before:w-1 before:bg-blue-500/50 before:z-10 before:rounded-full"
-                            : ""
-                        }
-                        ${
-                          dragOverNodeId === node.id &&
-                          dropPosition === "right" &&
-                          draggingNodeId !== node.id
-                            ? "after:absolute after:inset-y-0 after:-right-1 after:w-1 after:bg-blue-500/50 after:z-10 after:rounded-full"
-                            : ""
-                        }
-                    `}
-                      >
-                        <Block
-                          key={`${node.id}-${node.type}`}
-                          node={node}
-                          isActive={state.activeNodeId === node.id}
-                          isFirstBlock={isFirstBlock}
-                          notionBased={notionBased}
-                          hasCoverImage={!!state.coverImage}
-                          onUploadCoverImage={onUploadImage}
-                          nodeRef={(el) => {
-                            if (el) {
-                              const elementNodeId =
-                                el.getAttribute("data-node-id");
-                              if (elementNodeId) {
-                                nodeRefs.current.set(elementNodeId, el);
-                              }
-
-                              if (textNode && elementNodeId === node.id) {
-                                const isCurrentlyFocused =
-                                  document.activeElement === el;
-                                const selection = window.getSelection();
-
-                                const hasActiveSelection =
-                                  selection &&
-                                  selection.rangeCount > 0 &&
-                                  !selection.isCollapsed;
-
-                                let selectionInThisElement = false;
-                                if (
-                                  hasActiveSelection &&
-                                  selection.rangeCount > 0
-                                ) {
-                                  const range = selection.getRangeAt(0);
-                                  selectionInThisElement = el.contains(
-                                    range.commonAncestorContainer
-                                  );
+                        <div
+                          onDragEnter={(e) => handleDragEnter(e, node.id)}
+                          onDragOver={(e) => handleDragOver(e, node.id)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, node.id)}
+                          className={`
+                          relative transition-all
+                          ${
+                            dragOverNodeId === node.id &&
+                            dropPosition === "before" &&
+                            draggingNodeId !== node.id
+                              ? "before:absolute before:inset-x-0 before:-top-1 before:h-1 before:bg-primary/30 before:z-10 before:rounded-full"
+                              : ""
+                          }
+                          ${
+                            dragOverNodeId === node.id &&
+                            dropPosition === "after" &&
+                            draggingNodeId !== node.id
+                              ? "after:absolute after:inset-x-0 after:-bottom-1 after:h-1 after:bg-primary/30 after:z-10 after:rounded-full"
+                              : ""
+                          }
+                          ${
+                            dragOverNodeId === node.id &&
+                            dropPosition === "left" &&
+                            draggingNodeId !== node.id
+                              ? "before:absolute before:inset-y-0 before:-left-1 before:w-1 before:bg-blue-500/50 before:z-10 before:rounded-full"
+                              : ""
+                          }
+                          ${
+                            dragOverNodeId === node.id &&
+                            dropPosition === "right" &&
+                            draggingNodeId !== node.id
+                              ? "after:absolute after:inset-y-0 after:-right-1 after:w-1 after:bg-blue-500/50 after:z-10 after:rounded-full"
+                              : ""
+                          }
+                      `}
+                        >
+                          <Block
+                            nodeId={node.id}
+                            isActive={activeNodeId === node.id}
+                            isFirstBlock={isFirstBlock}
+                            notionBased={notionBased}
+                            hasCoverImage={!!coverImage}
+                            onUploadCoverImage={onUploadImage}
+                            nodeRef={(el) => {
+                              if (el) {
+                                const elementNodeId =
+                                  el.getAttribute("data-node-id");
+                                if (elementNodeId) {
+                                  nodeRefs.current.set(elementNodeId, el);
                                 }
 
-                                // Check if node has inline children
-                                const nodeHasChildren =
-                                  textNode &&
-                                  Array.isArray(textNode.children) &&
-                                  textNode.children.length > 0;
+                                if (textNode && elementNodeId === node.id) {
+                                  const isCurrentlyFocused =
+                                    document.activeElement === el;
+                                  const selection = window.getSelection();
 
-                                if (
-                                  !isCurrentlyFocused &&
-                                  !nodeHasChildren &&
-                                  !hasActiveSelection &&
-                                  !selectionInThisElement
-                                ) {
-                                  const displayContent = textNode.content || "";
-                                  const currentContent = el.textContent || "";
+                                  const hasActiveSelection =
+                                    selection &&
+                                    selection.rangeCount > 0 &&
+                                    !selection.isCollapsed;
 
-                                  if (currentContent !== displayContent) {
-                                    el.textContent = displayContent;
+                                  let selectionInThisElement = false;
+                                  if (
+                                    hasActiveSelection &&
+                                    selection.rangeCount > 0
+                                  ) {
+                                    const range = selection.getRangeAt(0);
+                                    selectionInThisElement = el.contains(
+                                      range.commonAncestorContainer
+                                    );
+                                  }
+
+                                  // Check if node has inline children
+                                  const nodeHasChildren =
+                                    textNode &&
+                                    Array.isArray(textNode.children) &&
+                                    textNode.children.length > 0;
+
+                                  if (
+                                    !isCurrentlyFocused &&
+                                    !nodeHasChildren &&
+                                    !hasActiveSelection &&
+                                    !selectionInThisElement
+                                  ) {
+                                    const displayContent =
+                                      textNode.content || "";
+                                    const currentContent = el.textContent || "";
+
+                                    if (currentContent !== displayContent) {
+                                      el.textContent = displayContent;
+                                    }
                                   }
                                 }
+                              } else {
+                                nodeRefs.current.delete(node.id);
                               }
-                            } else {
-                              nodeRefs.current.delete(node.id);
+                            }}
+                            onInput={(element) =>
+                              handleContentChange(node.id, element)
                             }
-                          }}
-                          onInput={(element) =>
-                            handleContentChange(node.id, element)
-                          }
-                          onKeyDown={(e) => handleKeyDown(e, node.id)}
-                          onClick={() => handleNodeClick(node.id)}
-                          onDelete={(nodeId?: string) =>
-                            handleDeleteNode(nodeId || node.id)
-                          }
-                          onCreateNested={handleCreateNested}
-                          readOnly={readOnly}
-                          onImageDragStart={handleImageDragStart}
-                          onBlockDragStart={handleBlockDragStart}
-                          onChangeBlockType={handleChangeBlockType}
-                          onInsertImage={handleInsertImageFromCommand}
-                          onCreateList={handleCreateListFromCommand}
-                          onCreateTable={handleCreateTableFromCommand}
-                          onUploadImage={onUploadImage}
-                          selectedImageIds={selectedImageIds}
-                          onToggleImageSelection={handleToggleImageSelection}
-                          onClickWithModifier={handleClickWithModifier}
-                          onFlexContainerDragOver={handleFlexContainerDragOver}
-                          onFlexContainerDragLeave={
-                            handleFlexContainerDragLeave
-                          }
-                          onFlexContainerDrop={handleFlexContainerDrop}
-                          dragOverFlexId={dragOverFlexId}
-                          flexDropPosition={flexDropPosition}
-                          onSetDragOverNodeId={setDragOverNodeId}
-                          onSetDropPosition={setDropPosition}
-                          draggingNodeId={draggingNodeId}
-                          onSetDraggingNodeId={setDraggingNodeId}
-                        />
-                      </div>
+                            onKeyDown={(e) => handleKeyDown(e, node.id)}
+                            onClick={() => handleNodeClick(node.id)}
+                            onDelete={(nodeId?: string) =>
+                              handleDeleteNode(nodeId || node.id)
+                            }
+                            onCreateNested={handleCreateNested}
+                            readOnly={readOnly}
+                            onImageDragStart={handleImageDragStart}
+                            onBlockDragStart={handleBlockDragStart}
+                            onChangeBlockType={handleChangeBlockType}
+                            onInsertImage={handleInsertImageFromCommand}
+                            onCreateList={handleCreateListFromCommand}
+                            onCreateTable={handleCreateTableFromCommand}
+                            onUploadImage={onUploadImage}
+                            selectedImageIds={selectedImageIds}
+                            onToggleImageSelection={handleToggleImageSelection}
+                            onClickWithModifier={handleClickWithModifier}
+                            onFlexContainerDragOver={
+                              handleFlexContainerDragOver
+                            }
+                            onFlexContainerDragLeave={
+                              handleFlexContainerDragLeave
+                            }
+                            onFlexContainerDrop={handleFlexContainerDrop}
+                            dragOverFlexId={dragOverFlexId}
+                            flexDropPosition={flexDropPosition}
+                            onSetDragOverNodeId={setDragOverNodeId}
+                            onSetDropPosition={setDropPosition}
+                            draggingNodeId={draggingNodeId}
+                            onSetDraggingNodeId={setDraggingNodeId}
+                          />
+                        </div>
 
-                      {/* Add block button after each block */}
-                      {!readOnly && (
-                        <AddBlockButton
-                          onAdd={() => handleAddBlock(node.id, "after")}
-                          position="after"
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        {/* Add block button after each block */}
+                        {!readOnly && (
+                          <AddBlockButton
+                            onAdd={() => handleAddBlock(node.id, "after")}
+                            position="after"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             </div>
           </CardContent>
 
@@ -1303,7 +1334,7 @@ export function Editor({
               <FreeImageBlock
                 key={node.id}
                 node={node as TextNode}
-                isActive={state.activeNodeId === node.id}
+                isActive={activeNodeId === node.id}
                 onClick={() => handleNodeClick(node.id)}
                 onDelete={
                   readOnly ? undefined : () => handleDeleteNode(node.id)
@@ -1318,7 +1349,7 @@ export function Editor({
       {/* LinkPopover and CustomClassPopover are now integrated directly into SelectionToolbar */}
       {!readOnly && (
         <SelectionToolbar
-          selection={state.currentSelection}
+          selection={currentSelection}
           selectedColor={selectedColor}
           onFormat={handleFormat}
           onTypeChange={(type) => handleTypeChange(type as TextNode["type"])}
@@ -1357,7 +1388,15 @@ export function Editor({
       {/* Template Switcher Button - Bottom Left */}
       {!readOnly && (
         <TemplateSwitcherButton
-          currentState={state}
+          currentState={
+            {
+              activeNodeId,
+              historyIndex,
+              history: [container],
+              currentSelection,
+              coverImage,
+            } as any
+          }
           onTemplateChange={(newState) => {
             dispatch({ type: "SET_STATE", payload: { state: newState } });
           }}

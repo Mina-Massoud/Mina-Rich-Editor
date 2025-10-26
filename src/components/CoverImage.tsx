@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useEditor } from "@/lib/context/EditorContext";
+import { useEditorState, useEditorDispatch } from "@/lib/store/editor-store";
 import { EditorActions } from "@/lib/reducer/actions";
 import { Button } from "@/components/ui/button";
 import { 
@@ -19,7 +19,8 @@ interface CoverImageProps {
 }
 
 export function CoverImage({ onUploadImage, readOnly = false }: CoverImageProps) {
-  const [state, dispatch] = useEditor();
+  const state = useEditorState();
+  const dispatch = useEditorDispatch();
   const { coverImage } = state;
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);

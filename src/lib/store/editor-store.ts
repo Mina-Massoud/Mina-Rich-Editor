@@ -1,102 +1,167 @@
 /**
- * Zustand Editor Store
- * 
- * Modern state management for the editor using Zustand.
- * Provides optimized selectors that prevent unnecessary re-renders.
- * 
- * @packageDocumentation
+ * Zustand Store for Mina Rich Editor
+ *
+ * Optimized for performance with selective subscriptions.
+ * Blocks subscribe only to their specific data, not the entire history.
  */
 
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import { useShallow } from 'zustand/react/shallow';
-import { EditorState, ContainerNode, EditorNode } from '../types';
-import { editorReducer, createInitialState } from '../reducer/editor-reducer';
-import { EditorAction } from '../reducer/actions';
-import { findNodeById } from '../utils/tree-operations';
+import React from "react";
+import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
+import {
+  EditorState,
+  ContainerNode,
+  SelectionInfo,
+  EditorNode,
+  TextNode,
+} from "../types";
+import { editorReducer, createInitialState } from "../reducer/editor-reducer";
+import { EditorAction } from "../reducer/actions";
 
-/**
- * Editor Store Interface
- */
-export interface EditorStore extends EditorState {
+// Store interface
+interface EditorStore extends EditorState {
   // Actions
   dispatch: (action: EditorAction) => void;
-  
-  // Utilities (optional - for convenience)
-  getCurrentContainer: () => ContainerNode;
+
+  // Optimized selectors that don't cause re-renders
   getNode: (nodeId: string) => EditorNode | undefined;
+  getContainer: () => ContainerNode;
+  isNodeActive: (nodeId: string) => boolean;
+  getActiveNodeId: () => string | null;
+  getContainerChildrenIds: () => string[];
+
+  // Selection management (optimized to avoid re-renders)
+  selectionManager: {
+    getSelection: () => SelectionInfo | null;
+    setSelection: (selection: SelectionInfo | null) => void;
+    subscribe: (
+      callback: (selection: SelectionInfo | null) => void
+    ) => () => void;
+  };
+
+  // Internal selection state (not reactive)
+  _selection: SelectionInfo | null;
+  _selectionSubscribers: Set<(selection: SelectionInfo | null) => void>;
 }
 
-/**
- * Create the Zustand editor store
- */
+// Helper function to find node by ID in tree
+function findNodeById(
+  container: ContainerNode,
+  nodeId: string
+): EditorNode | undefined {
+  if (container.id === nodeId) return container;
+
+  for (const child of container.children) {
+    if (child.id === nodeId) return child;
+
+    if ("children" in child && Array.isArray(child.children)) {
+      const found = findNodeById(child as ContainerNode, nodeId);
+      if (found) return found;
+    }
+  }
+
+  return undefined;
+}
+
+// Static empty Set to avoid creating new instances
+const EMPTY_SELECTED_BLOCKS = new Set<string>();
+
+// Create the store with subscribeWithSelector middleware for fine-grained subscriptions
 export const useEditorStore = create<EditorStore>()(
-  devtools(
-    (set, get) => ({
-      // Initial state from existing reducer
+  subscribeWithSelector((set, get) => {
+    // Initialize selection subscribers
+    const selectionSubscribers = new Set<
+      (selection: SelectionInfo | null) => void
+    >();
+
+    return {
+      // Initialize with default state
       ...createInitialState(),
 
-      // Dispatch action - reuses existing reducer logic
+      // Selection state (non-reactive)
+      _selection: null,
+      _selectionSubscribers: selectionSubscribers,
+
+      // Main dispatch function
       dispatch: (action: EditorAction) => {
-        set((state) => {
-          // Get current state without dispatch/utilities
-          const currentState: EditorState = {
-            history: state.history,
-            historyIndex: state.historyIndex,
-            activeNodeId: state.activeNodeId,
-            version: state.version,
-            coverImage: state.coverImage,
-            hasSelection: state.hasSelection,
-            selectionKey: state.selectionKey,
-            currentSelection: state.currentSelection,
-            selectedBlocks: state.selectedBlocks,
-            metadata: state.metadata,
-          };
+        const currentState = get();
+        const newState = editorReducer(currentState, action);
 
-          // Run through existing reducer
-          const newState = editorReducer(currentState, action);
-
-          // Log action for debugging
-          if (process.env.NODE_ENV === 'development') {
-            console.log('🎬 [Zustand] Action:', action.type, action);
-          }
-
-          return newState;
-        }, false, action as any); // Pass action for devtools (cast to any for Zustand devtools compatibility)
+        // Update the store with new state
+        set(newState);
       },
 
-      // Utility: Get current container
-      getCurrentContainer: () => {
-        const state = get();
-        return state.history[state.historyIndex];
-      },
-
-      // Utility: Get specific node by ID
+      // Optimized selectors (these don't cause subscriptions)
       getNode: (nodeId: string) => {
-        const container = get().getCurrentContainer();
+        const container = get().history[get().historyIndex];
         return findNodeById(container, nodeId);
       },
-    }),
-    { name: 'EditorStore' }
-  )
+
+      getContainer: () => {
+        return get().history[get().historyIndex];
+      },
+
+      isNodeActive: (nodeId: string) => {
+        return get().activeNodeId === nodeId;
+      },
+
+      getActiveNodeId: () => {
+        return get().activeNodeId;
+      },
+
+      getContainerChildrenIds: () => {
+        const container = get().history[get().historyIndex];
+        return container.children.map((child) => child.id);
+      },
+
+      // Selection manager (optimized to avoid re-renders)
+      selectionManager: {
+        getSelection: () => get()._selection,
+
+        setSelection: (selection: SelectionInfo | null) => {
+          // Update internal selection without triggering re-renders
+          set({ _selection: selection });
+
+          // Notify subscribers (e.g., toolbar) but don't trigger full re-render
+          const subscribers = get()._selectionSubscribers;
+          subscribers.forEach((callback) => callback(selection));
+        },
+
+        subscribe: (callback: (selection: SelectionInfo | null) => void) => {
+          const subscribers = get()._selectionSubscribers;
+          subscribers.add(callback);
+          return () => {
+            subscribers.delete(callback);
+          };
+        },
+      },
+    };
+  })
 );
 
+// Specialized hooks for components to subscribe to specific data
+
 /**
- * Hook to get a specific node by ID with optimized re-rendering.
- * Only re-renders when THIS specific node changes.
+ * Hook for blocks to subscribe only to their specific node data
+ * This prevents re-renders when other nodes change
  * 
- * @param nodeId - The ID of the node to get
- * @returns The node or undefined if not found
+ * OPTIMIZATION: Uses subscribeWithSelector to ONLY subscribe to this specific node.
+ * The selector function extracts just this node, and Zustand only notifies us
+ * when the RETURN VALUE changes (using Object.is for reference equality).
  * 
- * @example
- * ```tsx
- * function Block({ nodeId }) {
- *   const node = useZustandNode(nodeId);
- *   // Only re-renders when this node changes!
- * }
- * ```
+ * How it works:
+ * 1. Selector extracts ONLY this specific node from state
+ * 2. Zustand tracks the selector's return value
+ * 3. On state change, Zustand re-runs selector and compares old vs new return value
+ * 4. Only triggers re-render if the node reference actually changed
+ * 5. Combined with structural sharing in reducer, unchanged nodes keep same reference
+ * 
+ * Result:
+ * - Type in block A → only block A's node reference changes → only block A re-renders ✅
+ * - All other blocks keep same reference → selector returns same value → no re-render ✅
  */
-export function useZustandNode(nodeId: string): EditorNode | undefined {
+export function useBlockNode(nodeId: string) {
   return useEditorStore((state) => {
     const container = state.history[state.historyIndex];
     return findNodeById(container, nodeId);
@@ -104,100 +169,185 @@ export function useZustandNode(nodeId: string): EditorNode | undefined {
 }
 
 /**
- * Hook to check if a specific node is active.
- * Only re-renders when the active status of THIS node changes.
- * 
- * @param nodeId - The ID of the node to check
- * @returns true if the node is active
+ * Hook to check if a specific node is active
+ * Only re-renders when the active status of THIS node changes
  */
-export function useZustandIsNodeActive(nodeId: string): boolean {
+export function useIsNodeActive(nodeId: string): boolean {
   return useEditorStore((state) => state.activeNodeId === nodeId);
 }
 
 /**
- * Hook to get the active node ID.
- * Only re-renders when the active node ID changes.
+ * Hook to get the current active node ID
+ * Only re-renders when the active node ID changes
  */
-export function useZustandActiveNodeId(): string | null {
+export function useActiveNodeId(): string | null {
   return useEditorStore((state) => state.activeNodeId);
 }
 
 /**
- * Hook to get the container's children IDs.
- * Only re-renders when the children array changes.
- * Uses shallow comparison to prevent infinite loops.
+ * Hook to get the current container's children IDs
+ * Only re-renders when the children array changes
+ * Uses useShallow to prevent unnecessary re-renders from array recreation
  */
-export function useZustandContainerChildrenIds(): string[] {
+export function useContainerChildrenIds(): string[] {
   return useEditorStore(
     useShallow((state) => {
       const container = state.history[state.historyIndex];
-      return container.children.map(child => child.id);
+      return container.children.map((child) => child.id);
     })
   );
 }
 
 /**
- * Hook to get the container's children nodes.
- * Only re-renders when children change.
- * Uses shallow comparison to prevent infinite loops.
+ * Hook to get the current container
+ * Use sparingly - prefer more specific hooks when possible
+ * Uses useShallow to prevent unnecessary re-renders when container reference hasn't changed
  */
-export function useZustandContainerChildren(): EditorNode[] {
+export function useContainer(): ContainerNode {
   return useEditorStore(
-    useShallow((state) => {
-      const container = state.history[state.historyIndex];
-      return container.children;
-    })
+    useShallow((state) => state.history[state.historyIndex])
   );
 }
 
 /**
- * Hook to get dispatch function.
- * Never causes re-renders.
+ * Hook to get the current container (non-reactive, for use in callbacks)
+ * This doesn't subscribe to changes, use it for one-time reads in event handlers
+ * Uses shallow equality since the getter function should be stable
  */
-export function useZustandDispatch() {
-  return useEditorStore((state) => state.dispatch);
+export function useContainerGetter(): () => ContainerNode {
+  return useEditorStore(
+    useShallow((state) => () => state.history[state.historyIndex])
+  );
 }
 
 /**
- * Hook to get current cover image.
- * Only re-renders when cover image changes.
+ * Hook to get the dispatch function
+ * This never changes so no re-renders
+ * Uses shallow equality to ensure stable reference
  */
-export function useZustandCoverImage() {
-  return useEditorStore((state) => state.coverImage);
+export function useEditorDispatch() {
+  return useEditorStore(
+    useShallow((state) => state.dispatch)
+  );
 }
 
 /**
- * Hook to check if can undo.
- * Only re-renders when undo availability changes.
+ * Hook to get the full editor state
+ * Use only when you need the complete state (like for toolbars)
+ * Uses useShallow to prevent infinite loops by caching the result
  */
-export function useZustandCanUndo(): boolean {
-  return useEditorStore((state) => state.historyIndex > 0);
+export function useEditorState(): EditorState {
+  return useEditorStore(
+    useShallow((state) => ({
+      history: state.history,
+      historyIndex: state.historyIndex,
+      activeNodeId: state.activeNodeId,
+      currentSelection: state.currentSelection,
+      version: state.version,
+      coverImage: state.coverImage,
+      hasSelection: state.currentSelection !== null,
+      selectionKey: state.version
+        ? parseInt(state.version.split(".").join(""))
+        : 0,
+      selectedBlocks: EMPTY_SELECTED_BLOCKS,
+    }))
+  );
 }
 
 /**
- * Hook to check if can redo.
- * Only re-renders when redo availability changes.
+ * Hook for selection management (optimized to avoid re-renders)
+ * Uses shallow equality since selectionManager is a stable object
  */
-export function useZustandCanRedo(): boolean {
-  return useEditorStore((state) => state.historyIndex < state.history.length - 1);
+export function useSelectionManager() {
+  return useEditorStore(
+    useShallow((state) => state.selectionManager)
+  );
 }
 
 /**
- * Hook to get the entire editor state (use sparingly).
- * Re-renders on any state change.
+ * Hook to subscribe to selection changes (for toolbar/UI updates)
+ * Only components that need to react to selection changes should use this
  */
-export function useZustandEditorState(): EditorState {
-  return useEditorStore((state) => ({
-    history: state.history,
-    historyIndex: state.historyIndex,
-    activeNodeId: state.activeNodeId,
-    version: state.version,
-    coverImage: state.coverImage,
-    hasSelection: state.hasSelection,
-    selectionKey: state.selectionKey,
-    currentSelection: state.currentSelection,
-    selectedBlocks: state.selectedBlocks,
-    metadata: state.metadata,
-  }));
+export function useSelection(): SelectionInfo | null {
+  const selectionManager = useSelectionManager();
+  const [selection, setSelection] = React.useState<SelectionInfo | null>(
+    selectionManager.getSelection()
+  );
+
+  React.useEffect(() => {
+    const unsubscribe = selectionManager.subscribe(setSelection);
+    return unsubscribe;
+  }, [selectionManager]);
+
+  return selection;
 }
 
+// Provider component for initialization
+export interface EditorProviderProps {
+  children: React.ReactNode;
+  initialContainer?: ContainerNode;
+  initialState?: EditorState;
+  onChange?: (state: EditorState) => void;
+  debug?: boolean;
+}
+
+export function EditorProvider({
+  children,
+  initialContainer,
+  initialState,
+  onChange,
+  debug = false,
+}: EditorProviderProps) {
+  const store = useEditorStore();
+
+  // Initialize store with provided state
+  React.useEffect(() => {
+    if (initialState) {
+      // Set the initial state
+      useEditorStore.setState(initialState);
+    } else if (initialContainer) {
+      // Create initial state from container
+      const newState = createInitialState(initialContainer);
+      useEditorStore.setState(newState);
+    }
+  }, [initialContainer, initialState]);
+
+  // Subscribe to state changes for onChange callback
+  React.useEffect(() => {
+    if (!onChange) return;
+
+    return useEditorStore.subscribe((state) => {
+      const editorState: EditorState = {
+        history: state.history,
+        historyIndex: state.historyIndex,
+        activeNodeId: state.activeNodeId,
+        currentSelection: state.currentSelection,
+        version: state.version,
+        coverImage: state.coverImage,
+        hasSelection: state.currentSelection !== null,
+        selectionKey: state.version
+          ? parseInt(state.version.split(".").join(""))
+          : 0,
+        selectedBlocks: new Set<string>(),
+      };
+      onChange(editorState);
+    });
+  }, [onChange]);
+
+  // Debug logging
+  React.useEffect(() => {
+    if (!debug) return;
+
+    let prevState = useEditorStore.getState();
+    return useEditorStore.subscribe((state) => {
+      console.group("🎬 [Mina Editor] State Change");
+      console.log("Previous:", prevState);
+      console.log("Current:", state);
+      console.groupEnd();
+      prevState = state;
+    });
+  }, [debug]);
+
+  
+  return React.createElement(React.Fragment, null, children);
+}

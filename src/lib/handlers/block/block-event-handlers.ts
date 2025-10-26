@@ -19,7 +19,7 @@ export interface BlockEventHandlerParams {
   onChangeBlockType?: (nodeId: string, newType: string) => void;
   onInsertImage?: (nodeId: string) => void;
   onCreateList?: (nodeId: string, listType: string) => void;
-  currentContainer: ContainerNode;
+  currentContainer: ContainerNode | (() => ContainerNode); // Can be value or getter for optimization
   dispatch: React.Dispatch<EditorAction>;
   localRef: React.RefObject<HTMLElement | null>;
   isComposingRef: React.MutableRefObject<boolean>;
@@ -59,6 +59,15 @@ export function createHandleInput(params: Pick<BlockEventHandlerParams, 'textNod
     const { textNode, readOnly, onInput, onChangeBlockType, showCommandMenu, setShowCommandMenu, setCommandMenuAnchor, shouldPreserveSelectionRef } = params;
     const element = e.currentTarget;
     const text = element.textContent || "";
+
+    // DEBUG: Log what user is typing
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📝 [INPUT] Block ${textNode.id}:`, {
+        text,
+        innerHTML: element.innerHTML,
+        currentNodeContent: textNode.content,
+      });
+    }
 
     // Check if this is a header block (h1) - headers don't show command menu
     const isHeaderBlock = textNode.type === 'h1';
@@ -101,6 +110,19 @@ export function createHandleKeyDown(params: BlockEventHandlerParams) {
       currentContainer,
       dispatch,
     } = params;
+
+    // DEBUG: Log key presses
+    if (process.env.NODE_ENV === 'development' && e.key === 'Enter') {
+      const element = e.currentTarget;
+      console.log(`⏎ [ENTER] Block ${textNode.id}:`, {
+        key: e.key,
+        shiftKey: e.shiftKey,
+        textContent: element.textContent,
+        innerHTML: element.innerHTML,
+        currentNodeContent: textNode.content,
+        nodeType: textNode.type,
+      });
+    }
 
     // Close command menu on Escape
     if (e.key === "Escape" && showCommandMenu) {
@@ -147,8 +169,11 @@ export function createHandleKeyDown(params: BlockEventHandlerParams) {
       e.preventDefault();
       e.stopPropagation();
 
+      // Get current container (call it if it's a getter function)
+      const container = typeof currentContainer === 'function' ? currentContainer() : currentContainer;
+      
       // Find the parent container
-      const parent = findParentById(currentContainer, textNode.id);
+      const parent = findParentById(container, textNode.id);
 
       if (parent) {
         // Create a new list item with the same type

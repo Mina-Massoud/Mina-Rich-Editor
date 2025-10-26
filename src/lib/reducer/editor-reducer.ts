@@ -46,11 +46,23 @@ const MAX_HISTORY_SIZE = 100;
 /**
  * Add a new container state to history
  * This truncates any "future" history if we're not at the end
+ * 
+ * TEMPORARY: History disabled - directly update current state without tracking
  */
 function addToHistory(
   state: EditorState,
   newContainer: ContainerNode
 ): EditorState {
+  // HISTORY DISABLED: Update current position instead of adding to history
+  const newHistory = [...state.history];
+  newHistory[state.historyIndex] = newContainer;
+
+  return {
+    ...state,
+    history: newHistory,
+  };
+
+  /* ORIGINAL CODE - RE-ENABLE TO RESTORE HISTORY:
   // No need to clone - the container is already immutable from tree operations
 
   // Get current history up to the current index
@@ -74,6 +86,7 @@ function addToHistory(
     history: newHistory,
     historyIndex: newHistory.length - 1,
   };
+  */
 }
 
 /**

@@ -14,7 +14,7 @@ import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
 import { ElementSelector, type ElementType } from "./ElementSelector";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { useEditor, EditorActions } from "../lib";
+import { useEditorState, useEditorDispatch, EditorActions } from "../lib";
 import { useToast } from "@/hooks/use-toast";
 import { tailwindClasses } from "../lib/tailwind-classes";
 import {
@@ -52,7 +52,8 @@ export function SelectionToolbar({
   onColorSelect,
   onFontSizeSelect,
 }: SelectionToolbarProps) {
-  const [state, dispatch] = useEditor();
+  const state = useEditorState();
+  const dispatch = useEditorDispatch();
   const { toast } = useToast();
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [isVisible, setIsVisible] = useState(false);
@@ -245,6 +246,8 @@ export function SelectionToolbar({
   };
   const hasExistingLink = Boolean(savedSelectionRef.current?.href);
 
+
+
   return (
     <AnimatePresence mode="wait">
       {position &&
@@ -255,7 +258,7 @@ export function SelectionToolbar({
             exit={{ opacity: 0 }}
             ref={toolbarRef}
             className={cn(
-              "fixed z-[200] duration-200",
+              "absolute z-[200] duration-200",
               "inline-flex items-stretch rounded-lg shadow-md pointer-events-auto",
               "bg-popover/95 backdrop-blur-sm border border-border/50",
               "text-sm leading-tight"
@@ -393,14 +396,7 @@ export function SelectionToolbar({
               className="h-6 my-auto mx-1.5 bg-border/50"
             />
 
-            {/* More Options */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-md hover:bg-accent/50 transition-colors duration-75"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
+          
           </motion.div>
         )}
     </AnimatePresence>

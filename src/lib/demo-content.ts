@@ -448,13 +448,6 @@ export function createDemoContent(
     } as TextNode,
 
     {
-      id: `h3-${timestamp}-version-8`,
-      type: "h3",
-      content: "📊 Table Support (from v0.1.0)",
-      attributes: {},
-    } as TextNode,
-
-    {
       id: `p-${timestamp}-version-8a`,
       type: "p",
       content:

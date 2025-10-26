@@ -12,7 +12,7 @@ import { Card } from "./ui/card";
 import { X, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
-import { useEditor } from "../lib/context/EditorContext";
+import { useEditorDispatch } from "../lib/store/editor-store";
 
 interface ImageBlockProps {
   node: TextNode;
@@ -35,7 +35,7 @@ export function ImageBlock({
   onToggleSelection,
   onClickWithModifier,
 }: ImageBlockProps) {
-  const [, dispatch] = useEditor();
+  const dispatch = useEditorDispatch();
   const [imageError, setImageError] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeSide, setResizeSide] = useState<"left" | "right" | null>(null);

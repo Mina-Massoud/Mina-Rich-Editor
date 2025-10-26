@@ -12,7 +12,7 @@ import { Editor } from "@/components/Editor";
 export default function Home() {
   const [readOnly, setReadOnly] = useState(false);
   const [showHero, setShowHero] = useState(true);
-  
+
   // Toggle between modes: true = Notion-style (with cover & header), false = Rich Editor (clean blocks)
   const [notionBased, setNotionBased] = useState(true);
 
@@ -30,12 +30,12 @@ export default function Home() {
     const container: ContainerNode = {
       id: "root",
       type: "container",
-      children: notionBased ? createDemoContent() : createEmptyContent(),
+      children: createDemoContent(),
       attributes: {},
     };
-    
+
     const state = createInitialState(container);
-    
+
     // Add cover image for Notion mode
     if (notionBased) {
       state.coverImage = {
@@ -44,7 +44,7 @@ export default function Home() {
         position: 50,
       };
     }
-    
+
     return state;
   }, [notionBased]);
 
@@ -118,10 +118,7 @@ export default function Home() {
                 }}
                 className="w-full flex-1 min-h-screen flex flex-col"
               >
-                <EditorProvider
-                  initialState={initialState}
-                  debug={true}
-                >
+                <EditorProvider initialState={initialState} debug={true}>
                   <Editor
                     readOnly={readOnly}
                     onUploadImage={handleImageUpload}

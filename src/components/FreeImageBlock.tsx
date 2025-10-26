@@ -11,7 +11,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { TextNode } from "../lib";
 import { X, ImageIcon, Loader2, Move } from "lucide-react";
 import { Button } from "./ui/button";
-import { useEditor } from "../lib/context/EditorContext";
+import { useEditorDispatch } from "../lib/store/editor-store";
 import { EditorActions } from "@/lib/reducer/actions";
 
 interface FreeImageBlockProps {
@@ -29,7 +29,7 @@ export function FreeImageBlock({
   onDelete,
   readOnly = false,
 }: FreeImageBlockProps) {
-  const [, dispatch] = useEditor();
+  const dispatch = useEditorDispatch();
   const [imageError, setImageError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);

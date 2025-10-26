@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { MediaUploadPopover } from "./MediaUploadPopover";
 import { Separator } from "./ui/separator";
 import { CardContent } from "./ui/card";
@@ -32,8 +32,30 @@ export function EditorToolbar({
   onCreateList,
   onCreateTable,
 }: EditorToolbarProps) {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Measure toolbar height and set it as CSS variable
+    const updateToolbarHeight = () => {
+      if (toolbarRef.current) {
+        const height = toolbarRef.current.offsetHeight;
+        document.documentElement.style.setProperty('--toolbar-height', `${height + 4}px`);
+      }
+    };
+
+    // Update on mount and when window resizes
+    updateToolbarHeight();
+    window.addEventListener('resize', updateToolbarHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateToolbarHeight);
+    };
+  }, []);
+
   return (
-    <CardContent className="p-2 md:p-3 sticky z-[100] w-full top-0 backdrop-blur-2xl border-b mx-auto transition-all duration-300 bg-background/30">
+    <CardContent 
+      ref={toolbarRef}
+      className="p-2 md:p-3 sticky z-[100] w-full top-0 backdrop-blur-2xl border-b mx-auto transition-all duration-300 bg-background/30">
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-center max-w-4xl lg:px-6 mx-auto w-full gap-2 md:gap-3">
         {/* Insert Elements */}
         <div className="flex items-center gap-1.5 md:gap-2 flex-wrap justify-center">

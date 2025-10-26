@@ -1,11 +1,11 @@
 /**
- * Block Component - Clean Version
+ * Block Component - Zustand Version
  *
  * Represents a single editable block (paragraph, heading, etc.)
  * Handles its own rendering, editing, and event handling.
  * Supports recursive rendering of nested blocks via ContainerNode.
  *
- * CLEAN VERSION - All handlers extracted to separate modules
+ * ZUSTAND VERSION - Uses selective subscriptions for optimal performance
  */
 
 "use client";
@@ -21,7 +21,12 @@ import {
 import { ImageBlock } from "./ImageBlock";
 import { VideoBlock } from "./VideoBlock";
 import { CommandMenu } from "./CommandMenu";
-import { useEditor } from "../lib/context/EditorContext";
+import { 
+  useBlockNode, 
+  useIsNodeActive, 
+  useEditorDispatch, 
+  useEditorStore
+} from "../lib/store/editor-store";
 import { GripVertical, Plus } from "lucide-react";
 import { BlockContextMenu } from "./BlockContextMenu";
 import { FlexContainer } from "./FlexContainer";
@@ -81,7 +86,7 @@ import {
 } from "../lib/handlers/block/block-styles";
 
 interface BlockProps {
-  node: EditorNode;
+  nodeId: string; // Changed: pass ID instead of full node to prevent re-renders
   isActive: boolean;
   nodeRef: (el: HTMLElement | null) => void;
   onInput: (element: HTMLElement) => void;
@@ -116,8 +121,11 @@ interface BlockProps {
   onSetDraggingNodeId?: (nodeId: string | null) => void;
 }
 
-export function Block({
-  node,
+// Cache for tracking node changes across renders
+const nodeCache = new Map<string, EditorNode>();
+
+export const Block = React.memo(function Block({
+  nodeId,
   isActive,
   nodeRef,
   onInput,
@@ -151,6 +159,16 @@ export function Block({
   draggingNodeId,
   onSetDraggingNodeId,
 }: BlockProps) {
+  // ✅ OPTIMIZATION: Subscribe to ONLY this node's data
+  // Thanks to structural sharing, this only causes re-render when THIS node changes
+  const node = useBlockNode(nodeId);
+  
+  // If node not found, return null (shouldn't happen but safe guard)
+  if (!node) {
+    console.warn(`Block: Node ${nodeId} not found`);
+    return null;
+  }
+
   const localRef = useRef<HTMLElement | null>(null);
   const isComposingRef = useRef(false);
   const shouldPreserveSelectionRef = useRef(false);
@@ -158,9 +176,17 @@ export function Block({
   const coverImageInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
 
-  console.log("🎨 [Block] Node:", node);
-  // Get editor context for direct state manipulation (needed for table updates)
-  const [state, dispatch] = useEditor();
+  // DEV: Track renders to verify optimization
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔄testBlock ${nodeId} render #${renderCountRef.current}`);
+  }
+  
+  // ZUSTAND: Get dispatch function (never changes, no re-renders)
+  const dispatch = useEditorDispatch();
+
 
   // Command menu state
   const [showCommandMenu, setShowCommandMenu] = useState(false);
@@ -226,7 +252,7 @@ export function Block({
           const blockContent = (
             <Block
               key={childNode.id}
-              node={childNode}
+              nodeId={childNode.id}
               isActive={isActive}
               nodeRef={nodeRef}
               onInput={onInput}
@@ -297,7 +323,7 @@ export function Block({
             return (
               <Block
                 key={childNode.id}
-                node={childNode}
+                nodeId={childNode.id}
                 isActive={isActive}
                 nodeRef={nodeRef}
                 onInput={onInput}
@@ -386,9 +412,6 @@ export function Block({
     );
   }
 
-  // Get current container from state (already have dispatch from top of component)
-  const currentContainer = state.history[state.historyIndex];
-
   // Build HTML callback
   const memoizedBuildHTML = useCallback(() => {
     return buildHTML(textNode, readOnly);
@@ -468,7 +491,8 @@ export function Block({
       onChangeBlockType,
       onInsertImage,
       onCreateList,
-      currentContainer,
+      // ✅ Pass getter function - only called when needed, doesn't cause re-renders
+      currentContainer: () => useEditorStore.getState().history[useEditorStore.getState().historyIndex],
       dispatch,
       localRef,
       isComposingRef,
@@ -483,7 +507,6 @@ export function Block({
       onKeyDown,
       onCreateNested,
       showCommandMenu,
-      currentContainer,
       dispatch,
     ]
   );
@@ -700,7 +723,7 @@ export function Block({
     contentEditable: !readOnly,
     suppressContentEditableWarning: true,
     ...(placeholder ? { placeholder } : {}),
-    className: `
+    className: `!ml-5
       ${isListItem ? "relative" : ""} 
       ${getTypeClassName(textNode.type)}
       ${className}
@@ -879,4 +902,112 @@ export function Block({
       )}
     </>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  // Return true if props are equal (component should NOT re-render)
+  // Return false if props are different (component SHOULD re-render)
+  
+  // IMPORTANT: We must check if node content changed, because if memo returns true,
+  // the component body never executes, so useBlockNode() never runs, and content
+  // changes would never be detected!
+  
+  const DEBUG = process.env.NODE_ENV === 'development';
+  
+  // Check if the node ID changed (critical prop)
+  if (prevProps.nodeId !== nextProps.nodeId) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → nodeId changed:`, prevProps.nodeId, '→', nextProps.nodeId);
+    return false;
+  }
+  
+  // Get the current node from store to check if its content changed
+  const { useEditorStore } = require('../lib/store/editor-store');
+  const store = useEditorStore.getState();
+  const currentNode = store.getNode(nextProps.nodeId);
+  
+  // Check if node reference changed (thanks to Zustand structural sharing)
+  const cachedNode = nodeCache.get(nextProps.nodeId);
+  
+  // Update cache with current node for next comparison
+  nodeCache.set(nextProps.nodeId, currentNode);
+  
+  // If node reference changed, content must have changed
+  // This is the KEY optimization - structural sharing ensures same reference = same data
+  if (cachedNode !== undefined && cachedNode !== currentNode) {
+    if (DEBUG) {
+      console.log(`🔄 Block ${nextProps.nodeId} → node data changed in store`);
+      console.log('  Previous node:', cachedNode);
+      console.log('  Current node:', currentNode);
+    }
+    return false;
+  }
+  
+  // Check if active state changed
+  if (prevProps.isActive !== nextProps.isActive) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → isActive changed:`, prevProps.isActive, '→', nextProps.isActive);
+    return false;
+  }
+  
+  // Check if read-only state changed
+  if (prevProps.readOnly !== nextProps.readOnly) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → readOnly changed:`, prevProps.readOnly, '→', nextProps.readOnly);
+    return false;
+  }
+  
+  // Check if depth changed
+  if (prevProps.depth !== nextProps.depth) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → depth changed:`, prevProps.depth, '→', nextProps.depth);
+    return false;
+  }
+  
+  // Check if drag-related props changed
+  if (prevProps.draggingNodeId !== nextProps.draggingNodeId) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → draggingNodeId changed:`, prevProps.draggingNodeId, '→', nextProps.draggingNodeId);
+    return false;
+  }
+  if (prevProps.dragOverFlexId !== nextProps.dragOverFlexId) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → dragOverFlexId changed:`, prevProps.dragOverFlexId, '→', nextProps.dragOverFlexId);
+    return false;
+  }
+  if (prevProps.flexDropPosition !== nextProps.flexDropPosition) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → flexDropPosition changed:`, prevProps.flexDropPosition, '→', nextProps.flexDropPosition);
+    return false;
+  }
+  
+  // Check if first block status changed
+  if (prevProps.isFirstBlock !== nextProps.isFirstBlock) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → isFirstBlock changed:`, prevProps.isFirstBlock, '→', nextProps.isFirstBlock);
+    return false;
+  }
+  if (prevProps.notionBased !== nextProps.notionBased) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → notionBased changed:`, prevProps.notionBased, '→', nextProps.notionBased);
+    return false;
+  }
+  if (prevProps.hasCoverImage !== nextProps.hasCoverImage) {
+    if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → hasCoverImage changed:`, prevProps.hasCoverImage, '→', nextProps.hasCoverImage);
+    return false;
+  }
+  
+  // Check if selectedImageIds set changed
+  if (prevProps.selectedImageIds !== nextProps.selectedImageIds) {
+    // Deep comparison for Set
+    if (prevProps.selectedImageIds?.size !== nextProps.selectedImageIds?.size) {
+      if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → selectedImageIds size changed:`, prevProps.selectedImageIds?.size, '→', nextProps.selectedImageIds?.size);
+      return false;
+    }
+    if (prevProps.selectedImageIds && nextProps.selectedImageIds) {
+      for (const id of prevProps.selectedImageIds) {
+        if (!nextProps.selectedImageIds.has(id)) {
+          if (DEBUG) console.log(`🔄 Block ${prevProps.nodeId} → selectedImageIds content changed`);
+          return false;
+        }
+      }
+    }
+  }
+  
+  // All callback functions are stable references from parent, no need to compare
+  // The node data itself is fetched via useBlockNode(nodeId) inside the component
+  // so changes to the node will be detected via Zustand subscriptions
+  
+  if (DEBUG) console.log(`✅ Block ${prevProps.nodeId} → memo skipped re-render (props unchanged)`);
+  return true; // Props are equal, skip re-render
+});

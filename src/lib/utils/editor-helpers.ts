@@ -1,16 +1,25 @@
 /**
  * Editor Helper Functions
- * 
+ *
  * Utility functions used by the SimpleEditor component
  */
 
-import { TextNode, EditorNode, ContainerNode, isContainerNode, SelectionInfo, InlineText } from '../types';
+import {
+  TextNode,
+  EditorNode,
+  ContainerNode,
+  isContainerNode,
+  SelectionInfo,
+  InlineText,
+} from "../types";
 
 /**
  * Parse DOM element back into inline children structure
  * This preserves formatting when user types in a formatted block
  */
-export function parseDOMToInlineChildren(element: HTMLElement): TextNode["children"] {
+export function parseDOMToInlineChildren(
+  element: HTMLElement
+): TextNode["children"] {
   const children: TextNode["children"] = [];
 
   const walkNode = (
@@ -37,7 +46,7 @@ export function parseDOMToInlineChildren(element: HTMLElement): TextNode["childr
     if (node.nodeType === Node.TEXT_NODE) {
       // Direct text node - use inherited formatting
       const content = node.textContent || "";
-      
+
       const hasAnyFormatting =
         inheritedFormats.bold ||
         inheritedFormats.italic ||
@@ -46,7 +55,7 @@ export function parseDOMToInlineChildren(element: HTMLElement): TextNode["childr
         inheritedFormats.code ||
         inheritedFormats.className ||
         inheritedFormats.elementType;
-      
+
       // Always add content if it exists OR if it's empty but has formatting
       // This prevents structure changes when user deletes the last character
       if (content || hasAnyFormatting) {
@@ -170,7 +179,7 @@ export function parseDOMToInlineChildren(element: HTMLElement): TextNode["childr
             currentFormats.code ||
             currentFormats.className ||
             currentFormats.elementType;
-          
+
           if (hasAnyFormatting) {
             children.push({
               content: "",
@@ -209,10 +218,10 @@ export function parseDOMToInlineChildren(element: HTMLElement): TextNode["childr
     if (child.content && child.content.length > 0) {
       return true;
     }
-    
+
     // If content is empty, only keep it if it has any formatting attributes
     // This prevents the structure from changing when user deletes the last character
-    const hasFormatting = 
+    const hasFormatting =
       child.bold ||
       child.italic ||
       child.underline ||
@@ -222,7 +231,7 @@ export function parseDOMToInlineChildren(element: HTMLElement): TextNode["childr
       child.elementType ||
       child.href ||
       child.styles;
-    
+
     return hasFormatting;
   });
 }
@@ -270,10 +279,27 @@ export function detectFormatsInRange(
   if (!node.children || node.children.length === 0) {
     // For nodes without inline children, use the node's type as elementType if it's a heading
     // Note: 'code' is excluded from element types - it's only a block-level type, not inline
-    const nodeElementType = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'li'].includes(node.type)
-      ? (node.type as "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "li" | "blockquote")
+    const nodeElementType = [
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "blockquote",
+      "li",
+    ].includes(node.type)
+      ? (node.type as
+          | "h1"
+          | "h2"
+          | "h3"
+          | "h4"
+          | "h5"
+          | "h6"
+          | "li"
+          | "blockquote")
       : null;
-    
+
     return {
       bold: node.attributes?.bold === true,
       italic: node.attributes?.italic === true,
@@ -398,9 +424,7 @@ export function detectFormatsInRange(
     className: allSameClassName ? firstClassName || null : null,
     styles: allSameStyles ? firstStyles || null : null,
   };
-  
-  console.log('🎨 [Selection] Detected formats:', { className: detectedFormats.className, href: detectedFormats.href, elementType: detectedFormats.elementType, bold: detectedFormats.bold, italic: detectedFormats.italic, underline: detectedFormats.underline, strikethrough: detectedFormats.strikethrough, code: detectedFormats.code, styles: detectedFormats.styles });
-  
+
   return detectedFormats;
 }
 
@@ -524,4 +548,3 @@ export function restoreSelection(
     }
   }
 }
-

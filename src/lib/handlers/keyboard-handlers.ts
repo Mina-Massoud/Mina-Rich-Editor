@@ -40,16 +40,31 @@ export function createHandleContentChange(
     // Get the current text content (from plain content or inline children)
     const currentContent = getNodeTextContent(node);
 
+    // DEBUG: Log content change detection
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`💾 [CONTENT CHANGE] Block ${nodeId}:`, {
+        newContent,
+        currentContent,
+        changed: newContent !== currentContent,
+      });
+    }
+
     // Only update if content actually changed
     if (newContent !== currentContent) {
       // Clear any existing timer for this node
       const existingTimer = contentUpdateTimers.current.get(nodeId);
       if (existingTimer) {
         clearTimeout(existingTimer);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`⏱️  [DEBOUNCE] Cleared existing timer for ${nodeId}`);
+        }
       }
 
       // Small debounce (50ms) for better performance while avoiding content loss
       const timer = setTimeout(() => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`✅ [SAVE] Dispatching content update for ${nodeId}:`, newContent);
+        }
         // Auto-detect ordered list pattern: "1. ", "2. ", etc. (only with space)
       const orderedListMatch = newContent.match(/^(\d+)\.\s(.+)$/);
       // Auto-detect unordered list pattern: "- " or "* "

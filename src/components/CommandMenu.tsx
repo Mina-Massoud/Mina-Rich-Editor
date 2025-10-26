@@ -37,7 +37,7 @@ import {
   Video,
   Table,
 } from 'lucide-react';
-import { useEditor, EditorActions } from '@/lib';
+import { useEditorDispatch, EditorActions } from '@/lib';
 
 export interface CommandOption {
   label: string;
@@ -170,7 +170,7 @@ export function CommandMenu({
   const [isUploading, setIsUploading] = useState(false);
   const commandRef = useRef<HTMLDivElement>(null);
 
-  const [, dispatch] = useEditor();
+  const dispatch = useEditorDispatch();
 
   // Handle command selection - for image/video, we'll use dispatch directly here
   const handleSelect = useCallback(async (commandValue: string) => {

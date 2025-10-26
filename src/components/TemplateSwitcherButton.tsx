@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -28,6 +28,7 @@ import {
   User,
   Zap,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { getAllTemplateMetadata, getTemplateById, type TemplateMetadata } from "../lib/templates";
 import type { EditorState } from "../lib/types";
@@ -62,8 +63,17 @@ export function TemplateSwitcherButton({
   const [selectedCategory, setSelectedCategory] = useState<TemplateMetadata["category"] | "all">("all");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const allTemplates = getAllTemplateMetadata();
+  
+  // Reset scroll position when category changes or dialog opens
+  useEffect(() => {
+    if (scrollContainerRef.current && isOpen) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [selectedCategory, isOpen]);
   
   const filteredTemplates = selectedCategory === "all" 
     ? allTemplates 
@@ -97,9 +107,11 @@ export function TemplateSwitcherButton({
   };
 
   const handleTemplateSelect = (templateId: string) => {
+    // Set the pending template ID immediately for UI feedback
+    setPendingTemplateId(templateId);
+    
     // Check if there's existing content
     if (hasExistingContent()) {
-      setPendingTemplateId(templateId);
       setShowConfirmDialog(true);
       return;
     }
@@ -108,11 +120,17 @@ export function TemplateSwitcherButton({
     applyTemplate(templateId);
   };
 
-  const applyTemplate = (templateId: string) => {
+  const applyTemplate = async (templateId: string) => {
     const template = getTemplateById(templateId);
     if (!template) return;
 
-    // Create new state with template content
+    setIsApplying(true);
+
+    // Small delay for smoother UX
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Create completely fresh state with template content
+    // This ensures all editor state is properly reset
     const newState: EditorState = {
       version: "1.0.0",
       history: [
@@ -128,18 +146,42 @@ export function TemplateSwitcherButton({
       hasSelection: false,
       selectionKey: 0,
       currentSelection: null,
-      selectedBlocks: new Set(),
+      selectedBlocks: new Set<string>(),
       coverImage: template.coverImage || null,
       metadata: {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        templateId: template.metadata.id,
+        templateName: template.metadata.name,
       },
     };
 
+    // Apply the new state
     onTemplateChange(newState);
+    
+    // Close dialogs
     setIsOpen(false);
     setShowConfirmDialog(false);
     setPendingTemplateId(null);
+    setIsApplying(false);
+
+    // Force a complete cleanup and re-render
+    setTimeout(() => {
+      // Clear any browser selection and focus
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+      }
+      
+      // Remove focus from any active element
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement && activeElement.blur) {
+        activeElement.blur();
+      }
+
+      // Force scroll to top to show new template from the beginning
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
   };
 
   const handleConfirmReplace = () => {
@@ -158,7 +200,10 @@ export function TemplateSwitcherButton({
       {/* Floating Button */}
       <div className="fixed bottom-6 left-6 z-50">
         <Button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            setIsOpen(true);
+            setSelectedCategory("all"); // Reset to all templates when opening
+          }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           className={cn(
@@ -217,22 +262,26 @@ export function TemplateSwitcherButton({
           </div>
 
           {/* Templates Grid */}
-          <div className="flex-1 overflow-y-auto pt-4">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 px-1 pb-2">
               {filteredTemplates.map((template) => {
                 const CategoryIcon = categoryIcons[template.category];
+                const isCurrentlyApplying = isApplying && pendingTemplateId === template.id;
                 
                 return (
                   <button
                     key={template.id}
                     onClick={() => handleTemplateSelect(template.id)}
+                    disabled={isApplying}
                     className={cn(
                       "group relative p-6 rounded-xl border border-border/60",
                       "hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10",
                       "hover:bg-accent/30 hover:scale-[1.02]",
                       "transition-all duration-300 ease-out",
                       "backdrop-blur-sm bg-background/50",
-                      "text-left"
+                      "text-left",
+                      isApplying && !isCurrentlyApplying && "opacity-50 cursor-not-allowed",
+                      isCurrentlyApplying && "border-primary/80 shadow-lg shadow-primary/20 scale-[1.02]"
                     )}
                   >
                     {/* Category badge */}
@@ -241,6 +290,13 @@ export function TemplateSwitcherButton({
                         <CategoryIcon className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
+
+                    {/* Loading overlay */}
+                    {isCurrentlyApplying && (
+                      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    )}
 
                     {/* Icon */}
                     <div className="text-5xl mb-4 transition-transform duration-200 group-hover:scale-110">
