@@ -33,12 +33,12 @@ const MAX_HISTORY_SIZE = 100;
 
 /**
  * NOTE: We removed the deepCloneContainer function that was here before.
- * 
- * Deep cloning was destroying structural sharing! The tree operations 
- * (updateNodeById, deleteNodeById, etc.) already return new immutable trees 
+ *
+ * Deep cloning was destroying structural sharing! The tree operations
+ * (updateNodeById, deleteNodeById, etc.) already return new immutable trees
  * with structural sharing - unchanged nodes keep their original references.
- * 
- * Deep cloning would create new references for ALL nodes, causing ALL React 
+ *
+ * Deep cloning would create new references for ALL nodes, causing ALL React
  * components to re-render even when their data didn't change. By removing it,
  * only components whose nodes actually changed will re-render.
  */
@@ -46,23 +46,11 @@ const MAX_HISTORY_SIZE = 100;
 /**
  * Add a new container state to history
  * This truncates any "future" history if we're not at the end
- * 
- * TEMPORARY: History disabled - directly update current state without tracking
  */
 function addToHistory(
   state: EditorState,
   newContainer: ContainerNode
 ): EditorState {
-  // HISTORY DISABLED: Update current position instead of adding to history
-  const newHistory = [...state.history];
-  newHistory[state.historyIndex] = newContainer;
-
-  return {
-    ...state,
-    history: newHistory,
-  };
-
-  /* ORIGINAL CODE - RE-ENABLE TO RESTORE HISTORY:
   // No need to clone - the container is already immutable from tree operations
 
   // Get current history up to the current index
@@ -86,7 +74,6 @@ function addToHistory(
     history: newHistory,
     historyIndex: newHistory.length - 1,
   };
-  */
 }
 
 /**
@@ -176,24 +163,26 @@ export function editorReducer(
     case "DELETE_NODE": {
       const { id } = action.payload;
       const currentContainer = state.history[state.historyIndex];
-      
+
       // Check if this is the only h1 header block in the root container
       const isH1Block = currentContainer.children.find((child) => {
         if (isTextNode(child)) {
           const textChild = child as TextNode;
-          return textChild.id === id && textChild.type === 'h1';
+          return textChild.id === id && textChild.type === "h1";
         }
         return false;
       });
-      
+
       // If it's an h1 and it's the only child, don't delete - just clear content
       if (isH1Block && currentContainer.children.length === 1) {
-        console.warn("Cannot delete the last h1 header block. Clearing content instead.");
+        console.warn(
+          "Cannot delete the last h1 header block. Clearing content instead."
+        );
         const newContainer = updateNodeById(currentContainer, id, () => ({
           content: "",
           children: undefined,
         })) as ContainerNode;
-        
+
         return addToHistory(
           {
             ...state,
@@ -205,7 +194,7 @@ export function editorReducer(
           newContainer
         );
       }
-      
+
       const result = deleteNodeById(currentContainer, id);
 
       // If the root container was deleted, prevent it
@@ -227,7 +216,7 @@ export function editorReducer(
           },
         };
         resultContainer.children = [defaultNode];
-        
+
         return addToHistory(
           {
             ...state,
@@ -449,10 +438,23 @@ export function editorReducer(
 
       const { nodeId, start, end } = state.currentSelection;
 
+      console.log(
+        "📍 Target node:",
+        nodeId,
+        "Range:",
+        start,
+        "-",
+        end,
+        "Element type:",
+        elementType
+      );
+
       const currentContainer = state.history[state.historyIndex];
       const node = findNodeById(currentContainer, nodeId) as
         | TextNode
         | undefined;
+
+      console.log("🔍 Found node:", node);
 
       if (!node || !isTextNode(node)) {
         console.warn("❌ Node not found or not a text node");
@@ -536,6 +538,8 @@ export function editorReducer(
     case "TOGGLE_FORMAT": {
       const { format } = action.payload;
 
+      console.group("🎨 [TOGGLE_FORMAT] Reducer executing");
+
       if (!state.currentSelection) {
         console.warn("❌ Cannot toggle format without active selection");
         console.groupEnd();
@@ -544,10 +548,14 @@ export function editorReducer(
 
       const { nodeId, start, end, formats } = state.currentSelection;
 
+      console.log("📍 Target node:", nodeId, "Range:", start, "-", end);
+
       const currentContainer = state.history[state.historyIndex];
       const node = findNodeById(currentContainer, nodeId) as
         | TextNode
         | undefined;
+
+      console.log("🔍 Found node:", node);
 
       if (!node || !isTextNode(node)) {
         console.warn("❌ Node not found or not a text node");
@@ -558,9 +566,25 @@ export function editorReducer(
       const isActive = formats[format];
 
       // Convert node to inline children if it's still plain content
-      const children = hasInlineChildren(node)
+      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
+      // So we need to get the actual text content from the selection or use what we have
+      let children = hasInlineChildren(node)
         ? node.children!
         : [{ content: node.content || "" }];
+
+      // If we have empty content but the selection has text, use the selection text
+      // This handles the case where nested blocks haven't synced their content yet
+      if (
+        !hasInlineChildren(node) &&
+        !node.content &&
+        state.currentSelection.text
+      ) {
+        children = [{ content: state.currentSelection.text }];
+        console.log(
+          "⚠️ Using selection text as content source:",
+          state.currentSelection.text
+        );
+      }
 
       // Build new children array by splitting segments that overlap with selection
       const newChildren: typeof node.children = [];
@@ -598,7 +622,8 @@ export function editorReducer(
             bold: format === "bold" ? !isActive : child.bold,
             italic: format === "italic" ? !isActive : child.italic,
             underline: format === "underline" ? !isActive : child.underline,
-            strikethrough: format === "strikethrough" ? !isActive : child.strikethrough,
+            strikethrough:
+              format === "strikethrough" ? !isActive : child.strikethrough,
             code: format === "code" ? !isActive : child.code,
           });
 
@@ -616,8 +641,15 @@ export function editorReducer(
 
       // Ensure there's always a text node at the end to allow cursor escape
       const lastChild = newChildren[newChildren.length - 1];
-      const hasFormatting = lastChild && (lastChild.bold || lastChild.italic || lastChild.underline || lastChild.strikethrough || lastChild.code || lastChild.elementType);
-      
+      const hasFormatting =
+        lastChild &&
+        (lastChild.bold ||
+          lastChild.italic ||
+          lastChild.underline ||
+          lastChild.strikethrough ||
+          lastChild.code ||
+          lastChild.elementType);
+
       if (hasFormatting) {
         // Add non-breaking space for cursor positioning (regular space gets collapsed by browser)
         newChildren.push({ content: "\u00A0" });
@@ -628,6 +660,13 @@ export function editorReducer(
         content: undefined, // Clear simple content
         children: newChildren, // Set inline children
       })) as ContainerNode;
+
+      console.log("✅ Updated node in tree, new children:", newChildren);
+      console.log("📦 New container:", newContainer);
+
+      // Verify the update worked by finding the node again
+      const updatedNode = findNodeById(newContainer, nodeId);
+      console.log("🔍 Verification - node after update:", updatedNode);
 
       // Update the selection's format state
       const newSelection = {
@@ -678,9 +717,23 @@ export function editorReducer(
       }
 
       // Convert node to inline children if it's still plain content
-      const children = hasInlineChildren(node)
+      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
+      let children = hasInlineChildren(node)
         ? node.children!
         : [{ content: node.content || "" }];
+      
+      // If we have empty content but the selection has text, use the selection text
+      if (
+        !hasInlineChildren(node) &&
+        !node.content &&
+        state.currentSelection.text
+      ) {
+        children = [{ content: state.currentSelection.text }];
+        console.log(
+          "⚠️ [APPLY_CUSTOM_CLASS] Using selection text as content source:",
+          state.currentSelection.text
+        );
+      }
 
       // Build new children array by splitting segments that overlap with selection
       const newChildren: typeof node.children = [];
@@ -784,9 +837,23 @@ export function editorReducer(
       }
 
       // Convert node to inline children if it's still plain content
-      const children = hasInlineChildren(node)
+      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
+      let children = hasInlineChildren(node)
         ? node.children!
         : [{ content: node.content || "" }];
+      
+      // If we have empty content but the selection has text, use the selection text
+      if (
+        !hasInlineChildren(node) &&
+        !node.content &&
+        state.currentSelection.text
+      ) {
+        children = [{ content: state.currentSelection.text }];
+        console.log(
+          "⚠️ [APPLY_INLINE_STYLE] Using selection text as content source:",
+          state.currentSelection.text
+        );
+      }
 
       // Build new children array by splitting segments that overlap with selection
       const newChildren: typeof node.children = [];
@@ -886,9 +953,23 @@ export function editorReducer(
       }
 
       // Convert node to inline children if it's still plain content
-      const children = hasInlineChildren(node)
+      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
+      let children = hasInlineChildren(node)
         ? node.children!
         : [{ content: node.content || "" }];
+      
+      // If we have empty content but the selection has text, use the selection text
+      if (
+        !hasInlineChildren(node) &&
+        !node.content &&
+        state.currentSelection.text
+      ) {
+        children = [{ content: state.currentSelection.text }];
+        console.log(
+          "⚠️ [APPLY_LINK] Using selection text as content source:",
+          state.currentSelection.text
+        );
+      }
 
       // Build new children array by splitting segments that overlap with selection
       const newChildren: typeof node.children = [];
@@ -981,9 +1062,23 @@ export function editorReducer(
       }
 
       // Convert node to inline children if it's still plain content
-      const children = hasInlineChildren(node)
+      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
+      let children = hasInlineChildren(node)
         ? node.children!
         : [{ content: node.content || "" }];
+      
+      // If we have empty content but the selection has text, use the selection text
+      if (
+        !hasInlineChildren(node) &&
+        !node.content &&
+        state.currentSelection.text
+      ) {
+        children = [{ content: state.currentSelection.text }];
+        console.log(
+          "⚠️ [REMOVE_LINK] Using selection text as content source:",
+          state.currentSelection.text
+        );
+      }
 
       // Build new children array by splitting segments that overlap with selection
       const newChildren: typeof node.children = [];
@@ -1200,7 +1295,7 @@ export function createInitialState(
 ): EditorState {
   // If container is provided, use it; otherwise create with at least one empty block
   let defaultChildren = container?.children;
-  
+
   // If no children provided or empty array, create a default empty heading
   if (!defaultChildren || defaultChildren.length === 0) {
     const timestamp = Date.now();
@@ -1214,7 +1309,7 @@ export function createInitialState(
     };
     defaultChildren = [defaultNode];
   }
-  
+
   const initialContainer: ContainerNode = {
     id: "root",
     type: "container",

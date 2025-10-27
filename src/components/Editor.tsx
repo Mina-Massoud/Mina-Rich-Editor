@@ -926,7 +926,7 @@ EditorProps = {}) {
       // Ctrl+Y / Cmd+Y or Ctrl+Shift+Z - Redo
       if (
         (isCtrlOrCmd && e.key === "y") ||
-        (isCtrlOrCmd && e.shiftKey && e.key === "z")
+        (isCtrlOrCmd && e.shiftKey && e.key === "Z")
       ) {
         if (
           !isInEditor &&
@@ -1141,7 +1141,7 @@ EditorProps = {}) {
                       : notionBased
                       ? "pt-[50px]"
                       : "pt-4"
-                  } px-10 transition-all duration-300`}
+                  } px-10 transition-all max-w-6xl duration-300`}
                 >
                   {container.children.map((node, index) => {
                     const isText = isTextNode(node);
