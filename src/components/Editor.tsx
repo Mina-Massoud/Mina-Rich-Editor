@@ -1141,7 +1141,7 @@ EditorProps = {}) {
                       : notionBased
                       ? "pt-[50px]"
                       : "pt-4"
-                  } px-10 transition-all max-w-6xl duration-300`}
+                  } px-10 transition-all mx-auto max-w-6xl duration-300`}
                 >
                   {container.children.map((node, index) => {
                     const isText = isTextNode(node);
