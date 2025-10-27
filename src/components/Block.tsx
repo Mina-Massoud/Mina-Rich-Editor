@@ -729,7 +729,7 @@ export const Block = React.memo(function Block({
     contentEditable: !readOnly,
     suppressContentEditableWarning: true,
     ...(placeholder ? { placeholder } : {}),
-    className: `!ml-5
+    className: `lg:!ml-5
       ${isListItem ? "relative" : ""} 
       ${getTypeClassName(textNode.type)}
       ${className}
@@ -767,7 +767,7 @@ export const Block = React.memo(function Block({
         >
           {/* Drag Handle & Add Button - Mobile: inline, Desktop: absolute positioned */}
           {!readOnly && onBlockDragStart && (
-            <div className="flex md:absolute items-center gap-0.5 mb-1 md:mb-0 md:left-0 md:top-1/2 md:-translate-y-1/2 md:-ml-[4.5rem] md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+            <div className="flex lg:absolute items-center gap-0.5 mb-1 lg:mb-0 lg:left-0 lg:top-1/2 lg:-translate-y-1/2 lg:-ml-[4.5rem] lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-200">
               {/* Add Cover Button - Only show on first block in Notion mode if no cover */}
               {notionBased && isFirstBlock && !hasCoverImage && onUploadCoverImage && (
                 <>
