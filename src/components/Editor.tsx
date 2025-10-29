@@ -1060,7 +1060,7 @@ EditorProps = {}) {
             onCreateTable={() => setTableDialogOpen(true)}
           />
         )}
-        <Card className="shadow-2xl py-0 relative flex flex-col flex-1 rounded-none border-2 gap-3 transition-all duration-300">
+        <div className="shadow-2xl py-0 relative flex flex-col flex-1 rounded-none border-2 gap-3 transition-all duration-300">
           {/* Table Dialog */}
           <TableDialog
             open={tableDialogOpen}
@@ -1345,7 +1345,7 @@ EditorProps = {}) {
                 readOnly={readOnly}
               />
             ))}
-        </Card>
+        </div>
       </div>
 
       {/* Selection Toolbar - Floats above selected text (Notion-style) */}
