@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import Link from "next/link";
 
 export const heroColors = {
   50: "#f8f7f5",
@@ -16,11 +17,7 @@ export const heroColors = {
 };
 
 
-interface HeroSectionProps {
-  onCtaClick?: () => void;
-}
-
-export function HeroSection({ onCtaClick }: HeroSectionProps) {
+export function HeroSection() {
   const gradientRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,72 +99,7 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
     <div
       className="min-h-screen bg-gradient-to-br from-warm-900 via-black to-warm-800 text-warm-100 font-primary overflow-hidden relative w-full"
     >
-      <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path
-              d="M 60 0 L 0 0 0 60"
-              fill="none"
-              stroke="rgba(200,180,160,0.08)"
-              strokeWidth="0.5"
-            />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-        <line x1="0" y1="20%" x2="100%" y2="20%" className="grid-line" style={{ animationDelay: "0.5s" }} />
-        <line x1="0" y1="80%" x2="100%" y2="80%" className="grid-line" style={{ animationDelay: "1s" }} />
-        <line x1="20%" y1="0" x2="20%" y2="100%" className="grid-line" style={{ animationDelay: "1.5s" }} />
-        <line x1="80%" y1="0" x2="80%" y2="100%" className="grid-line" style={{ animationDelay: "2s" }} />
-        <line
-          x1="50%"
-          y1="0"
-          x2="50%"
-          y2="100%"
-          className="grid-line"
-          style={{ animationDelay: "2.5s", opacity: 0.05 }}
-        />
-        <line
-          x1="0"
-          y1="50%"
-          x2="100%"
-          y2="50%"
-          className="grid-line"
-          style={{ animationDelay: "3s", opacity: 0.05 }}
-        />
-        <circle cx="20%" cy="20%" r="2" className="detail-dot" style={{ animationDelay: "3s" }} />
-        <circle cx="80%" cy="20%" r="2" className="detail-dot" style={{ animationDelay: "3.2s" }} />
-        <circle cx="20%" cy="80%" r="2" className="detail-dot" style={{ animationDelay: "3.4s" }} />
-        <circle cx="80%" cy="80%" r="2" className="detail-dot" style={{ animationDelay: "3.6s" }} />
-        <circle cx="50%" cy="50%" r="1.5" className="detail-dot" style={{ animationDelay: "4s" }} />
-      </svg>
-
-      {/* Corner elements */}
-      <div className="corner-element top-8 left-8" style={{ animationDelay: "4s" }}>
-        <div
-          className="absolute top-0 left-0 w-2 h-2 opacity-30 bg-warm-200"
-        ></div>
-      </div>
-      <div className="corner-element top-8 right-8" style={{ animationDelay: "4.2s" }}>
-        <div
-          className="absolute top-0 right-0 w-2 h-2 opacity-30 bg-warm-200"
-        ></div>
-      </div>
-      <div className="corner-element bottom-8 left-8" style={{ animationDelay: "4.4s" }}>
-        <div
-          className="absolute bottom-0 left-0 w-2 h-2 opacity-30 bg-warm-200"
-        ></div>
-      </div>
-      <div className="corner-element bottom-8 right-8" style={{ animationDelay: "4.6s" }}>
-        <div
-          className="absolute bottom-0 right-0 w-2 h-2 opacity-30 bg-warm-200"
-        ></div>
-      </div>
-
-      {/* Floating elements */}
-      <div className="floating-element" style={{ top: "25%", left: "15%", animationDelay: "5s" }}></div>
-      <div className="floating-element" style={{ top: "60%", left: "85%", animationDelay: "5.5s" }}></div>
-      <div className="floating-element" style={{ top: "40%", left: "10%", animationDelay: "6s" }}></div>
-      <div className="floating-element" style={{ top: "75%", left: "90%", animationDelay: "6.5s" }}></div>
+   
 
       <div className="relative z-10 min-h-screen flex flex-col justify-between items-center px-8 py-12 md:px-16 md:py-20">
         {/* Top tagline */}
@@ -215,29 +147,29 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
           >
             <div className="mb-4 md:mb-6">
               <span className="hero-word" data-delay="1600">
-                Mina
+                AI-Powered,
               </span>{" "}
               <span className="hero-word" data-delay="1750">
-                Rich
+                Collaborative,
               </span>{" "}
               <span className="hero-word" data-delay="1900">
-                Editor
+                Free
               </span>
             </div>
             <div
               className="text-2xl md:text-3xl lg:text-4xl font-thin leading-relaxed text-warm-200"
             >
               <span className="hero-word" data-delay="2050">
-                The Rich Text Editor
+                Rich
               </span>{" "}
               <span className="hero-word" data-delay="2200">
-                Developers
+                Text
               </span>{" "}
               <span className="hero-word" data-delay="2350">
-                Actually
+                Editor
               </span>{" "}
               <span className="hero-word" data-delay="2500">
-                Want
+                for React
               </span>
             </div>
           </h1>
@@ -248,10 +180,10 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
             style={{
               opacity: 0,
               animation: "word-appear 0.8s ease-out forwards",
-              animationDelay: "2.6s",
+              animationDelay: "2.8s",
             }}
           >
-            Notion-style blocks, real-time collaboration, AI integration, CMS-ready export — in 3 lines of code.
+            Built-in AI generation, real-time collaboration, and Notion-style blocks — completely free. No ProseMirror. No license fees.
           </p>
 
           {/* CTA Buttons */}
@@ -259,12 +191,12 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
             className="flex flex-col sm:flex-row gap-4 mt-8 justify-center items-stretch"
             
           >
-            <button
-              onClick={onCtaClick}
-              className="px-10 py-4 text-lg font-semibold transition-all hover:scale-[1.03] hover:brightness-110 active:scale-[0.98] shadow-md bg-warm-200 text-warm-900"
+            <Link
+              href="/demo"
+              className="px-10 py-4 text-lg font-semibold transition-all hover:scale-[1.03] hover:brightness-110 active:scale-[0.98] shadow-md bg-warm-200 text-warm-900 inline-block"
             >
               Try Mina Rich Editor →
-            </button>
+            </Link>
             <div
               className="px-6 py-4 border font-mono text-sm flex items-center gap-2 select-all border-warm-700 text-warm-200"
             >
@@ -329,6 +261,10 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
           </div>
         </div>
       </div>
+
+      <img src={'/backgrounds/hero-img.webp'} className="absolute inset-0 w-full h-full opacity-[0.05]" />
+      <img src={'/backgrounds/pharoh.png'} className="absolute invert top-0 right-0 opacity-[0.06]" />
+
 
       <div
         id="mouse-gradient"

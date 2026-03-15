@@ -1,13 +1,8 @@
-"use client";
-
 import React from "react";
 import { Github } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { HeroSection } from "./ui/hero-section";
-
-interface LandingPageProps {
-  onTryEditor: () => void;
-}
 
 /* ─── Reusable Components ──────────────────────────────────────────────────── */
 
@@ -62,13 +57,13 @@ function CodeBlock({ label, code }: { label: string; code: string }) {
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-export default function LandingPage({ onTryEditor }: LandingPageProps) {
+export default function LandingPage() {
   return (
     <div
       className="w-full overflow-x-hidden bg-surface-base text-warm-100"
     >
       {/* ═══ HERO ═══════════════════════════════════════════════════════════ */}
-      <HeroSection onCtaClick={onTryEditor} />
+      <HeroSection />
 
       {/* ═══ 01 — QUICK START ═════════════════════════════════════════════ */}
       <section className="relative px-8 md:px-16 py-32">
@@ -98,50 +93,15 @@ function App() {
   )
 }`}
           />
+          <DemoLink href="/compact" label="Try CompactEditor" />
         </div>
       </section>
 
-      {/* ═══ 02 — TWO EDITORS ═════════════════════════════════════════════ */}
-      <section className="relative px-8 md:px-16 py-32 bg-surface-raised">
-        <div className="relative z-10 max-w-5xl mx-auto">
-          <SectionHeader num="02" label="Two Editors" />
-          <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-center mb-4 text-warm-50">
-            Full-page or compact. Your choice.
-          </h2>
-          <p className="text-center font-light mb-20 max-w-lg mx-auto text-warm-300">
-            Two variants optimized for different use cases.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <ScreenshotFrame label="Full Editor — Notion style" src="/screenshots/full-editor.png" alt="Full page editor" w={700} h={480} />
-              <ul className="mt-6 space-y-2">
-                {["Cover image & title", "Block drag handles", "Sidebar navigation", "Full toolbar", "Document-level features"].map((item) => (
-                  <li key={item} className="text-sm font-light flex items-center gap-2 text-warm-300">
-                    <span className="text-warm-200">-</span> {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <ScreenshotFrame label="CompactEditor — Inline" src="/screenshots/compact-editor.png" alt="CompactEditor for CMS" w={700} h={480} />
-              <ul className="mt-6 space-y-2">
-                {["Inline floating toolbar", "Minimal footprint", "Form-friendly sizing", "onChange callback", "CMS field integration"].map((item) => (
-                  <li key={item} className="text-sm font-light flex items-center gap-2 text-warm-300">
-                    <span className="text-warm-200">-</span> {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ 03 — AI INTEGRATION ══════════════════════════════════════════ */}
+      {/* ═══ 02 — AI INTEGRATION ══════════════════════════════════════════ */}
       <section className="relative px-8 md:px-16 py-32">
         <GridBg id="ai" />
         <div className="relative z-10 max-w-5xl mx-auto">
-          <SectionHeader num="03" label="AI Integration" />
+          <SectionHeader num="02" label="AI Integration" />
           <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-center mb-4 text-warm-50">
             Your LLM, your editor
           </h2>
@@ -187,13 +147,14 @@ const myProvider: AIProvider = {
 <CompactEditor ai={myProvider} />`}
             />
           </div>
+          <DemoLink href="/demo/ai" label="Try AI Integration" />
         </div>
       </section>
 
-      {/* ═══ 04 — REAL-TIME COLLABORATION ═════════════════════════════════ */}
+      {/* ═══ 03 — REAL-TIME COLLABORATION ═════════════════════════════════ */}
       <section className="relative px-8 md:px-16 py-32 bg-surface-raised">
         <div className="relative z-10 max-w-5xl mx-auto">
-          <SectionHeader num="04" label="Collaboration" />
+          <SectionHeader num="03" label="Collaboration" />
           <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-center mb-4 text-warm-50">
             Built for multiplayer
           </h2>
@@ -224,14 +185,15 @@ function CollabEditor() {
   )
 }`}
           />
+          <DemoLink href="/collab" label="Try Collaboration" />
         </div>
       </section>
 
-      {/* ═══ 05 — PERFORMANCE ═════════════════════════════════════════════ */}
+      {/* ═══ 04 — PERFORMANCE ═════════════════════════════════════════════ */}
       <section className="relative px-8 md:px-16 py-32">
         <GridBg id="perf" />
         <div className="relative z-10 max-w-5xl mx-auto">
-          <SectionHeader num="05" label="Performance" />
+          <SectionHeader num="04" label="Performance" />
           <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-center mb-4 text-warm-50">
             Fast by architecture, not by accident
           </h2>
@@ -250,13 +212,14 @@ function CollabEditor() {
             <FeatureRow n="02" title="Structural Sharing" desc="State updates reuse unchanged references. React.memo skips re-renders automatically because the props literally haven't changed." align="right" />
             <FeatureRow n="03" title="Direct DOM Reconciliation" desc="Critical text operations bypass React's virtual DOM entirely, writing to the DOM directly for sub-millisecond response times." align="left" />
           </div>
+          <DemoLink href="/demo" label="Try the Editor" />
         </div>
       </section>
 
-      {/* ═══ 06 — DEVELOPER EXPERIENCE ════════════════════════════════════ */}
+      {/* ═══ 05 — DEVELOPER EXPERIENCE ════════════════════════════════════ */}
       <section className="relative px-8 md:px-16 py-32 bg-surface-raised">
         <div className="relative z-10 max-w-6xl mx-auto">
-          <SectionHeader num="06" label="Developer Experience" />
+          <SectionHeader num="05" label="Developer Experience" />
           <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-center mb-4 text-warm-50">
             Built by developers, for developers
           </h2>
@@ -280,14 +243,15 @@ function CollabEditor() {
               <DxCard idx={12} tag="tst" title="440+ Tests" desc="Comprehensive test suite covering block operations, keyboard handling, serialization, and edge cases. Vitest + Playwright." />
             </div>
           </div>
+          <DemoLink href="/demo/features" label="Try Features" />
         </div>
       </section>
 
-      {/* ═══ 07 — CONTENT MANAGEMENT ══════════════════════════════════════ */}
+      {/* ═══ 06 — CONTENT MANAGEMENT ══════════════════════════════════════ */}
       <section className="relative px-8 md:px-16 py-32">
         <GridBg id="cms" />
         <div className="relative z-10 max-w-5xl mx-auto">
-          <SectionHeader num="07" label="Content Management" />
+          <SectionHeader num="06" label="Content Management" />
           <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-center mb-4 text-warm-50">
             Built for content management
           </h2>
@@ -333,13 +297,14 @@ api.getBlockCount() // total blocks`}
               </div>
             ))}
           </div>
+          <DemoLink href="/demo/export" label="Try Export" />
         </div>
       </section>
 
-      {/* ═══ 08 — MULTI-FORMAT EXPORT ═════════════════════════════════════ */}
+      {/* ═══ 07 — MULTI-FORMAT EXPORT ═════════════════════════════════════ */}
       <section className="relative px-8 md:px-16 py-32 bg-surface-raised">
         <div className="relative z-10 max-w-4xl mx-auto">
-          <SectionHeader num="08" label="Ship Anywhere" />
+          <SectionHeader num="07" label="Ship Anywhere" />
           <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-center mb-4 text-warm-50">
             Ship content anywhere
           </h2>
@@ -395,6 +360,7 @@ The new dashboard is ready for review.
 - New analytics widgets`}
             />
           </div>
+          <DemoLink href="/demo/export" label="Try Export" />
         </div>
       </section>
 
@@ -412,9 +378,9 @@ The new dashboard is ready for review.
             npm install @mina-editor/core
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button onClick={onTryEditor} className="px-10 py-4 font-medium tracking-wide transition-opacity hover:opacity-80 active:scale-[0.98] bg-warm-200 text-warm-900">
+            <Link href="/demo" className="px-10 py-4 font-medium tracking-wide transition-opacity hover:opacity-80 active:scale-[0.98] bg-warm-200 text-warm-900">
               Try the Editor &rarr;
-            </button>
+            </Link>
             <a href="https://github.com/mina-massoud/mina-rich-editor" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 px-10 py-4 border border-warm-700 font-medium tracking-wide transition-colors hover:bg-white/5 text-warm-200">
               <Github className="w-4 h-4" />
               GitHub
@@ -476,6 +442,20 @@ function FeatureRow({ n, title, desc, align }: { n: string; title: string; desc:
       <div className={align === "right" ? "md:order-1" : ""}>
         <p className="font-light leading-relaxed text-sm md:text-base pt-1 text-warm-300">{desc}</p>
       </div>
+    </div>
+  );
+}
+
+function DemoLink({ href, label }: { href: string; label: string }) {
+  return (
+    <div className="text-center mt-12">
+      <Link href={href} className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.15em] text-warm-300 hover:text-warm-100 transition-colors border-b border-warm-700 pb-1">
+        {label}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+          <path d="M5 12h14" />
+          <path d="m12 5 7 7-7 7" />
+        </svg>
+      </Link>
     </div>
   );
 }

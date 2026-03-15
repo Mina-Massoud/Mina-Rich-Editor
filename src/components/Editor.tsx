@@ -802,7 +802,7 @@ export function Editor({
             readOnly ? "py-14 md:py-20" : ""
           }`}
         >
-          <div ref={editorContentRef} className="h-full">
+          <div ref={editorContentRef} className="h-full flex flex-col flex-1">
             <EditorContextProvider value={editorContextValue}>
               <>
                 {/* Cover Image — only rendered when notionBased and a cover image exists in store */}
@@ -828,7 +828,7 @@ export function Editor({
                       : notionBased
                       ? "pt-[50px]"
                       : "pt-4"
-                  } px-4 lg:px-10 lg:pl-20 transition-all duration-300`}
+                  } px-4 lg:px-10 flex-1 lg:pl-20 transition-all duration-300`}
                 >
                   {/* ✅ OPTIMIZATION: Render by ID array — Editor no longer
                       iterates the full container on every keystroke.
