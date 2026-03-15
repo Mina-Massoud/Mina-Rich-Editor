@@ -5,12 +5,14 @@
  */
 
 import { EditorActions } from '../reducer/actions';
-import { ContainerNode, TextNode, isTextNode, isContainerNode, EditorNode } from '../types';
+import { ContainerNode, TextNode, isTextNode, isContainerNode } from '../types';
 import { uploadImage } from '../utils/image-upload';
 import { findNodeAnywhere } from '../utils/editor-helpers';
+import { generateId } from '../utils/id-generator';
 
+/** Parameters shared by drag-and-drop handler factory functions. */
 export interface DragDropHandlerParams {
-  container: ContainerNode;
+  container: ContainerNode | (() => ContainerNode);
   dispatch: React.Dispatch<any>;
   toast: any;
   draggingNodeId: string | null;
@@ -21,40 +23,33 @@ export interface DragDropHandlerParams {
   onUploadImage?: (file: File) => Promise<string>;
 }
 
-/**
- * Handle image drag start
- */
+/** Creates a dragstart handler that records the image node ID as the currently dragged node. */
 export function createHandleImageDragStart(setDraggingNodeId: (id: string) => void) {
   return (nodeId: string) => {
     setDraggingNodeId(nodeId);
   };
 }
 
-/**
- * Handle block drag start
- */
+/** Creates a dragstart handler that records the block node ID as the currently dragged node. */
 export function createHandleBlockDragStart(setDraggingNodeId: (id: string) => void) {
   return (nodeId: string) => {
     setDraggingNodeId(nodeId);
   };
 }
 
-/**
- * Handle drag enter
- */
+/** Creates a dragenter handler that prevents the default browser behavior to allow custom drop handling. */
 export function createHandleDragEnter() {
-  return (e: React.DragEvent, nodeId: string) => {
+  return (e: React.DragEvent, _nodeId: string) => {
     e.preventDefault();
     e.stopPropagation();
   };
 }
 
-/**
- * Handle drag over
- */
+/** Creates a dragover handler that calculates and sets the drop position (before/after/left/right) based on cursor location. */
 export function createHandleDragOver(params: Omit<DragDropHandlerParams, 'toast' | 'setIsUploading' | 'onUploadImage'>) {
   return (e: React.DragEvent, nodeId: string) => {
-    const { container, draggingNodeId, setDragOverNodeId, setDropPosition } = params;
+    const { container: containerOrGetter, draggingNodeId, setDragOverNodeId, setDropPosition } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
     e.preventDefault();
     e.stopPropagation();
 
@@ -198,9 +193,7 @@ export function createHandleDragOver(params: Omit<DragDropHandlerParams, 'toast'
   };
 }
 
-/**
- * Handle drag leave
- */
+/** Creates a dragleave handler that clears the drop indicator when the pointer leaves the target element. */
 export function createHandleDragLeave(setDragOverNodeId: (id: string | null) => void, setDropPosition: (pos: "before" | "after" | "left" | "right" | null) => void) {
   return (e: React.DragEvent) => {
     e.preventDefault();
@@ -217,23 +210,21 @@ export function createHandleDragLeave(setDragOverNodeId: (id: string | null) => 
   };
 }
 
-/**
- * Handle drop - This is a complex function that handles multiple drop scenarios
- * Note: This function should be further broken down in the future
- */
+/** Creates an async drop handler that moves existing blocks, merges images into flex containers, or uploads dropped media files. */
 export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "before" | "after" | "left" | "right" | null) {
   return async (e: React.DragEvent, nodeId: string) => {
-    const { 
-      container, 
-      dispatch, 
-      toast, 
-      draggingNodeId, 
-      setDraggingNodeId, 
-      setDragOverNodeId, 
+    const {
+      container: containerOrGetter,
+      dispatch,
+      toast,
+      draggingNodeId,
+      setDraggingNodeId,
+      setDragOverNodeId,
       setDropPosition,
       setIsUploading,
       onUploadImage
     } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
     
     e.preventDefault();
     e.stopPropagation();
@@ -403,9 +394,8 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
           }
 
           // Create a flex container with both images
-          const timestamp = Date.now();
           const flexContainer: ContainerNode = {
-            id: `flex-container-${timestamp}`,
+            id: generateId("flex-container"),
             type: "container",
             children:
               dropPosition === "left"
@@ -724,7 +714,7 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
       }
 
       const mediaNode: TextNode = {
-        id: `${isVideo ? 'video' : 'img'}-${Date.now()}`,
+        id: generateId(isVideo ? 'video' : 'img'),
         type: isVideo ? "video" : "img",
         content: "", // Optional caption
         attributes: {

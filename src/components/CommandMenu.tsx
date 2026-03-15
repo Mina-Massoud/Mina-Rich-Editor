@@ -36,6 +36,7 @@ import {
   Image,
   Video,
   Table,
+  Sparkles,
 } from 'lucide-react';
 import { useEditorDispatch, EditorActions } from '@/lib';
 
@@ -55,6 +56,7 @@ interface CommandMenuProps {
   nodeId: string; // ID of the block being transformed
   onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler
   onUploadVideo?: (file: File) => Promise<string>; // Custom video upload handler
+  onAISelect?: () => void; // Callback when "AI Generate" is selected
 }
 
 const commands: CommandOption[] = [
@@ -158,18 +160,19 @@ const commands: CommandOption[] = [
   },
 ];
 
-export function CommandMenu({ 
-  isOpen, 
-  onClose, 
-  onSelect, 
+export function CommandMenu({
+  isOpen,
+  onClose,
+  onSelect,
   anchorElement,
   nodeId,
   onUploadImage,
-  onUploadVideo
+  onUploadVideo,
+  onAISelect,
 }: CommandMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [search, setSearch] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  const [, setIsUploading] = useState(false);
   const commandRef = useRef<HTMLDivElement>(null);
 
   const dispatch = useEditorDispatch();
@@ -369,6 +372,21 @@ export function CommandMenu({
     onSelect(commandValue);
   }, [dispatch, nodeId, onSelect, onClose, onUploadImage]);
 
+  // AI command option
+  const aiCommand: CommandOption = {
+    label: 'AI Generate',
+    value: 'ai-generate',
+    icon: <Sparkles className="w-4 h-4" />,
+    description: 'Generate content with AI',
+    keywords: ['ai', 'generate', 'write', 'create', 'assistant', 'magic'],
+  };
+
+  // Handle AI selection
+  const handleAISelect = useCallback(() => {
+    onClose();
+    onAISelect?.();
+  }, [onClose, onAISelect]);
+
   // Filter commands based on search
   const filteredCommands = search
     ? commands.filter(cmd => {
@@ -381,6 +399,12 @@ export function CommandMenu({
       })
     : commands;
 
+  // Filter AI command based on search
+  const showAICommand = onAISelect && (!search ||
+    aiCommand.label.toLowerCase().includes(search.toLowerCase()) ||
+    aiCommand.keywords?.some(k => k.toLowerCase().includes(search.toLowerCase()))
+  );
+
   // Reset selected index when filtered commands change
   useEffect(() => {
     setSelectedIndex(0);
@@ -390,19 +414,26 @@ export function CommandMenu({
   useEffect(() => {
     if (!isOpen) return;
 
+    const totalItems = filteredCommands.length + (showAICommand ? 1 : 0);
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedIndex(prev => 
-          prev < filteredCommands.length - 1 ? prev + 1 : prev
+        setSelectedIndex(prev =>
+          prev < totalItems - 1 ? prev + 1 : prev
         );
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setSelectedIndex(prev => prev > 0 ? prev - 1 : prev);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        if (filteredCommands[selectedIndex]) {
-          handleSelect(filteredCommands[selectedIndex].value);
+        if (showAICommand && selectedIndex === 0) {
+          handleAISelect();
+        } else {
+          const cmdIndex = selectedIndex - (showAICommand ? 1 : 0);
+          if (filteredCommands[cmdIndex]) {
+            handleSelect(filteredCommands[cmdIndex].value);
+          }
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
@@ -468,6 +499,26 @@ export function CommandMenu({
           />
           <CommandList>
             <CommandEmpty>No commands found.</CommandEmpty>
+            {showAICommand && (
+              <CommandGroup heading="AI">
+                <CommandItem
+                  value="ai-generate"
+                  onSelect={handleAISelect}
+                  className={`
+                    flex items-start gap-3 px-3 py-2 cursor-pointer
+                    ${selectedIndex === 0 ? 'bg-accent' : ''}
+                  `}
+                >
+                  <div className="mt-0.5 text-violet-500">{aiCommand.icon}</div>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{aiCommand.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {aiCommand.description}
+                    </span>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
+            )}
             <CommandGroup heading="Turn into">
               {filteredCommands.map((command, index) => (
                 <CommandItem
@@ -476,7 +527,7 @@ export function CommandMenu({
                   onSelect={() => handleSelect(command.value)}
                   className={`
                     flex items-start gap-3 px-3 py-2 cursor-pointer
-                    ${index === selectedIndex ? 'bg-accent' : ''}
+                    ${index + (showAICommand ? 1 : 0) === selectedIndex ? 'bg-accent' : ''}
                   `}
                 >
                   <div className="mt-0.5">{command.icon}</div>

@@ -12,25 +12,28 @@ import {
   hasInlineChildren,
   isTextNode,
 } from "../types";
-import { findNodeInTree } from "../utils/editor-helpers";
+import { findNodeInTree, parseDOMToInlineChildren } from "../utils/editor-helpers";
+import { generateId } from "../utils/id-generator";
 
+/** Parameters shared by all keyboard handler factory functions. */
 export interface KeyboardHandlerParams {
-  container: ContainerNode;
+  container: ContainerNode | (() => ContainerNode);
   dispatch: React.Dispatch<any>;
   nodeRefs: React.MutableRefObject<Map<string, HTMLElement>>;
   lastEnterTime: React.MutableRefObject<number>;
   onToggleImageSelection?: (nodeId: string) => void;
+  isComposingRef?: React.MutableRefObject<boolean>;
 }
 
-/**
- * Handle content change in a node
- */
+/** Creates a debounced content-change handler that parses the DOM and dispatches the appropriate update action. */
 export function createHandleContentChange(
   params: KeyboardHandlerParams,
-  contentUpdateTimers: React.MutableRefObject<Map<string, NodeJS.Timeout>>
+  contentUpdateTimers: React.MutableRefObject<Map<string, NodeJS.Timeout>>,
+  isComposingRef?: React.MutableRefObject<boolean>
 ) {
   return (nodeId: string, element: HTMLElement) => {
-    const { container, dispatch } = params;
+    const { container: containerOrGetter, dispatch } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
     const result = findNodeInTree(nodeId, container);
     if (!result || !isTextNode(result.node)) return;
     const node = result.node as TextNode;
@@ -40,31 +43,26 @@ export function createHandleContentChange(
     // Get the current text content (from plain content or inline children)
     const currentContent = getNodeTextContent(node);
 
-    // DEBUG: Log content change detection
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`💾 [CONTENT CHANGE] Block ${nodeId}:`, {
-        newContent,
-        currentContent,
-        changed: newContent !== currentContent,
-      });
-    }
-
     // Only update if content actually changed
     if (newContent !== currentContent) {
       // Clear any existing timer for this node
       const existingTimer = contentUpdateTimers.current.get(nodeId);
       if (existingTimer) {
         clearTimeout(existingTimer);
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`⏱️  [DEBOUNCE] Cleared existing timer for ${nodeId}`);
-        }
       }
 
-      // Small debounce (50ms) for better performance while avoiding content loss
+      // Debounce: batch rapid keystrokes into one state update (50ms window)
       const timer = setTimeout(() => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`✅ [SAVE] Dispatching content update for ${nodeId}:`, newContent);
+        // IME reschedule: don't dispatch during active composition (e.g. CJK input).
+        // The compositionend handler will call onInput to flush once composition ends.
+        if (isComposingRef?.current) {
+          const rescheduleTimer = setTimeout(() => {
+            contentUpdateTimers.current.delete(nodeId);
+          }, 50);
+          contentUpdateTimers.current.set(nodeId, rescheduleTimer);
+          return;
         }
+
         // Auto-detect ordered list pattern: "1. ", "2. ", etc. (only with space)
       const orderedListMatch = newContent.match(/^(\d+)\.\s(.+)$/);
       // Auto-detect unordered list pattern: "- " or "* "
@@ -72,7 +70,7 @@ export function createHandleContentChange(
 
       if (orderedListMatch && node.type === "p") {
         // Convert to ordered list item and remove only the number prefix
-        const [_, number, content] = orderedListMatch;
+        const [_match, _number, content] = orderedListMatch;
 
         dispatch(
           EditorActions.updateNode(node.id, {
@@ -80,6 +78,8 @@ export function createHandleContentChange(
             content: content,
           })
         );
+        contentUpdateTimers.current.delete(nodeId);
+        return;
       } else if (unorderedListMatch && node.type === "p") {
         // Convert to unordered list item and remove the bullet prefix
         const [_, content] = unorderedListMatch;
@@ -90,6 +90,55 @@ export function createHandleContentChange(
             content: content,
           })
         );
+        contentUpdateTimers.current.delete(nodeId);
+        return;
+      } else if (node.type === "p" && /^(#{1,6})\s(.+)$/.test(newContent)) {
+        // Auto-detect heading pattern: "# text", "## text", ..., "###### text"
+        const headingMatch = newContent.match(/^(#{1,6})\s(.+)$/)!;
+        const level = headingMatch[1].length;
+        const content = headingMatch[2];
+        const headingType = `h${level}` as TextNode["type"];
+
+        dispatch(
+          EditorActions.updateNode(node.id, {
+            type: headingType,
+            content: content,
+          })
+        );
+        contentUpdateTimers.current.delete(nodeId);
+        return;
+      } else if (node.type === "p" && /^>\s(.+)$/.test(newContent)) {
+        // Auto-detect blockquote: "> text"
+        const blockquoteMatch = newContent.match(/^>\s(.+)$/)!;
+
+        dispatch(
+          EditorActions.updateNode(node.id, {
+            type: "blockquote",
+            content: blockquoteMatch[1],
+          })
+        );
+        contentUpdateTimers.current.delete(nodeId);
+        return;
+      } else if (node.type === "p" && /^(-{3,}|\*{3,}|_{3,})$/.test(newContent)) {
+        // Auto-detect horizontal rule: "---", "***", or "___"
+        dispatch(
+          EditorActions.updateNode(node.id, {
+            type: "hr",
+            content: "",
+          })
+        );
+        contentUpdateTimers.current.delete(nodeId);
+        return;
+      } else if (node.type === "p" && newContent === "```") {
+        // Auto-detect code block: "```"
+        dispatch(
+          EditorActions.updateNode(node.id, {
+            type: "code",
+            content: "",
+          })
+        );
+        contentUpdateTimers.current.delete(nodeId);
+        return;
       } else if (
         node.type === "li" &&
         (node.lines || newContent.includes("\n"))
@@ -123,9 +172,6 @@ export function createHandleContentChange(
         dispatch(EditorActions.updateContent(node.id, newContent));
       } else {
         // Node has inline children with formatting - parse DOM to preserve formatting
-        const {
-          parseDOMToInlineChildren,
-        } = require("../utils/editor-helpers");
         const parsedChildren = parseDOMToInlineChildren(element);
 
         dispatch(
@@ -145,12 +191,11 @@ export function createHandleContentChange(
   };
 }
 
-/**
- * Handle click events with modifier keys (Ctrl/Cmd + Click)
- */
+/** Creates a click handler that toggles image selection when Ctrl/Cmd is held during a click. */
 export function createHandleClickWithModifier(params: KeyboardHandlerParams) {
   return (e: React.MouseEvent, nodeId: string) => {
-    const { container, onToggleImageSelection } = params;
+    const { container: containerOrGetter, onToggleImageSelection } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
     
     // Check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
@@ -172,12 +217,11 @@ export function createHandleClickWithModifier(params: KeyboardHandlerParams) {
   };
 }
 
-/**
- * Handle key down events
- */
+/** Creates a keydown handler that manages Enter (block splitting), Backspace (block deletion), and list item logic. */
 export function createHandleKeyDown(params: KeyboardHandlerParams) {
   return (e: React.KeyboardEvent<HTMLElement>, nodeId: string) => {
-    const { container, dispatch, nodeRefs, lastEnterTime } = params;
+    const { container: containerOrGetter, dispatch, nodeRefs, lastEnterTime } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
     // CRITICAL: Get the actual node ID from the DOM element's data attribute
     // This ensures we get the correct ID for nested list items, not the container's ID
     const actualNodeId =
@@ -211,7 +255,7 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
       e.preventDefault();
 
       const currentTime = Date.now();
-      const timeSinceLastEnter = currentTime - lastEnterTime.current;
+      lastEnterTime.current = currentTime;
 
       // Get cursor position
       const selection = window.getSelection();
@@ -242,50 +286,52 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
         if (!beforeCursor.trim() && !afterCursor.trim()) {
           // Convert to paragraph and exit list
           const newNode: TextNode = {
-            id: "p-" + Date.now(),
+            id: generateId("p"),
             type: "p",
             content: "",
             attributes: {},
           };
 
-          dispatch(EditorActions.deleteNode(actualNodeId));
-          dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
-          dispatch(EditorActions.setActiveNode(newNode.id));
+          dispatch(EditorActions.batch([
+            EditorActions.deleteNode(actualNodeId),
+            EditorActions.insertNode(newNode, actualNodeId, "after"),
+            EditorActions.setActiveNode(newNode.id),
+          ]));
 
-          setTimeout(() => {
+          // Wait for the browser to paint the new DOM node before focusing it.
+          requestAnimationFrame(() => {
             const newElement = nodeRefs.current.get(newNode.id);
             if (newElement) {
               newElement.focus();
             }
-          }, 10);
+          });
 
           return;
         }
 
-        // Create new list item with same type as current one
-        // Update current node with content before cursor
-        dispatch(
-          EditorActions.updateNode(actualNodeId, {
-            content: beforeCursor,
-            children: undefined, // Clear inline formatting when splitting
-            lines: undefined, // Clear multiline structure
-          })
-        );
-
         // Create new list item with content after cursor, same type as current
         const newNode: TextNode = {
-          id: `${node.type}-${Date.now()}`,
+          id: generateId(node.type),
           type: node.type,
           content: afterCursor,
           attributes: {},
         };
 
-        dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
-        dispatch(EditorActions.setActiveNode(newNode.id));
+        // Batch all dispatches to avoid intermediate re-renders
+        dispatch(EditorActions.batch([
+          EditorActions.updateNode(actualNodeId, {
+            content: beforeCursor,
+            children: undefined, // Clear inline formatting when splitting
+            lines: undefined, // Clear multiline structure
+          }),
+          EditorActions.insertNode(newNode, actualNodeId, "after"),
+          EditorActions.setActiveNode(newNode.id),
+        ]));
 
         lastEnterTime.current = currentTime;
 
-        setTimeout(() => {
+        // Wait for the browser to paint the new list item before focusing it.
+        requestAnimationFrame(() => {
           const newElement = nodeRefs.current.get(newNode.id);
           if (newElement) {
             newElement.focus();
@@ -312,7 +358,7 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
               }
             }
           }
-        }, 10);
+        });
 
         return;
       }
@@ -322,6 +368,9 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
         // Split content at cursor position
         const beforeCursor = fullText.substring(0, cursorPosition);
         const afterCursor = fullText.substring(cursorPosition);
+
+        // Track the new paragraph ID so the rAF focus callback can use it
+        let newParagraphId = "";
 
         // Check if node has inline children (formatted content)
         const nodeHasInlineChildren = hasInlineChildren(node);
@@ -374,54 +423,53 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
             currentPos = childEnd;
           }
 
-          // Update current node with children before cursor
-          dispatch(
-            EditorActions.updateNode(actualNodeId, {
-              children: beforeChildren.length > 0 ? beforeChildren : undefined,
-              content:
-                beforeChildren.length === 0 ? beforeCursor : node.content,
-            })
-          );
-
           // Create new node with children after cursor (always create a paragraph on Enter)
           const newNode: TextNode = {
-            id: `p-` + Date.now(),
+            id: generateId("p"),
             type: "p",
             content: afterChildren.length === 0 ? afterCursor : node.content,
             children: afterChildren.length > 0 ? afterChildren : undefined,
             attributes: {},
           };
 
-          dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
-          dispatch(EditorActions.setActiveNode(newNode.id));
+          // Batch all three dispatches into one to avoid intermediate re-renders
+          // that could clobber DOM content during the split.
+          dispatch(EditorActions.batch([
+            EditorActions.updateNode(actualNodeId, {
+              children: beforeChildren.length > 0 ? beforeChildren : undefined,
+              content:
+                beforeChildren.length === 0 ? beforeCursor : node.content,
+            }),
+            EditorActions.insertNode(newNode, actualNodeId, "after"),
+            EditorActions.setActiveNode(newNode.id),
+          ]));
+          newParagraphId = newNode.id;
         } else {
           // Simple case: no inline children, just plain text
-          // Update current node with content before cursor
-          dispatch(
-            EditorActions.updateNode(actualNodeId, {
-              content: beforeCursor,
-            })
-          );
-
           // Create new node with content after cursor (always create a paragraph on Enter)
           const newNode: TextNode = {
-            id: `p-` + Date.now(),
+            id: generateId("p"),
             type: "p",
             content: afterCursor,
             attributes: {},
           };
 
-          dispatch(EditorActions.insertNode(newNode, actualNodeId, "after"));
-          dispatch(EditorActions.setActiveNode(newNode.id));
+          // Batch all three dispatches into one to avoid intermediate re-renders
+          dispatch(EditorActions.batch([
+            EditorActions.updateNode(actualNodeId, {
+              content: beforeCursor,
+            }),
+            EditorActions.insertNode(newNode, actualNodeId, "after"),
+            EditorActions.setActiveNode(newNode.id),
+          ]));
+          newParagraphId = newNode.id;
         }
 
         lastEnterTime.current = currentTime;
 
-        // Focus the new node after a brief delay and place cursor at start
-        setTimeout(() => {
-          const newElement = nodeRefs.current.get(
-            `p-` + currentTime
-          );
+        // Wait for the browser to paint the new paragraph before focusing it.
+        requestAnimationFrame(() => {
+          const newElement = nodeRefs.current.get(newParagraphId);
           if (newElement) {
             newElement.focus();
             // Place cursor at the start of the new node
@@ -435,7 +483,7 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
               sel?.addRange(range);
             }
           }
-        }, 10);
+        });
       }
     } else if (e.key === "Backspace" || e.key === "Delete") {
       const result = findNodeInTree(actualNodeId, container);
@@ -507,8 +555,8 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
         if (nodeToFocus) {
           dispatch(EditorActions.setActiveNode(nodeToFocus.id));
           
-          // Place cursor at the end of the focused node
-          setTimeout(() => {
+          // Wait for the browser to paint after the deleted node is removed, then focus.
+          requestAnimationFrame(() => {
             const elementToFocus = nodeRefs.current.get(nodeToFocus.id);
             if (elementToFocus) {
               elementToFocus.focus();
@@ -536,7 +584,7 @@ export function createHandleKeyDown(params: KeyboardHandlerParams) {
                 sel?.addRange(range);
               }
             }
-          }, 10);
+          });
         }
       }
     }

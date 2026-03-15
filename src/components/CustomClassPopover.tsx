@@ -159,7 +159,7 @@ export function CustomClassPopover() {
     );
 
     // Apply the merged custom class
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       dispatch(EditorActions.applyCustomClass(mergedClasses));
 
       // Show appropriate toast message
@@ -178,7 +178,7 @@ export function CustomClassPopover() {
       setIsOpen(false);
       setPosition(null);
       savedSelectionRef.current = null;
-    }, 0);
+    });
   };
 
   // Reusable content component for both Popover and Sheet

@@ -1,47 +1,35 @@
 /**
- * Mina Rich Editor - Clean Version
+ * Mina Rich Editor - Embeddable Component
  *
- * A minimal editor demonstrating text formatting with our CRUD system.
- * Focus on: Select text → Click format button → Update via reducer
+ * A clean, embeddable React editor component.
+ * Fills its container at any width — the consumer controls layout.
  *
- * CLEAN VERSION - All handlers extracted to separate modules
+ * All handlers are extracted to separate modules.
  */
 
 "use client";
 
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import {
-  EditorActions,
   type TextNode,
-  type EditorNode,
-  type EditorState,
-  type SelectionInfo,
-  hasInlineChildren,
-  getNodeTextContent,
-  serializeToHtml,
+  type ContainerNode,
   isTextNode,
-  isContainerNode,
-  ContainerNode,
-  findNodeById,
 } from "../lib";
+import { serializeToSemanticHtml } from "../lib/utils/serialize-semantic-html";
 import {
   useEditorStore,
   useEditorDispatch,
+  useEditorStoreInstance,
   useContainer,
+  useContainerChildrenIds,
+  useBlockNode,
   useSelectionManager,
-  useSelection,
 } from "../lib/store/editor-store";
-import { findNodeInTree } from "../lib/utils/editor-helpers";
 import { AddBlockButton } from "./AddBlockButton";
-import { CustomClassPopover } from "./CustomClassPopover";
-import { LinkPopover } from "./LinkPopover";
 import { EditorToolbar } from "./EditorToolbar";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { TableDialog } from "./TableDialog";
-import { TableBuilder } from "./TableBuilder";
-import { Card, CardContent } from "./ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { QuickModeToggle } from "./QuickModeToggle";
 import { useDragAutoScroll } from "../lib/utils/drag-auto-scroll";
 import { GroupImagesButton } from "./GroupImagesButton";
 import { FreeImageBlock } from "./FreeImageBlock";
@@ -49,36 +37,14 @@ import { InsertComponentsModal } from "./InsertComponentsModal";
 
 // Import all handlers
 import {
-  createHandleSelectionChange,
-  createHandleFormat,
-  createHandleApplyColor,
-  createHandleApplyFontSize,
-  createHandleTypeChange,
-} from "../lib/handlers/selection-handlers";
-
-import {
   createHandleKeyDown,
   createHandleContentChange,
   createHandleClickWithModifier,
 } from "../lib/handlers/keyboard-handlers";
 
-import {
-  createHandleImageDragStart,
-  createHandleBlockDragStart,
-  createHandleDragEnter,
-  createHandleDragOver,
-  createHandleDragLeave,
-  createHandleDrop,
-} from "../lib/handlers/drag-drop-handlers";
-
-import {
-  createHandleFileChange,
-  createHandleMultipleFilesChange,
-  createHandleImageUploadClick,
-  createHandleMultipleImagesUploadClick,
-  createHandleFreeImageFileChange,
-  createHandleFreeImageUploadClick,
-} from "../lib/handlers/file-upload-handlers";
+import { useEditorDragDrop } from "../hooks/useEditorDragDrop";
+import { useEditorFileUpload } from "../hooks/useEditorFileUpload";
+import { useEditorKeyboardShortcuts } from "../hooks/useEditorKeyboardShortcuts";
 
 import {
   createHandleNodeClick,
@@ -89,45 +55,214 @@ import {
   createHandleInsertImageFromCommand,
   createHandleCreateList,
   createHandleCreateListFromCommand,
-  createHandleCreateLink,
-  createHandleCreateTable,
-  createHandleCopyHtml,
-  createHandleCopyJson,
 } from "../lib/handlers/node-operation-handlers";
 
-import {
-  createHandleToggleImageSelection,
-  createHandleClearImageSelection,
-  createHandleGroupSelectedImages,
-  checkImagesInSameFlex,
-  createHandleReverseImagesInFlex,
-  createHandleExtractFromFlex,
-} from "../lib/handlers/image-selection-handlers";
-
-import {
-  createHandleFlexContainerDragOver,
-  createHandleFlexContainerDragLeave,
-  createHandleFlexContainerDrop,
-} from "../lib/handlers/flex-container-handlers";
+// Custom hooks
+import { useImageSelection } from "../hooks/useImageSelection";
+import { useTableOperations } from "../hooks/useTableOperations";
+import { useEditorClipboard } from "../hooks/useEditorClipboard";
+import { useEditorSelection } from "../hooks/useEditorSelection";
+import { useMediaPaste } from "../hooks/useMediaPaste";
 
 import { Block } from "./Block";
 import { CoverImage } from "./CoverImage";
-import { ExportFloatingButton } from "./ExportFloatingButton";
-import { TemplateSwitcherButton } from "./TemplateSwitcherButton";
-import { Button } from "./ui/button";
-import { VirtualizedBlockList } from "./archieve/VirtualizedBlockList";
+import {
+  EditorContextProvider,
+  type EditorContextValue,
+} from "../hooks/useEditorContext";
+
+// ─── Per-block wrapper ────────────────────────────────────────────────────────
+
+interface BlockWrapperProps {
+  nodeId: string;
+  index: number;
+  activeNodeId: string | null;
+  readOnly: boolean;
+  dragOverNodeId: string | null;
+  dropPosition: string | null;
+  draggingNodeId: string | null;
+  handleDragEnter: (e: React.DragEvent, nodeId: string) => void;
+  handleDragOver: (e: React.DragEvent, nodeId: string) => void;
+  handleDragLeave: (e: React.DragEvent) => void;
+  handleDrop: (e: React.DragEvent, nodeId: string) => void;
+  handleAddBlock: (nodeId: string, position: "before" | "after") => void;
+}
+
+/**
+ * BlockWrapper — subscribes only to a single node's data via `useBlockNode`.
+ *
+ * This means Editor's JSX never iterates the full node list on content
+ * changes. When a keystroke mutates block A, only BlockWrapper(A) re-renders.
+ * Editor itself does NOT re-render because it now subscribes to
+ * `useContainerChildrenIds` (a stable ID array) instead of the full container.
+ */
+const BlockWrapper = React.memo(function BlockWrapper({
+  nodeId,
+  index,
+  activeNodeId,
+  readOnly,
+  dragOverNodeId,
+  dropPosition,
+  draggingNodeId,
+  handleDragEnter,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  handleAddBlock,
+}: BlockWrapperProps) {
+  const node = useBlockNode(nodeId);
+
+  // Node may not exist yet during concurrent renders — bail out early
+  if (!node) return null;
+
+  // Skip free-positioned images; they are rendered by FreePositionedImages
+  const isText = isTextNode(node);
+  const textNode = isText ? (node as TextNode) : null;
+  if (textNode?.type === "img" && textNode.attributes?.isFreePositioned) {
+    return null;
+  }
+
+  const isFirstBlock = index === 0;
+
+  return (
+    <div className="w-full">
+      {/* Add block button before first block */}
+      {!readOnly && isFirstBlock && (
+        <AddBlockButton
+          onAdd={() => handleAddBlock(nodeId, "before")}
+          position="before"
+        />
+      )}
+
+      <div
+        onDragEnter={(e) => handleDragEnter(e, nodeId)}
+        onDragOver={(e) => handleDragOver(e, nodeId)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, nodeId)}
+        className={`
+          relative transition-all
+          ${
+            dragOverNodeId === nodeId &&
+            dropPosition === "before" &&
+            draggingNodeId !== nodeId
+              ? "before:absolute before:inset-x-0 before:-top-1 before:h-1 before:bg-primary/30 before:z-10 before:rounded-full"
+              : ""
+          }
+          ${
+            dragOverNodeId === nodeId &&
+            dropPosition === "after" &&
+            draggingNodeId !== nodeId
+              ? "after:absolute after:inset-x-0 after:-bottom-1 after:h-1 after:bg-primary/30 after:z-10 after:rounded-full"
+              : ""
+          }
+          ${
+            dragOverNodeId === nodeId &&
+            dropPosition === "left" &&
+            draggingNodeId !== nodeId
+              ? "before:absolute before:inset-y-0 before:-left-1 before:w-1 before:bg-blue-500/50 before:z-10 before:rounded-full"
+              : ""
+          }
+          ${
+            dragOverNodeId === nodeId &&
+            dropPosition === "right" &&
+            draggingNodeId !== nodeId
+              ? "after:absolute after:inset-y-0 after:-right-1 after:w-1 after:bg-blue-500/50 after:z-10 after:rounded-full"
+              : ""
+          }
+        `}
+      >
+        <Block
+          nodeId={nodeId}
+          isActive={activeNodeId === nodeId}
+          isFirstBlock={isFirstBlock}
+          depth={0}
+        />
+      </div>
+
+      {/* Add block button after each block */}
+      {!readOnly && (
+        <AddBlockButton
+          onAdd={() => handleAddBlock(nodeId, "after")}
+          position="after"
+        />
+      )}
+    </div>
+  );
+});
+
+// ─── Free-positioned images renderer ─────────────────────────────────────────
+
+interface FreePositionedImagesProps {
+  activeNodeId: string | null;
+  readOnly: boolean;
+  handleNodeClick: (nodeId: string) => void;
+  handleDeleteNode: (nodeId: string) => void;
+}
+
+/**
+ * FreePositionedImages — isolates the `useContainer` subscription needed to
+ * find and render absolutely-positioned image blocks.
+ *
+ * By extracting this into its own component, the parent Editor is no longer
+ * required to subscribe to the full container object just to filter images.
+ */
+function FreePositionedImages({
+  activeNodeId,
+  readOnly,
+  handleNodeClick,
+  handleDeleteNode,
+}: FreePositionedImagesProps) {
+  const container = useContainer();
+
+  const freeImages = container.children.filter((node) => {
+    const textNode = isTextNode(node) ? (node as TextNode) : null;
+    return (
+      textNode &&
+      textNode.type === "img" &&
+      textNode.attributes?.isFreePositioned
+    );
+  });
+
+  return (
+    <>
+      {freeImages.map((node) => (
+        <FreeImageBlock
+          key={node.id}
+          node={node as TextNode}
+          isActive={activeNodeId === node.id}
+          onClick={() => handleNodeClick(node.id)}
+          onDelete={readOnly ? undefined : () => handleDeleteNode(node.id)}
+          readOnly={readOnly}
+        />
+      ))}
+    </>
+  );
+}
+
+// ─── Editor Component Props ───────────────────────────────────────────────────
 
 /**
  * Editor Component Props
  */
 interface EditorProps {
-  readOnly?: boolean; // View-only mode - renders content without editing capabilities
-  onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler - should return the uploaded image URL
-  onUploadVideo?: (file: File) => Promise<string>; // Custom video upload handler - should return the uploaded video URL
-  notionBased?: boolean; // Enable Notion-style features (cover image, first header spacing) - default: true
-  onNotionBasedChange?: (notionBased: boolean) => void; // Callback when notion mode is toggled
-  // enableVirtualization?: boolean; // Enable virtualization for better performance with many blocks - default: false
-  // virtualizationThreshold?: number; // Number of blocks before virtualization kicks in - default: 50
+  readOnly?: boolean; // View-only mode — renders content without editing capabilities
+  onUploadImage?: (file: File) => Promise<string>; // Custom image upload handler — should return the uploaded image URL
+  onUploadVideo?: (file: File) => Promise<string>; // Custom video upload handler — should return the uploaded video URL
+  notionBased?: boolean; // Enable Notion-style features (cover image, first header spacing) — default: true
+  className?: string; // Additional CSS classes applied to the outermost container div
+  /**
+   * Called whenever the document content changes.
+   * Debounced at 300 ms — only fires when the container reference actually
+   * changes (not on activeNodeId or selection-only updates).
+   * NOTE: Markdown is intentionally omitted from the payload because Markdown
+   * serialisation can be expensive. Use `useEditorAPI().getMarkdown()` if needed.
+   */
+  onChange?: (data: { json: ContainerNode; html: string }) => void;
+  dir?: 'ltr' | 'rtl' | 'auto'; // Text direction — default: 'ltr'
+  onDirChange?: (dir: 'ltr' | 'rtl' | 'auto') => void; // Callback when direction changes
+  onAISelect?: (nodeId: string) => void; // Called when user selects "AI Generate" from command menu
+  aiProvider?: import('../lib/ai/types').AIProvider; // AI provider for selection-based AI editing
+  aiSystemPrompt?: string; // Default system prompt for AI selection editing
 }
 
 export function Editor({
@@ -135,31 +270,95 @@ export function Editor({
   onUploadImage,
   onUploadVideo,
   notionBased = true,
-  onNotionBasedChange,
-}: // enableVirtualization = false,
-// virtualizationThreshold = 50,
-EditorProps = {}) {
+  className,
+  onChange,
+  dir = 'ltr',
+  onDirChange,
+  onAISelect,
+  aiProvider,
+  aiSystemPrompt,
+}: EditorProps = {}) {
   // ✅ OPTIMIZATION: Subscribe to specific state pieces instead of full state
   // This prevents Editor from re-rendering on every state change
   const activeNodeId = useEditorStore((state) => state.activeNodeId);
-  const historyIndex = useEditorStore((state) => state.historyIndex);
-  const historyLength = useEditorStore((state) => state.history.length);
+  const undoStackLength = useEditorStore((state) => state.undoStack.length);
+  const redoStackLength = useEditorStore((state) => state.redoStack.length);
   const coverImage = useEditorStore((state) => state.coverImage);
   const currentSelection = useEditorStore((state) => state.currentSelection);
 
   const dispatch = useEditorDispatch();
-  const container = useContainer();
+  // ✅ OPTIMIZATION: Subscribe only to the list of child IDs, not the full
+  // container object. This prevents Editor from re-rendering on every keystroke
+  // (content changes update the container reference but not the ID array).
+  const childrenIds = useContainerChildrenIds();
   const selectionManager = useSelectionManager();
+
+  // ✅ OPTIMIZATION: Stable container getter for all callbacks.
+  // Callbacks use this getter instead of closing over the container directly,
+  // so they never go stale and never need to be recreated when container changes.
+  // We pull the getter directly from the Zustand store so that the Editor
+  // component itself does NOT subscribe to container changes — only the
+  // specialised sub-components (BlockWrapper, FreePositionedImages, etc.) do.
+  const storeGetContainer = useEditorStore((s) => s.getContainer);
+  const getContainer = useCallback(() => storeGetContainer(), [storeGetContainer]);
   const { toast } = useToast();
   const lastEnterTime = useRef<number>(0);
   const nodeRefs = useRef<Map<string, HTMLElement>>(new Map());
   const contentUpdateTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const multipleFileInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
-  const freeImageInputRef = useRef<HTMLInputElement>(null);
+  const activeNodeIdRef = useRef(activeNodeId);
+  activeNodeIdRef.current = activeNodeId;
   const editorContentRef = useRef<HTMLDivElement>(null);
   const [readOnly, setReadOnly] = useState(initialReadOnly);
+
+  // Keep internal readOnly in sync when the prop changes externally
+  useEffect(() => {
+    setReadOnly(initialReadOnly);
+  }, [initialReadOnly]);
+
+  // ── onChange: debounced subscription to container reference changes ────────
+  const store = useEditorStoreInstance();
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const onChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!onChangeRef.current) return;
+
+    let prevContainer = store.getState().getContainer();
+
+    const unsubscribe = store.subscribe((state) => {
+      const nextContainer = state.current;
+
+      // Only fire when the container reference actually changed
+      // (ignores activeNodeId, selection, and other non-content state updates)
+      if (nextContainer === prevContainer) return;
+      prevContainer = nextContainer;
+
+      // Debounce: clear any pending timer before scheduling a new one
+      if (onChangeTimerRef.current !== null) {
+        clearTimeout(onChangeTimerRef.current);
+      }
+
+      onChangeTimerRef.current = setTimeout(() => {
+        onChangeTimerRef.current = null;
+        const cb = onChangeRef.current;
+        if (!cb) return;
+        const json = nextContainer;
+        const html = serializeToSemanticHtml(json);
+        cb({ json, html });
+      }, 300);
+    });
+
+    return () => {
+      unsubscribe();
+      if (onChangeTimerRef.current !== null) {
+        clearTimeout(onChangeTimerRef.current);
+        onChangeTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
+  // ──────────────────────────────────────────────────────────────────────────
 
   // Enable auto-scroll when dragging near viewport edges
   useDragAutoScroll(editorContentRef, {
@@ -169,146 +368,128 @@ EditorProps = {}) {
     enableHorizontal: false,
   });
 
-  const [isUploading, setIsUploading] = useState(false);
-  const [copiedHtml, setCopiedHtml] = useState(false);
-  const [copiedJson, setCopiedJson] = useState(false);
-  const [enhanceSpaces, setEnhanceSpaces] = useState(true);
-  const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
-  const [dropPosition, setDropPosition] = useState<
-    "before" | "after" | "left" | "right" | null
-  >(null);
-  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string>("");
-  const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(
-    new Set()
-  );
-  const [dragOverFlexId, setDragOverFlexId] = useState<string | null>(null);
-  const [flexDropPosition, setFlexDropPosition] = useState<
-    "left" | "right" | null
-  >(null);
-  const [tableDialogOpen, setTableDialogOpen] = useState(false);
-  const [tableInsertionTargetId, setTableInsertionTargetId] = useState<
-    string | undefined
-  >(undefined);
   const [insertComponentModalOpen, setInsertComponentModalOpen] =
     useState(false);
 
-  // Container is now obtained from useContainer hook above
+  // --- Extracted hooks ---
 
-  const currentNode = activeNodeId
-    ? (container.children.find((n) => n.id === activeNodeId) as
-        | TextNode
-        | undefined)
-    : (container.children[0] as TextNode | undefined);
+  const {
+    selectedImageIds,
+    handleToggleImageSelection,
+    handleClearImageSelection,
+    handleGroupSelectedImages,
+    flexInfo,
+    handleReverseImagesInFlex,
+    handleExtractFromFlex,
+  } = useImageSelection({ dispatch, toast, getContainer });
 
-  // Debounced dispatch for selection state updates
-  const selectionDispatchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const {
+    tableDialogOpen,
+    setTableDialogOpen,
+    setTableInsertionTargetId,
+    handleCreateTableFromCommand,
+    handleImportMarkdownTable,
+    handleCreateTable,
+  } = useTableOperations({ dispatch, toast, getContainer, editorContentRef });
 
-  // Create handler parameters
-  const selectionParams = {
-    container,
-    state: {
-      activeNodeId,
-      historyIndex,
-      history: [container],
-      currentSelection,
-    } as any, // Minimal state object for handlers
+  const { handleCopy, handlePaste, handleCut } = useEditorClipboard({
+    dispatch,
+    getContainer,
+    getActiveNodeId: () => activeNodeIdRef.current,
+  });
+
+  const {
+    selectedColor,
+    handleSelectionChange,
+    handleFormat,
+    handleApplyColor,
+    handleApplyFontSize,
+    handleTypeChange,
+  } = useEditorSelection({
     dispatch,
     selectionManager,
+    activeNodeId,
+    getContainer,
+    toast,
+    undoStackLength,
+    currentSelection,
     nodeRefs,
-  };
-
-  // keyboardParams will be created dynamically with the handlers
+  });
 
   const nodeOperationParams = {
-    container,
+    container: getContainer,
     dispatch,
     toast,
     nodeRefs,
     editorContentRef,
   };
 
-  const dragDropParams = {
-    container,
-    dispatch,
-    toast,
+  // Drag-drop hook
+  const {
+    dragOverNodeId,
+    setDragOverNodeId,
+    dropPosition,
+    setDropPosition,
     draggingNodeId,
     setDraggingNodeId,
-    setDragOverNodeId,
-    setDropPosition,
-    setIsUploading,
-    onUploadImage,
-  };
-
-  const fileUploadParams = {
-    container,
+    dragOverFlexId,
+    flexDropPosition,
+    handleImageDragStart,
+    handleBlockDragStart,
+    handleDragEnter,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleFlexContainerDragOver,
+    handleFlexContainerDragLeave,
+    handleFlexContainerDrop,
+  } = useEditorDragDrop({
     dispatch,
-    state: { activeNodeId, historyIndex, history: [container] } as any,
+    getContainer,
     toast,
+    onUploadImage,
+  });
+
+  // File upload hook
+  const {
+    isUploading,
     setIsUploading,
     fileInputRef,
     multipleFileInputRef,
-    onUploadImage,
-  };
-
-  const videoUploadParams = {
-    container,
+    videoInputRef,
+    freeImageInputRef,
+    handleFileChange,
+    handleMultipleFilesChange,
+    handleImageUploadClick,
+    handleMultipleImagesUploadClick,
+    handleVideoUploadClick,
+    handleVideoFileChange,
+    handleFreeImageFileChange,
+    handleFreeImageUploadClick,
+  } = useEditorFileUpload({
     dispatch,
-    state: { activeNodeId, historyIndex, history: [container] } as any,
+    getContainer,
+    getActiveNodeId: () => activeNodeIdRef.current,
     toast,
-    setIsUploading,
-    fileInputRef: videoInputRef,
-    multipleFileInputRef: videoInputRef, // Reuse the same ref for consistency
     onUploadImage,
-  };
+  });
 
-  const freeImageUploadParams = {
-    container,
+  // Media paste (image/video from clipboard) — document-level listener
+  useMediaPaste({
+    readOnly,
     dispatch,
-    state: { activeNodeId, historyIndex, history: [container] } as any,
     toast,
-    setIsUploading,
-    fileInputRef: freeImageInputRef,
-    multipleFileInputRef: freeImageInputRef,
     onUploadImage,
-  };
-
-  // Create all handlers
-  const handleSelectionChange = useCallback(
-    createHandleSelectionChange(selectionParams, selectionDispatchTimerRef),
-    [container, activeNodeId, selectionManager, dispatch]
-  );
-
-  const handleFormat = useCallback(createHandleFormat(selectionParams), [
-    container,
-    dispatch,
-    selectionManager,
-  ]);
-
-  const handleApplyColor = useCallback(
-    createHandleApplyColor(selectionParams, toast, setSelectedColor),
-    [dispatch, selectionManager, toast]
-  );
-
-  const handleApplyFontSize = useCallback(
-    createHandleApplyFontSize(selectionParams, toast),
-    [dispatch, selectionManager, toast]
-  );
-
-  const handleTypeChange = useCallback(
-    createHandleTypeChange(selectionParams, handleSelectionChange),
-    [dispatch, selectionManager, handleSelectionChange]
-  );
-
-  const handleToggleImageSelection = useCallback(
-    createHandleToggleImageSelection(selectedImageIds, setSelectedImageIds),
-    [selectedImageIds]
-  );
+    setIsUploading,
+    getContainer,
+    getActiveNodeId: () => activeNodeIdRef.current,
+    nodeRefs,
+  });
 
   const handleContentChange = useCallback(
     createHandleContentChange(
       {
-        container,
+        container: getContainer,
         dispatch,
         nodeRefs,
         lastEnterTime,
@@ -316,39 +497,39 @@ EditorProps = {}) {
       },
       contentUpdateTimers
     ),
-    [container, dispatch, handleToggleImageSelection]
+    [dispatch, handleToggleImageSelection]
   );
 
   const handleKeyDown = useCallback(
     createHandleKeyDown({
-      container,
+      container: getContainer,
       dispatch,
       nodeRefs,
       lastEnterTime,
       onToggleImageSelection: handleToggleImageSelection,
     }),
-    [container, dispatch, nodeRefs, lastEnterTime, handleToggleImageSelection]
+    [dispatch, handleToggleImageSelection]
   );
 
   const handleClickWithModifier = useCallback(
     createHandleClickWithModifier({
-      container,
+      container: getContainer,
       dispatch,
       nodeRefs,
       lastEnterTime,
       onToggleImageSelection: handleToggleImageSelection,
     }),
-    [container, handleToggleImageSelection]
+    [handleToggleImageSelection]
   );
 
   const handleNodeClick = useCallback(
-    createHandleNodeClick({ container, dispatch }),
-    [container, dispatch]
+    createHandleNodeClick({ container: getContainer, dispatch }),
+    [dispatch]
   );
 
   const handleDeleteNode = useCallback(
-    createHandleDeleteNode({ container, dispatch, toast }),
-    [container, dispatch, toast]
+    createHandleDeleteNode({ container: getContainer, dispatch, toast }),
+    [dispatch, toast]
   );
 
   const handleAddBlock = useCallback(
@@ -357,8 +538,8 @@ EditorProps = {}) {
   );
 
   const handleCreateNested = useCallback(
-    createHandleCreateNested({ container, dispatch, toast }),
-    [container, dispatch, toast]
+    createHandleCreateNested({ container: getContainer, dispatch, toast }),
+    [dispatch, toast]
   );
 
   const handleChangeBlockType = useCallback(
@@ -373,187 +554,12 @@ EditorProps = {}) {
 
   const handleCreateList = useCallback(
     createHandleCreateList(nodeOperationParams),
-    [container, dispatch, toast, editorContentRef]
+    [dispatch, toast]
   );
 
   const handleCreateListFromCommand = useCallback(
     createHandleCreateListFromCommand({ dispatch, toast, nodeRefs }),
     [dispatch, toast, nodeRefs]
-  );
-
-  const handleCreateLink = useCallback(
-    createHandleCreateLink(nodeOperationParams),
-    [container, dispatch, toast, editorContentRef]
-  );
-
-  const handleCreateTable = useCallback(
-    createHandleCreateTable(nodeOperationParams, tableInsertionTargetId),
-    [container, dispatch, toast, editorContentRef, tableInsertionTargetId]
-  );
-
-  const handleCreateTableFromCommand = useCallback(
-    (nodeId: string) => {
-      // Store the node ID for later use when table is created
-      setTableInsertionTargetId(nodeId);
-      dispatch(EditorActions.setActiveNode(nodeId));
-      // Open the table dialog
-      setTableDialogOpen(true);
-    },
-    [dispatch]
-  );
-
-  const handleImportMarkdownTable = useCallback(
-    (table: any) => {
-      const timestamp = Date.now();
-
-      // Wrap table in a container for consistent handling
-      const tableWrapper: ContainerNode = {
-        id: `table-wrapper-${timestamp}`,
-        type: "container",
-        children: [table],
-        attributes: {},
-      };
-
-      // Determine where to insert the table
-      let targetNode = null;
-      let targetPosition: "after" | "before" = "after";
-
-      if (tableInsertionTargetId) {
-        // If we have a target node (from command menu), insert after it
-        targetNode = container.children.find(
-          (n) => n.id === tableInsertionTargetId
-        );
-        targetPosition = "after";
-      }
-
-      if (!targetNode) {
-        // Fallback: insert at the end
-        targetNode = container.children[container.children.length - 1];
-        targetPosition = "after";
-      }
-
-      if (targetNode) {
-        dispatch(
-          EditorActions.insertNode(tableWrapper, targetNode.id, targetPosition)
-        );
-      } else {
-        // If no nodes exist, replace the container
-        dispatch(
-          EditorActions.replaceContainer({
-            ...container,
-            children: [tableWrapper],
-          })
-        );
-      }
-
-      toast({
-        title: "Table Imported",
-        description: "Markdown table has been imported successfully",
-      });
-
-      // Smooth scroll to the newly created table
-      setTimeout(() => {
-        const editorContent = editorContentRef.current;
-        if (editorContent) {
-          const tableElement = editorContent.querySelector(
-            `[data-node-id="${tableWrapper.id}"]`
-          );
-          if (tableElement) {
-            tableElement.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-              inline: "nearest",
-            });
-          }
-        }
-      }, 150);
-    },
-    [container, dispatch, toast, editorContentRef, tableInsertionTargetId]
-  );
-
-  const handleCopyHtml = useCallback(
-    () =>
-      createHandleCopyHtml({ toast }, enhanceSpaces, setCopiedHtml)(container),
-    [container, enhanceSpaces, toast]
-  );
-
-  const handleCopyJson = useCallback(
-    () => createHandleCopyJson({ toast }, setCopiedJson)(container),
-    [container, toast]
-  );
-
-  const handleImageDragStart = useCallback(
-    createHandleImageDragStart(setDraggingNodeId),
-    []
-  );
-
-  const handleBlockDragStart = useCallback(
-    createHandleBlockDragStart(setDraggingNodeId),
-    []
-  );
-
-  const handleDragEnter = useCallback(createHandleDragEnter(), []);
-
-  const handleDragOver = useCallback(
-    createHandleDragOver({
-      container,
-      dispatch,
-      draggingNodeId,
-      setDraggingNodeId,
-      setDragOverNodeId,
-      setDropPosition,
-    }),
-    [container, draggingNodeId]
-  );
-
-  const handleDragLeave = useCallback(
-    createHandleDragLeave(setDragOverNodeId, setDropPosition),
-    []
-  );
-
-  const handleDrop = useCallback(
-    createHandleDrop(dragDropParams, dropPosition),
-    [container, dispatch, toast, draggingNodeId, dropPosition, onUploadImage]
-  );
-
-  const handleFileChange = useCallback(
-    createHandleFileChange(fileUploadParams),
-    [container, dispatch, activeNodeId, toast, onUploadImage]
-  );
-
-  const handleMultipleFilesChange = useCallback(
-    createHandleMultipleFilesChange(fileUploadParams),
-    [container, dispatch, activeNodeId, toast, onUploadImage]
-  );
-
-  const handleImageUploadClick = useCallback(
-    createHandleImageUploadClick(fileInputRef),
-    []
-  );
-
-  const handleMultipleImagesUploadClick = useCallback(
-    createHandleMultipleImagesUploadClick(multipleFileInputRef),
-    []
-  );
-
-  const handleVideoUploadClick = useCallback(
-    createHandleImageUploadClick(videoInputRef),
-    []
-  );
-
-  const handleVideoFileChange = useCallback(
-    createHandleFileChange(videoUploadParams),
-    [container, dispatch, activeNodeId, toast, onUploadImage]
-  );
-
-  const handleFreeImageFileChange = useCallback(
-    createHandleFreeImageFileChange(freeImageUploadParams),
-    [container, dispatch, activeNodeId, toast, onUploadImage]
-  );
-
-  const handleFreeImageUploadClick = useCallback(
-    createHandleFreeImageUploadClick(freeImageInputRef),
-    []
   );
 
   const handleInsertComponentClick = useCallback(() => {
@@ -570,91 +576,21 @@ EditorProps = {}) {
     [handleFreeImageUploadClick]
   );
 
-  const handleClearImageSelection = useCallback(
-    createHandleClearImageSelection(setSelectedImageIds),
-    []
-  );
-
-  const handleGroupSelectedImages = useCallback(
-    createHandleGroupSelectedImages(
-      { container, dispatch, toast },
-      selectedImageIds,
-      handleClearImageSelection
-    ),
-    [container, dispatch, toast, selectedImageIds, handleClearImageSelection]
-  );
-
-  // Check if selected images are in same flex container
-  const flexInfo = React.useMemo(() => {
-    if (selectedImageIds.size < 2) {
-      return { inSameFlex: false, flexParentId: null };
-    }
-    return checkImagesInSameFlex(
-      { container, dispatch, toast },
-      selectedImageIds
-    );
-  }, [container, selectedImageIds, dispatch, toast]);
-
-  const handleReverseImagesInFlex = useCallback(
-    createHandleReverseImagesInFlex(
-      { container, dispatch, toast },
-      selectedImageIds,
-      flexInfo.flexParentId || ""
-    ),
-    [container, dispatch, toast, selectedImageIds, flexInfo.flexParentId]
-  );
-
-  const handleExtractFromFlex = useCallback(
-    createHandleExtractFromFlex(
-      { container, dispatch, toast },
-      selectedImageIds,
-      flexInfo.flexParentId || "",
-      handleClearImageSelection
-    ),
-    [
-      container,
-      dispatch,
-      toast,
-      selectedImageIds,
-      flexInfo.flexParentId,
-      handleClearImageSelection,
-    ]
-  );
-
-  const handleFlexContainerDragOver = useCallback(
-    createHandleFlexContainerDragOver({
-      container,
-      dispatch,
-      toast,
-      draggingNodeId,
-      setDragOverFlexId,
-      setFlexDropPosition,
-    }),
-    [container, dispatch, toast, draggingNodeId]
-  );
-
-  const handleFlexContainerDragLeave = useCallback(
-    createHandleFlexContainerDragLeave(setDragOverFlexId, setFlexDropPosition),
-    []
-  );
-
-  const handleFlexContainerDrop = useCallback(
-    createHandleFlexContainerDrop({
-      container,
-      dispatch,
-      toast,
-      draggingNodeId,
-      setDragOverFlexId,
-      setFlexDropPosition,
-    }),
-    [container, dispatch, toast, draggingNodeId]
-  );
-
-  // Selection change listener
+  // Selection change listener (scoped to this editor instance)
   useEffect(() => {
-    document.addEventListener("selectionchange", handleSelectionChange);
+    const scopedHandler = () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && editorContentRef.current) {
+        const range = sel.getRangeAt(0);
+        if (!editorContentRef.current.contains(range.commonAncestorContainer)) {
+          return;
+        }
+      }
+      handleSelectionChange();
+    };
+    document.addEventListener("selectionchange", scopedHandler);
     return () => {
-      document.removeEventListener("selectionchange", handleSelectionChange);
+      document.removeEventListener("selectionchange", scopedHandler);
     };
   }, [handleSelectionChange]);
 
@@ -670,6 +606,7 @@ EditorProps = {}) {
       if (element && document.activeElement !== element) {
         element.focus();
       } else if (!element && retries < 10) {
+        // Retry: element may not be mounted yet after state update
         setTimeout(() => attemptFocus(retries + 1), 50);
       } else if (!element) {
         console.error(
@@ -690,443 +627,186 @@ EditorProps = {}) {
     };
   }, []);
 
-  // Handle paste events for images/videos
-  useEffect(() => {
-    const handlePaste = async (e: ClipboardEvent) => {
-      const activeElement = document.activeElement;
-      const isInEditor = Array.from(nodeRefs.current.values()).some(
-        (el) => el === activeElement || el.contains(activeElement)
-      );
-
-      if (!isInEditor || readOnly) return;
-
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      // Check if any item is an image or video file
-      const mediaFiles: File[] = [];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (
-          item.kind === "file" &&
-          (item.type.startsWith("image/") || item.type.startsWith("video/"))
-        ) {
-          const file = item.getAsFile();
-          if (file) {
-            mediaFiles.push(file);
-          }
-        }
-      }
-
-      if (mediaFiles.length === 0) return;
-
-      // Prevent default paste behavior
-      e.preventDefault();
-
-      // Upload the files
-      setIsUploading(true);
-
-      try {
-        const uploadPromises = mediaFiles.map(async (file) => {
-          if (onUploadImage) {
-            return await onUploadImage(file);
-          } else {
-            const { uploadImage } = await import("../lib/utils/image-upload");
-            const result = await uploadImage(file);
-            if (!result.success || !result.url) {
-              throw new Error(result.error || "Upload failed");
-            }
-            return result.url;
-          }
-        });
-
-        const mediaUrls = await Promise.all(uploadPromises);
-
-        // Create media nodes
-        const timestamp = Date.now();
-        const mediaNodes: TextNode[] = mediaUrls.map((url, index) => {
-          const file = mediaFiles[index];
-          const isVideo = file.type.startsWith("video/");
-
-          return {
-            id: `${isVideo ? "video" : "img"}-${timestamp}-${index}`,
-            type: isVideo ? "video" : "img",
-            content: "",
-            attributes: {
-              src: url,
-              alt: file.name,
-            },
-          };
-        });
-
-        // Insert media nodes after current active node
-        const targetId =
-          activeNodeId || container.children[container.children.length - 1]?.id;
-
-        if (mediaFiles.length === 1) {
-          // Single media file - insert directly
-          if (targetId) {
-            dispatch(
-              EditorActions.insertNode(mediaNodes[0], targetId, "after")
-            );
-          }
-        } else {
-          // Multiple media files - create flex container
-          const flexContainer: ContainerNode = {
-            id: `flex-container-${timestamp}`,
-            type: "container",
-            children: mediaNodes,
-            attributes: {
-              layoutType: "flex",
-              gap: "4",
-              flexWrap: "wrap",
-            },
-          };
-
-          if (targetId) {
-            dispatch(
-              EditorActions.insertNode(flexContainer, targetId, "after")
-            );
-          }
-        }
-
-        const videoCount = mediaFiles.filter((f) =>
-          f.type.startsWith("video/")
-        ).length;
-        const imageCount = mediaFiles.filter((f) =>
-          f.type.startsWith("image/")
-        ).length;
-        let description = "";
-        if (videoCount > 0 && imageCount > 0) {
-          description = `${imageCount} image(s) and ${videoCount} video(s) pasted successfully.`;
-        } else if (videoCount > 0) {
-          description = `${videoCount} video(s) pasted successfully.`;
-        } else {
-          description = `${imageCount} image(s) pasted successfully.`;
-        }
-
-        toast({
-          title: "Media pasted",
-          description,
-        });
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Paste failed",
-          description:
-            error instanceof Error
-              ? error.message
-              : "An unexpected error occurred",
-        });
-      } finally {
-        setIsUploading(false);
-      }
-    };
-
-    document.addEventListener("paste", handlePaste);
-    return () => {
-      document.removeEventListener("paste", handlePaste);
-    };
-  }, [
+  // Global keyboard shortcuts (Ctrl+A, Ctrl+B/I/U, Ctrl+Z/Y, arrow navigation)
+  useEditorKeyboardShortcuts({
     readOnly,
-    activeNodeId,
-    container,
     dispatch,
-    toast,
-    onUploadImage,
-    setIsUploading,
-  ]);
-
-  // Handle global keyboard shortcuts
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-
-      const activeElement = document.activeElement;
-      const isInEditor = Array.from(nodeRefs.current.values()).some(
-        (el) => el === activeElement || el.contains(activeElement)
-      );
-
-      // Ctrl+A / Cmd+A - Select all content in current block only
-      if (isCtrlOrCmd && e.key === "a" && isInEditor) {
-        e.preventDefault();
-
-        const selection = window.getSelection();
-        if (!selection) return;
-
-        const currentBlock = activeElement as HTMLElement;
-        if (currentBlock && currentBlock.isContentEditable) {
-          const range = document.createRange();
-          range.selectNodeContents(currentBlock);
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      }
-
-      // Ctrl+B / Cmd+B - Toggle Bold
-      if (isCtrlOrCmd && e.key === "b" && isInEditor) {
-        e.preventDefault();
-        const selection = window.getSelection();
-        if (selection && !selection.isCollapsed) {
-          handleFormat("bold");
-        }
-      }
-
-      // Ctrl+I / Cmd+I - Toggle Italic
-      if (isCtrlOrCmd && e.key === "i" && isInEditor) {
-        e.preventDefault();
-        const selection = window.getSelection();
-        if (selection && !selection.isCollapsed) {
-          handleFormat("italic");
-        }
-      }
-
-      // Ctrl+U / Cmd+U - Toggle Underline
-      if (isCtrlOrCmd && e.key === "u" && isInEditor) {
-        e.preventDefault();
-        const selection = window.getSelection();
-        if (selection && !selection.isCollapsed) {
-          handleFormat("underline");
-        }
-      }
-
-      // Ctrl+Shift+S / Cmd+Shift+S - Toggle Strikethrough
-      if (isCtrlOrCmd && e.shiftKey && e.key === "S" && isInEditor) {
-        e.preventDefault();
-        const selection = window.getSelection();
-        if (selection && !selection.isCollapsed) {
-          handleFormat("strikethrough");
-        }
-      }
-
-      // Ctrl+E / Cmd+E - Toggle Code
-      if (isCtrlOrCmd && e.key === "e" && isInEditor) {
-        e.preventDefault();
-        const selection = window.getSelection();
-        if (selection && !selection.isCollapsed) {
-          handleFormat("code");
-        }
-      }
-
-      // Ctrl+Z / Cmd+Z - Undo
-      if (isCtrlOrCmd && e.key === "z" && !e.shiftKey) {
-        if (
-          !isInEditor &&
-          (activeElement?.tagName === "INPUT" ||
-            activeElement?.tagName === "TEXTAREA")
-        ) {
-          return;
-        }
-        e.preventDefault();
-        if (historyIndex > 0) {
-          dispatch(EditorActions.undo());
-        }
-      }
-
-      // Ctrl+Y / Cmd+Y or Ctrl+Shift+Z - Redo
-      if (
-        (isCtrlOrCmd && e.key === "y") ||
-        (isCtrlOrCmd && e.shiftKey && e.key === "Z")
-      ) {
-        if (
-          !isInEditor &&
-          (activeElement?.tagName === "INPUT" ||
-            activeElement?.tagName === "TEXTAREA")
-        ) {
-          return;
-        }
-        e.preventDefault();
-        if (historyIndex < historyLength - 1) {
-          dispatch(EditorActions.redo());
-        }
-      }
-
-      // Arrow Up/Down - Navigate between blocks
-      if (
-        (e.key === "ArrowUp" || e.key === "ArrowDown") &&
-        isInEditor &&
-        activeNodeId
-      ) {
-        const currentElement = activeElement as HTMLElement;
-        const currentNodeId =
-          currentElement?.getAttribute("data-node-id") || activeNodeId;
-
-        // Find the current node and its siblings
-        const result = findNodeInTree(currentNodeId, container);
-        if (!result) return;
-
-        const { siblings } = result;
-        const currentIndex = siblings.findIndex((n) => n.id === currentNodeId);
-        if (currentIndex === -1) return;
-
-        // ArrowUp: Navigate to previous block
-        if (e.key === "ArrowUp" && currentIndex > 0) {
-          e.preventDefault();
-          const prevNode = siblings[currentIndex - 1];
-          dispatch(EditorActions.setActiveNode(prevNode.id));
-
-          // Focus and place cursor at the end of the previous node
-          setTimeout(() => {
-            const prevElement = nodeRefs.current.get(prevNode.id);
-            if (prevElement) {
-              prevElement.focus();
-              const range = document.createRange();
-              const sel = window.getSelection();
-
-              // Place cursor at the end
-              const lastChild =
-                prevElement.childNodes[prevElement.childNodes.length - 1];
-              if (lastChild?.nodeType === Node.TEXT_NODE) {
-                range.setStart(lastChild, lastChild.textContent?.length || 0);
-              } else if (lastChild) {
-                range.setStartAfter(lastChild);
-              } else {
-                range.selectNodeContents(prevElement);
-              }
-              range.collapse(true);
-              sel?.removeAllRanges();
-              sel?.addRange(range);
-            }
-          }, 10);
-        }
-
-        // ArrowDown: Navigate to next block
-        if (e.key === "ArrowDown" && currentIndex < siblings.length - 1) {
-          e.preventDefault();
-          const nextNode = siblings[currentIndex + 1];
-          dispatch(EditorActions.setActiveNode(nextNode.id));
-
-          // Focus and place cursor at the end of the next node
-          setTimeout(() => {
-            const nextElement = nodeRefs.current.get(nextNode.id);
-            if (nextElement) {
-              nextElement.focus();
-              const range = document.createRange();
-              const sel = window.getSelection();
-
-              // Place cursor at the end
-              const lastChild =
-                nextElement.childNodes[nextElement.childNodes.length - 1];
-              if (lastChild?.nodeType === Node.TEXT_NODE) {
-                range.setStart(lastChild, lastChild.textContent?.length || 0);
-              } else if (lastChild) {
-                range.setStartAfter(lastChild);
-              } else {
-                range.selectNodeContents(nextElement);
-              }
-              range.collapse(true);
-              sel?.removeAllRanges();
-              sel?.addRange(range);
-            }
-          }, 10);
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleGlobalKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleGlobalKeyDown);
-    };
-  }, [
-    historyIndex,
-    historyLength,
-    activeNodeId,
-    dispatch,
-    toast,
+    getContainer,
+    getActiveNodeId: () => activeNodeIdRef.current,
+    getCanUndo: () => undoStackLength > 0,
+    getCanRedo: () => redoStackLength > 0,
+    nodeRefs,
     handleFormat,
-    container,
-  ]);
+  });
 
-  console.log("Editor re-rendered");
+  // Stable registerNodeRef callback (nodeRefs ref never changes identity)
+  const registerNodeRef = useCallback(
+    (nodeId: string, el: HTMLElement | null) => {
+      if (el) {
+        nodeRefs.current.set(nodeId, el);
+      } else {
+        nodeRefs.current.delete(nodeId);
+      }
+    },
+    [] // nodeRefs.current is a stable Map — the ref itself never changes
+  );
+
+  // Build the editor context value.
+  // Callbacks are stable (useCallback with stable deps), so this memo only
+  // rebuilds when the few dynamic fields listed in deps actually change.
+  const editorContextValue = useMemo<EditorContextValue>(
+    () => ({
+      readOnly,
+      notionBased,
+      onUploadImage,
+      onUploadVideo,
+      onInput: (nodeId: string, element: HTMLElement) =>
+        handleContentChange(nodeId, element),
+      onKeyDown: (e: React.KeyboardEvent<HTMLElement>, nodeId: string) =>
+        handleKeyDown(e, nodeId),
+      onNodeClick: handleNodeClick,
+      onDeleteNode: handleDeleteNode,
+      onCreateNested: handleCreateNested,
+      onChangeBlockType: handleChangeBlockType,
+      onInsertImage: handleInsertImageFromCommand,
+      onCreateList: handleCreateListFromCommand,
+      onCreateTable: handleCreateTableFromCommand,
+      selectedImageIds,
+      onToggleImageSelection: handleToggleImageSelection,
+      onClickWithModifier: handleClickWithModifier,
+      onBlockDragStart: handleBlockDragStart,
+      onImageDragStart: handleImageDragStart,
+      onSetDragOverNodeId: setDragOverNodeId,
+      onSetDropPosition: setDropPosition,
+      draggingNodeId,
+      onSetDraggingNodeId: setDraggingNodeId,
+      onFlexContainerDragOver: handleFlexContainerDragOver,
+      onFlexContainerDragLeave: handleFlexContainerDragLeave,
+      onFlexContainerDrop: handleFlexContainerDrop,
+      dragOverFlexId,
+      flexDropPosition,
+      registerNodeRef,
+      hasCoverImage: !!coverImage,
+      onUploadCoverImage: onUploadImage,
+      onAISelect,
+    }),
+    [
+      readOnly,
+      notionBased,
+      onUploadImage,
+      onUploadVideo,
+      handleContentChange,
+      handleKeyDown,
+      handleNodeClick,
+      handleDeleteNode,
+      handleCreateNested,
+      handleChangeBlockType,
+      handleInsertImageFromCommand,
+      handleCreateListFromCommand,
+      handleCreateTableFromCommand,
+      selectedImageIds,
+      handleToggleImageSelection,
+      handleClickWithModifier,
+      handleBlockDragStart,
+      handleImageDragStart,
+      setDragOverNodeId,
+      setDropPosition,
+      draggingNodeId,
+      setDraggingNodeId,
+      handleFlexContainerDragOver,
+      handleFlexContainerDragLeave,
+      handleFlexContainerDrop,
+      dragOverFlexId,
+      flexDropPosition,
+      registerNodeRef,
+      coverImage,
+      onAISelect,
+    ]
+  );
+
   return (
-    <div className="bg-background transition-colors flex flex-col flex-1 duration-300">
-      {/* Editor with integrated toolbar */}
-      <div className="mx-auto flex flex-col flex-1 w-full">
-        <QuickModeToggle
-          readOnly={readOnly}
-          onReadOnlyChange={setReadOnly}
-          notionBased={notionBased}
-          onNotionBasedChange={onNotionBasedChange}
+    <div dir={dir} className={`mina-editor bg-background transition-colors flex flex-col w-full h-full duration-300${className ? ` ${className}` : ""}`}>
+      {/* Toolbar - hidden in readOnly mode */}
+      {!readOnly && (
+        <EditorToolbar
+          isUploading={isUploading}
+          onImageUploadClick={handleImageUploadClick}
+          onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
+          onVideoUploadClick={handleVideoUploadClick}
+          onInsertComponentClick={handleInsertComponentClick}
+          onCreateList={handleCreateList}
+          onCreateTable={() => setTableDialogOpen(true)}
         />
-        {/* Toolbar - hidden in readOnly mode */}
+      )}
+
+      <div className="py-0 relative flex flex-col flex-1 gap-3 transition-all duration-300">
+        {/* Table Dialog */}
+        <TableDialog
+          open={tableDialogOpen}
+          onOpenChange={(open) => {
+            setTableDialogOpen(open);
+            // Clear the target ID when dialog closes
+            if (!open) {
+              setTableInsertionTargetId(undefined);
+            }
+          }}
+          onCreateTable={handleCreateTable}
+          onImportMarkdown={handleImportMarkdownTable}
+        />
+
+        {/* Insert Components Modal */}
+        <InsertComponentsModal
+          open={insertComponentModalOpen}
+          onOpenChange={setInsertComponentModalOpen}
+          onSelect={handleInsertComponentSelect}
+        />
+
+        {/* Hidden file inputs for image and video uploads */}
         {!readOnly && (
-          <EditorToolbar
-            isUploading={isUploading}
-            onImageUploadClick={handleImageUploadClick}
-            onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
-            onVideoUploadClick={handleVideoUploadClick}
-            onInsertComponentClick={handleInsertComponentClick}
-            onCreateList={handleCreateList}
-            onCreateTable={() => setTableDialogOpen(true)}
-          />
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <input
+              ref={multipleFileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleMultipleFilesChange}
+              className="hidden"
+            />
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              onChange={handleVideoFileChange}
+              className="hidden"
+            />
+            <input
+              ref={freeImageInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFreeImageFileChange}
+              className="hidden"
+            />
+          </>
         )}
-        <div className="shadow-2xl py-0 relative flex flex-col flex-1 rounded-none border-2 gap-3 transition-all duration-300">
-          {/* Table Dialog */}
-          <TableDialog
-            open={tableDialogOpen}
-            onOpenChange={(open) => {
-              setTableDialogOpen(open);
-              // Clear the target ID when dialog closes
-              if (!open) {
-                setTableInsertionTargetId(undefined);
-              }
-            }}
-            onCreateTable={handleCreateTable}
-            onImportMarkdown={handleImportMarkdownTable}
-          />
 
-          {/* Insert Components Modal */}
-          <InsertComponentsModal
-            open={insertComponentModalOpen}
-            onOpenChange={setInsertComponentModalOpen}
-            onSelect={handleInsertComponentSelect}
-          />
-
-          {/* Hidden file inputs for image and video uploads */}
-          {!readOnly && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <input
-                ref={multipleFileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleMultipleFilesChange}
-                className="hidden"
-              />
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/*"
-                onChange={handleVideoFileChange}
-                className="hidden"
-              />
-              <input
-                ref={freeImageInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFreeImageFileChange}
-                className="hidden"
-              />
-            </>
-          )}
-
-          {/* Editor Content */}
-          <CardContent
-            className={`px-0 flex flex-col w-full flex-1 transition-all duration-300 mx-auto ${
-              readOnly ? "py-14 md:py-20" : ""
-            }`}
-          >
-            <div ref={editorContentRef} className="h-full">
+        {/* Editor Content */}
+        <div
+          className={`px-0 flex flex-col w-full flex-1 transition-all duration-300 mx-auto ${
+            readOnly ? "py-14 md:py-20" : ""
+          }`}
+        >
+          <div ref={editorContentRef} className="h-full">
+            <EditorContextProvider value={editorContextValue}>
               <>
-                {/* Cover Image - Only in Notion mode for non-virtualized */}
-                {notionBased && (
+                {/* Cover Image — only rendered when notionBased and a cover image exists in store */}
+                {notionBased && coverImage && (
                   <CoverImage
                     onUploadImage={onUploadImage}
                     readOnly={readOnly}
@@ -1135,217 +815,55 @@ EditorProps = {}) {
 
                 <div
                   data-editor-content
+                  role="textbox"
+                  aria-multiline="true"
+                  aria-label="Rich text editor"
+                  aria-readonly={readOnly}
+                  onCopy={readOnly ? undefined : handleCopy}
+                  onPaste={readOnly ? undefined : handlePaste}
+                  onCut={readOnly ? undefined : handleCut}
                   className={`${
                     notionBased && coverImage
                       ? "pt-[280px] lg:pt-[420px]"
                       : notionBased
                       ? "pt-[50px]"
                       : "pt-4"
-                  } px-10 transition-all mx-auto max-w-6xl duration-300`}
+                  } px-4 lg:px-10 lg:pl-20 transition-all duration-300`}
                 >
-                  {container.children.map((node, index) => {
-                    const isText = isTextNode(node);
-                    const textNode = isText ? (node as TextNode) : null;
-
-                    // Skip free-positioned images - they'll be rendered separately
-                    if (
-                      textNode &&
-                      textNode.type === "img" &&
-                      textNode.attributes?.isFreePositioned
-                    ) {
-                      return null;
-                    }
-
-                    // Use stable key based only on node.id to prevent unnecessary remounts
-                    // Previously included children.length which caused remounts on every edit
-                    const nodeKey = node.id;
-
-                    const isFirstBlock = index === 0;
-                    const isSecondBlock = index === 1;
-
-                    return (
-                      <div className="mx-auto max-w-6xl w-full" key={nodeKey}>
-                        {/* Add block button before first block */}
-                        {!readOnly && isFirstBlock && (
-                          <AddBlockButton
-                            onAdd={() => handleAddBlock(node.id, "before")}
-                            position="before"
-                          />
-                        )}
-
-                        <div
-                          onDragEnter={(e) => handleDragEnter(e, node.id)}
-                          onDragOver={(e) => handleDragOver(e, node.id)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => handleDrop(e, node.id)}
-                          className={`
-                          relative transition-all
-                          ${
-                            dragOverNodeId === node.id &&
-                            dropPosition === "before" &&
-                            draggingNodeId !== node.id
-                              ? "before:absolute before:inset-x-0 before:-top-1 before:h-1 before:bg-primary/30 before:z-10 before:rounded-full"
-                              : ""
-                          }
-                          ${
-                            dragOverNodeId === node.id &&
-                            dropPosition === "after" &&
-                            draggingNodeId !== node.id
-                              ? "after:absolute after:inset-x-0 after:-bottom-1 after:h-1 after:bg-primary/30 after:z-10 after:rounded-full"
-                              : ""
-                          }
-                          ${
-                            dragOverNodeId === node.id &&
-                            dropPosition === "left" &&
-                            draggingNodeId !== node.id
-                              ? "before:absolute before:inset-y-0 before:-left-1 before:w-1 before:bg-blue-500/50 before:z-10 before:rounded-full"
-                              : ""
-                          }
-                          ${
-                            dragOverNodeId === node.id &&
-                            dropPosition === "right" &&
-                            draggingNodeId !== node.id
-                              ? "after:absolute after:inset-y-0 after:-right-1 after:w-1 after:bg-blue-500/50 after:z-10 after:rounded-full"
-                              : ""
-                          }
-                      `}
-                        >
-                          <Block
-                            nodeId={node.id}
-                            isActive={activeNodeId === node.id}
-                            isFirstBlock={isFirstBlock}
-                            notionBased={notionBased}
-                            hasCoverImage={!!coverImage}
-                            onUploadCoverImage={onUploadImage}
-                            nodeRef={(el) => {
-                              if (el) {
-                                const elementNodeId =
-                                  el.getAttribute("data-node-id");
-                                if (elementNodeId) {
-                                  nodeRefs.current.set(elementNodeId, el);
-                                }
-
-                                if (textNode && elementNodeId === node.id) {
-                                  const isCurrentlyFocused =
-                                    document.activeElement === el;
-                                  const selection = window.getSelection();
-
-                                  const hasActiveSelection =
-                                    selection &&
-                                    selection.rangeCount > 0 &&
-                                    !selection.isCollapsed;
-
-                                  let selectionInThisElement = false;
-                                  if (
-                                    hasActiveSelection &&
-                                    selection.rangeCount > 0
-                                  ) {
-                                    const range = selection.getRangeAt(0);
-                                    selectionInThisElement = el.contains(
-                                      range.commonAncestorContainer
-                                    );
-                                  }
-
-                                  // Check if node has inline children
-                                  const nodeHasChildren =
-                                    textNode &&
-                                    Array.isArray(textNode.children) &&
-                                    textNode.children.length > 0;
-
-                                  if (
-                                    !isCurrentlyFocused &&
-                                    !nodeHasChildren &&
-                                    !hasActiveSelection &&
-                                    !selectionInThisElement
-                                  ) {
-                                    const displayContent =
-                                      textNode.content || "";
-                                    const currentContent = el.textContent || "";
-
-                                    if (currentContent !== displayContent) {
-                                      el.textContent = displayContent;
-                                    }
-                                  }
-                                }
-                              } else {
-                                nodeRefs.current.delete(node.id);
-                              }
-                            }}
-                            onInput={(element) =>
-                              handleContentChange(node.id, element)
-                            }
-                            onKeyDown={(e) => handleKeyDown(e, node.id)}
-                            onClick={() => handleNodeClick(node.id)}
-                            onDelete={(nodeId?: string) =>
-                              handleDeleteNode(nodeId || node.id)
-                            }
-                            onCreateNested={handleCreateNested}
-                            readOnly={readOnly}
-                            onImageDragStart={handleImageDragStart}
-                            onBlockDragStart={handleBlockDragStart}
-                            onChangeBlockType={handleChangeBlockType}
-                            onInsertImage={handleInsertImageFromCommand}
-                            onCreateList={handleCreateListFromCommand}
-                            onCreateTable={handleCreateTableFromCommand}
-                            onUploadImage={onUploadImage}
-                            onUploadVideo={onUploadVideo}
-                            selectedImageIds={selectedImageIds}
-                            onToggleImageSelection={handleToggleImageSelection}
-                            onClickWithModifier={handleClickWithModifier}
-                            onFlexContainerDragOver={
-                              handleFlexContainerDragOver
-                            }
-                            onFlexContainerDragLeave={
-                              handleFlexContainerDragLeave
-                            }
-                            onFlexContainerDrop={handleFlexContainerDrop}
-                            dragOverFlexId={dragOverFlexId}
-                            flexDropPosition={flexDropPosition}
-                            onSetDragOverNodeId={setDragOverNodeId}
-                            onSetDropPosition={setDropPosition}
-                            draggingNodeId={draggingNodeId}
-                            onSetDraggingNodeId={setDraggingNodeId}
-                          />
-                        </div>
-
-                        {/* Add block button after each block */}
-                        {!readOnly && (
-                          <AddBlockButton
-                            onAdd={() => handleAddBlock(node.id, "after")}
-                            position="after"
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
+                  {/* ✅ OPTIMIZATION: Render by ID array — Editor no longer
+                      iterates the full container on every keystroke.
+                      Each BlockWrapper subscribes only to its own node. */}
+                  {childrenIds.map((nodeId, index) => (
+                    <BlockWrapper
+                      key={nodeId}
+                      nodeId={nodeId}
+                      index={index}
+                      activeNodeId={activeNodeId}
+                      readOnly={readOnly}
+                      dragOverNodeId={dragOverNodeId}
+                      dropPosition={dropPosition}
+                      draggingNodeId={draggingNodeId}
+                      handleDragEnter={handleDragEnter}
+                      handleDragOver={handleDragOver}
+                      handleDragLeave={handleDragLeave}
+                      handleDrop={handleDrop}
+                      handleAddBlock={handleAddBlock}
+                    />
+                  ))}
                 </div>
               </>
-            </div>
-          </CardContent>
-
-          {/* Free-positioned images - rendered absolutely */}
-          {container.children
-            .filter((node) => {
-              const textNode = isTextNode(node) ? (node as TextNode) : null;
-              return (
-                textNode &&
-                textNode.type === "img" &&
-                textNode.attributes?.isFreePositioned
-              );
-            })
-            .map((node) => (
-              <FreeImageBlock
-                key={node.id}
-                node={node as TextNode}
-                isActive={activeNodeId === node.id}
-                onClick={() => handleNodeClick(node.id)}
-                onDelete={
-                  readOnly ? undefined : () => handleDeleteNode(node.id)
-                }
-                readOnly={readOnly}
-              />
-            ))}
+            </EditorContextProvider>
+          </div>
         </div>
+
+        {/* ✅ OPTIMIZATION: Free-positioned images isolated into its own
+            component so it owns the container subscription independently. */}
+        <FreePositionedImages
+          activeNodeId={activeNodeId}
+          readOnly={readOnly}
+          handleNodeClick={handleNodeClick}
+          handleDeleteNode={handleDeleteNode}
+        />
       </div>
 
       {/* Selection Toolbar - Floats above selected text (Notion-style) */}
@@ -1358,6 +876,8 @@ EditorProps = {}) {
           onTypeChange={(type) => handleTypeChange(type as TextNode["type"])}
           onColorSelect={handleApplyColor}
           onFontSizeSelect={handleApplyFontSize}
+          aiProvider={aiProvider}
+          aiSystemPrompt={aiSystemPrompt}
         />
       )}
 
@@ -1372,37 +892,6 @@ EditorProps = {}) {
           }
           onExtract={flexInfo.inSameFlex ? handleExtractFromFlex : undefined}
           onClear={handleClearImageSelection}
-        />
-      )}
-
-      {/* Floating Export Button */}
-      {!readOnly && (
-        <ExportFloatingButton
-          container={container}
-          onCopyHtml={handleCopyHtml}
-          onCopyJson={handleCopyJson}
-          copiedHtml={copiedHtml}
-          copiedJson={copiedJson}
-          enhanceSpaces={enhanceSpaces}
-          onEnhanceSpacesChange={setEnhanceSpaces}
-        />
-      )}
-
-      {/* Template Switcher Button - Bottom Left */}
-      {!readOnly && (
-        <TemplateSwitcherButton
-          currentState={
-            {
-              activeNodeId,
-              historyIndex,
-              history: [container],
-              currentSelection,
-              coverImage,
-            } as any
-          }
-          onTemplateChange={(newState) => {
-            dispatch({ type: "SET_STATE", payload: { state: newState } });
-          }}
         />
       )}
     </div>

@@ -19,7 +19,6 @@ import {
   Eye,
   Code2,
   FileJson,
-  Sparkles,
 } from "lucide-react";
 import { type ContainerNode, serializeToHtml } from "../lib";
 import { cn } from "@/lib/utils";

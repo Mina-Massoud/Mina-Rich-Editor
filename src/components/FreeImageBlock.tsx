@@ -24,7 +24,6 @@ interface FreeImageBlockProps {
 
 export function FreeImageBlock({
   node,
-  isActive,
   onClick,
   onDelete,
   readOnly = false,
@@ -214,7 +213,7 @@ export function FreeImageBlock({
     dispatch,
   ]);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (_e: React.MouseEvent) => {
     if (!isDragging && !isResizing) {
       onClick();
     }

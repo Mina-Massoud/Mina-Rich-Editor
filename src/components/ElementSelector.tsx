@@ -70,7 +70,6 @@ export function ElementSelector({
   onValueChange,
   elements = ELEMENT_OPTIONS,
   variant = "default",
-  placeholder = "Select element",
   className,
   disabled = false,
   showDescription = true,

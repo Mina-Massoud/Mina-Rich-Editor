@@ -64,7 +64,7 @@ export function VideoBlock({
     }
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {};
+  const handleDragEnd = (_e: React.DragEvent) => {};
 
   const videoUrl = node.attributes?.src as string | undefined;
   const caption = node.content || "";

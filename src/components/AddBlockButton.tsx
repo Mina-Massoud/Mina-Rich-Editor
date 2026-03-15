@@ -18,7 +18,6 @@ interface AddBlockButtonProps {
 
 export function AddBlockButton({
   onAdd,
-  position = "after",
 }: AddBlockButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
 

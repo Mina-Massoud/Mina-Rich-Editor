@@ -6,18 +6,14 @@
 
 import { TextNode } from "../../types";
 
-/**
- * Helper function to escape HTML entities
- */
+/** Escapes HTML special characters in a string to prevent unintended markup rendering. */
 export function escapeHTML(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
 }
 
-/**
- * Get CSS classes for each node type
- */
+/** Returns the Tailwind CSS class string for a given node type, used to style rendered block elements. */
 export function getTypeClassName(type: string): string {
   switch (type) {
     case "h1":
@@ -48,9 +44,26 @@ export function getTypeClassName(type: string): string {
 }
 
 /**
- * Build HTML content from children or lines
+ * Build data-* attribute string for an inline child.
+ * These attributes encode the formatting state so parseDOMToInlineChildren
+ * can reliably reconstruct the data model without relying on CSS class names.
  */
-export function buildHTML(textNode: TextNode, readOnly: boolean): string {
+function buildDataAttributes(child: import("../../types").InlineText): string {
+  const attrs: string[] = [];
+  if (child.bold) attrs.push('data-bold="true"');
+  if (child.italic) attrs.push('data-italic="true"');
+  if (child.underline) attrs.push('data-underline="true"');
+  if (child.strikethrough) attrs.push('data-strikethrough="true"');
+  if (child.code) attrs.push('data-code="true"');
+  if (child.href) attrs.push(`data-href="${child.href}"`);
+  if (child.elementType) attrs.push(`data-element-type="${child.elementType}"`);
+  if (child.className) attrs.push(`data-class-name="${child.className}"`);
+  if (child.styles) attrs.push(`data-styles="${escapeHTML(JSON.stringify(child.styles))}"`);
+  return attrs.length > 0 ? " " + attrs.join(" ") : "";
+}
+
+/** Renders a TextNode's content (plain, inline-children, or multi-line) to an HTML string for use as innerHTML. */
+export function buildHTML(textNode: TextNode, _readOnly: boolean): string {
   // Check if node has inline children with formatting
   const hasChildren =
     Array.isArray(textNode.children) && textNode.children.length > 0;
@@ -63,7 +76,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
   // If node has multiple lines (e.g., ordered list with multiple items)
   if (hasLines) {
     return textNode
-      .lines!.map((line, index) => {
+      .lines!.map((line) => {
         let lineContent = "";
 
         // If line has inline children with formatting
@@ -81,7 +94,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
                 child.italic ? "italic" : "",
                 child.underline ? "underline" : "",
                 child.strikethrough ? "line-through" : "",
-                child.code ? "font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded" : "",
+                child.code ? "font-mono bg-warm-800/10 dark:bg-warm-200/10 px-1 py-0.5 rounded" : "",
                 className || "", // Include custom className (only if not hex color)
               ]
                 .filter(Boolean)
@@ -94,6 +107,8 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
                 ? escapeHTML(child.content || "")
                 : child.content || "";
 
+              const dataAttrs = buildDataAttributes(child);
+
               // If it's a link
               if (child.href) {
                 const linkClasses = ["hover:underline cursor-pointer", classes]
@@ -103,7 +118,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
                 const combinedClasses = [linkClasses, italicSpacing]
                   .filter(Boolean)
                   .join(" ");
-                return `<a href="${child.href}" target="_blank" rel="noopener noreferrer" class="${combinedClasses}"${styleAttr}>${childContent}</a>`;
+                return `<a href="${child.href}" target="_blank" rel="noopener noreferrer" class="${combinedClasses}"${styleAttr}${dataAttrs}>${childContent}</a>`;
               }
 
               if (child.elementType) {
@@ -112,7 +127,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
                 const combinedClasses = [elementClasses, classes, italicSpacing]
                   .filter(Boolean)
                   .join(" ");
-                return `<span class="${combinedClasses}"${styleAttr}>${childContent}</span>`;
+                return `<span class="${combinedClasses}"${styleAttr}${dataAttrs}>${childContent}</span>`;
               }
 
               if (classes || colorStyle) {
@@ -123,7 +138,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
                 const classAttr = combinedClasses
                   ? ` class="${combinedClasses}"`
                   : "";
-                return `<span${classAttr}${styleAttr}>${childContent}</span>`;
+                return `<span${classAttr}${styleAttr}${dataAttrs}>${childContent}</span>`;
               }
               return childContent;
             })
@@ -160,7 +175,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
           child.italic ? "italic" : "",
           child.underline ? "underline" : "",
           child.strikethrough ? "line-through" : "",
-          child.code ? "font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded" : "",
+          child.code ? "font-mono bg-warm-800/10 dark:bg-warm-200/10 px-1 py-0.5 rounded" : "",
           child.className || "",
         ]
           .filter(Boolean)
@@ -171,13 +186,15 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
           ? escapeHTML(child.content || "")
           : child.content || "";
 
+        const dataAttrs = buildDataAttributes(child);
+
         // If it's a link
         if (child.href) {
           const linkClasses = ["underline cursor-pointer", classes]
             .filter(Boolean)
             .join(" ");
           const combinedClasses = [linkClasses].filter(Boolean).join(" ");
-          return `<a href="${child.href}" target="_blank" rel="noopener noreferrer" class="${combinedClasses}"${styleAttr}>${childContent}</a>`;
+          return `<a href="${child.href}" target="_blank" rel="noopener noreferrer" class="${combinedClasses}"${styleAttr}${dataAttrs}>${childContent}</a>`;
         }
 
         // If child has an elementType, wrap in appropriate element
@@ -187,7 +204,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
           const combinedClasses = [elementClasses, classes]
             .filter(Boolean)
             .join(" ");
-          return `<span class="${combinedClasses}"${styleAttr}>${childContent}</span>`;
+          return `<span class="${combinedClasses}"${styleAttr}${dataAttrs}>${childContent}</span>`;
         }
 
         if (classes || inlineStyles) {
@@ -196,7 +213,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
           const classAttr = combinedClasses
             ? ` class="${combinedClasses}"`
             : "";
-          return `<span${classAttr}${styleAttr}>${childContent}</span>`;
+          return `<span${classAttr}${styleAttr}${dataAttrs}>${childContent}</span>`;
         }
         return childContent;
       })
@@ -208,9 +225,7 @@ export function buildHTML(textNode: TextNode, readOnly: boolean): string {
   return isCodeBlock ? escapeHTML(content) : content;
 }
 
-/**
- * Save current selection position
- */
+/** Captures the current selection start, end, and collapsed state relative to the given element ref. */
 export function saveSelection(localRef: React.RefObject<HTMLElement | null>): {
   start: number;
   end: number;
@@ -236,9 +251,7 @@ export function saveSelection(localRef: React.RefObject<HTMLElement | null>): {
   };
 }
 
-/**
- * Restore selection to saved position
- */
+/** Restores a previously saved selection to its character offsets within the element referenced by localRef. */
 export function restoreSelection(
   localRef: React.RefObject<HTMLElement | null>,
   savedSelection: { start: number; end: number; collapsed: boolean } | null

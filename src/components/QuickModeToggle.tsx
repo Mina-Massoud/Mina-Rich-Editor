@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, Sun, Moon, FileText } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon, Languages } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -17,13 +17,17 @@ interface ToolbarProps {
   onReadOnlyChange: (readOnly: boolean) => void;
   notionBased?: boolean;
   onNotionBasedChange?: (notionBased: boolean) => void;
+  dir?: 'ltr' | 'rtl' | 'auto';
+  onDirChange?: (dir: 'ltr' | 'rtl' | 'auto') => void;
 }
 
-export function QuickModeToggle({ 
-  readOnly, 
+export function QuickModeToggle({
+  readOnly,
   onReadOnlyChange,
   notionBased,
-  onNotionBasedChange 
+  onNotionBasedChange,
+  dir,
+  onDirChange,
 }: ToolbarProps) {
   const { theme, setTheme } = useTheme();
 
@@ -103,6 +107,31 @@ export function QuickModeToggle({
             <p>{readOnly ? "View Only Mode" : "Edit Mode"}</p>
           </TooltipContent>
         </Tooltip>
+
+        {/* RTL toggle */}
+        {onDirChange && (
+          <>
+            <Separator orientation="vertical" className="h-5 md:h-6" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={dir === 'rtl' ? "default" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8 md:h-9 md:w-9"
+                  onClick={() => onDirChange(dir === 'rtl' ? 'ltr' : 'rtl')}
+                >
+                  <Languages className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span className="sr-only">
+                    {dir === 'rtl' ? "Right-to-Left" : "Left-to-Right"}
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{dir === 'rtl' ? "RTL Mode" : "LTR Mode"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </>
+        )}
 
         <Separator orientation="vertical" className="h-5 md:h-6" />
 

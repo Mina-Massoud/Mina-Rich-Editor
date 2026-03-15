@@ -425,6 +425,20 @@ export interface UpdateCoverImagePositionAction {
 }
 
 /**
+ * REPLACE_SELECTION_TEXT action - replaces text in a selection range with new text.
+ * Used by AI selection editing to replace selected text with AI-generated content.
+ */
+export interface ReplaceSelectionTextAction {
+  type: 'REPLACE_SELECTION_TEXT';
+  payload: {
+    nodeId: string;
+    start: number;
+    end: number;
+    newText: string;
+  };
+}
+
+/**
  * Union type of all possible editor actions.
  */
 export type EditorAction =
@@ -457,7 +471,8 @@ export type EditorAction =
   | RedoAction
   | SetCoverImageAction
   | RemoveCoverImageAction
-  | UpdateCoverImagePositionAction;
+  | UpdateCoverImagePositionAction
+  | ReplaceSelectionTextAction;
 
 /**
  * Action creator helpers for type-safe action creation.
@@ -705,6 +720,19 @@ export const EditorActions = {
   updateCoverImagePosition: (position: number): UpdateCoverImagePositionAction => ({
     type: 'UPDATE_COVER_IMAGE_POSITION',
     payload: { position },
+  }),
+
+  /**
+   * Creates a REPLACE_SELECTION_TEXT action.
+   */
+  replaceSelectionText: (
+    nodeId: string,
+    start: number,
+    end: number,
+    newText: string
+  ): ReplaceSelectionTextAction => ({
+    type: 'REPLACE_SELECTION_TEXT',
+    payload: { nodeId, start, end, newText },
   }),
 };
 

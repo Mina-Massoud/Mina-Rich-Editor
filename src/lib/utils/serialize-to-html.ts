@@ -6,7 +6,7 @@
  * Supports recursive rendering of nested containers
  */
 
-import { ContainerNode, StructuralNode, TextNode, EditorNode, isTextNode, isContainerNode, isStructuralNode, hasInlineChildren } from '../types';
+import { ContainerNode, StructuralNode, TextNode, isTextNode, isContainerNode, isStructuralNode, hasInlineChildren } from '../types';
 
 /**
  * Get Tailwind CSS classes for block-level element types
@@ -457,16 +457,6 @@ function serializeContainerNode(node: ContainerNode, indent: string = ''): strin
   
   html += `${indent}</${containerTag}>\n`;
   return html;
-}
-
-/**
- * Serialize any editor node (TextNode or ContainerNode) to HTML
- */
-function serializeEditorNode(node: EditorNode, indent: string = ''): string {
-  if (isContainerNode(node)) {
-    return serializeContainerNode(node as ContainerNode, indent);
-  }
-  return serializeTextNode(node as TextNode, indent);
 }
 
 /**

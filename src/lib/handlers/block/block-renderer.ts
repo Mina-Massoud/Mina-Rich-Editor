@@ -4,7 +4,7 @@
  * Helper functions for determining which component to render for each node type
  */
 
-import { EditorNode, TextNode, isContainerNode, ContainerNode } from "../../types";
+import { EditorNode, isContainerNode, ContainerNode } from "../../types";
 
 /**
  * Determine which HTML element to render based on node type

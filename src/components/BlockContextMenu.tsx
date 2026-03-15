@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/shadcn-io/color-picker";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Church, PaintBucket } from "lucide-react";
+import { PaintBucket } from "lucide-react";
 
 interface BlockContextMenuProps {
   children: React.ReactNode;
@@ -51,20 +51,20 @@ const lightModeColors = [
   { name: "Gray", hex: "#f9fafb" },
 ];
 
-// Dark mode colors - darker, more saturated backgrounds
+// Dark mode colors - warm-toned darker backgrounds
 const darkModeColors = [
   { name: "None", hex: "transparent" },
-  { name: "Red", hex: "#450a0a" },
-  { name: "Orange", hex: "#431407" },
-  { name: "Yellow", hex: "#422006" },
-  { name: "Green", hex: "#052e16" },
-  { name: "Blue", hex: "#172554" },
-  { name: "Indigo", hex: "#1e1b4b" },
-  { name: "Purple", hex: "#2e1065" },
-  { name: "Pink", hex: "#500724" },
-  { name: "Teal", hex: "#042f2e" },
-  { name: "Cyan", hex: "#164e63" },
-  { name: "Gray", hex: "#1f2937" },
+  { name: "Red", hex: "#4a1215" },
+  { name: "Orange", hex: "#4a1c0a" },
+  { name: "Yellow", hex: "#47260a" },
+  { name: "Green", hex: "#0f2e1a" },
+  { name: "Blue", hex: "#1a2544" },
+  { name: "Indigo", hex: "#231e42" },
+  { name: "Purple", hex: "#301558" },
+  { name: "Pink", hex: "#4a0f28" },
+  { name: "Teal", hex: "#0e2f2a" },
+  { name: "Cyan", hex: "#1a4452" },
+  { name: "Warm Gray", hex: "#2a2520" },
 ];
 
 export function BlockContextMenu({

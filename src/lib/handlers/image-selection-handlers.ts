@@ -7,23 +7,24 @@
 import { EditorActions } from '../reducer/actions';
 import { ContainerNode, TextNode } from '../types';
 import { findNodeAnywhere } from '../utils/editor-helpers';
+import { generateId } from '../utils/id-generator';
 
+/** Parameters shared by image selection handler factories. */
 export interface ImageSelectionHandlerParams {
-  container: ContainerNode;
+  container: ContainerNode | (() => ContainerNode);
   dispatch: React.Dispatch<any>;
   toast: any;
 }
 
-/**
- * Create flex container from selected images
- */
+/** Creates a handler that groups two or more selected images into a flex container node. */
 export function createHandleGroupSelectedImages(
   params: ImageSelectionHandlerParams,
   selectedImageIds: Set<string>,
   clearSelection: () => void
 ) {
   return () => {
-    const { container, dispatch, toast } = params;
+    const { container: containerOrGetter, dispatch, toast } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
 
     if (selectedImageIds.size < 2) {
       toast({
@@ -37,7 +38,7 @@ export function createHandleGroupSelectedImages(
     // Find all selected image nodes
     const imageNodes: TextNode[] = [];
     const imageResults = [];
-    
+
     for (const imageId of selectedImageIds) {
       const result = findNodeAnywhere(imageId, container);
       if (result && result.node.type === 'img') {
@@ -54,12 +55,6 @@ export function createHandleGroupSelectedImages(
       });
       return;
     }
-
-    // Check if images are in different flex containers - we can't group them
-    const parentIds = new Set(imageResults.map(r => r.parentId).filter(Boolean));
-    const hasFlexParent = imageResults.some(r => 
-      r.parent && r.parent.attributes?.layoutType === 'flex'
-    );
 
     // Find the position to insert the new flex container
     // Use the position of the first selected image (topmost in the document)
@@ -89,9 +84,8 @@ export function createHandleGroupSelectedImages(
     }
 
     // Create a flex container with all selected images
-    const timestamp = Date.now();
     const flexContainer: ContainerNode = {
-      id: `flex-container-${timestamp}`,
+      id: generateId("flex-container"),
       type: "container",
       children: imageNodes,
       attributes: {
@@ -135,9 +129,7 @@ export function createHandleGroupSelectedImages(
   };
 }
 
-/**
- * Toggle image selection
- */
+/** Creates a handler that toggles an image's presence in the set of selected image IDs. */
 export function createHandleToggleImageSelection(
   selectedImageIds: Set<string>,
   setSelectedImageIds: (ids: Set<string>) => void
@@ -153,9 +145,7 @@ export function createHandleToggleImageSelection(
   };
 }
 
-/**
- * Clear all image selections
- */
+/** Creates a handler that clears all currently selected image IDs. */
 export function createHandleClearImageSelection(
   setSelectedImageIds: (ids: Set<string>) => void
 ) {
@@ -164,14 +154,13 @@ export function createHandleClearImageSelection(
   };
 }
 
-/**
- * Check if selected images are in the same flex container
- */
+/** Checks whether all currently selected images share the same flex container parent, returning the parent ID if so. */
 export function checkImagesInSameFlex(
   params: ImageSelectionHandlerParams,
   selectedImageIds: Set<string>
 ): { inSameFlex: boolean; flexParentId: string | null } {
-  const { container } = params;
+  const { container: containerOrGetter } = params;
+  const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
 
   if (selectedImageIds.size < 2) {
     return { inSameFlex: false, flexParentId: null };
@@ -204,16 +193,15 @@ export function checkImagesInSameFlex(
   };
 }
 
-/**
- * Reverse order of selected images in flex container
- */
+/** Creates a handler that reverses the order of selected images within their shared flex container. */
 export function createHandleReverseImagesInFlex(
   params: ImageSelectionHandlerParams,
   selectedImageIds: Set<string>,
   flexParentId: string
 ) {
   return () => {
-    const { container, dispatch, toast } = params;
+    const { container: containerOrGetter, dispatch, toast } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
 
     // Find the flex container
     const flexResult = findNodeAnywhere(flexParentId, container);
@@ -257,9 +245,7 @@ export function createHandleReverseImagesInFlex(
   };
 }
 
-/**
- * Extract selected images from flex container
- */
+/** Creates a handler that removes the selected images from their flex container and places them as standalone root-level nodes. */
 export function createHandleExtractFromFlex(
   params: ImageSelectionHandlerParams,
   selectedImageIds: Set<string>,
@@ -267,7 +253,8 @@ export function createHandleExtractFromFlex(
   clearSelection: () => void
 ) {
   return () => {
-    const { container, dispatch, toast } = params;
+    const { container: containerOrGetter, dispatch, toast } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
 
     // Find the flex container
     const flexResult = findNodeAnywhere(flexParentId, container);

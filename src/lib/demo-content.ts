@@ -18,7 +18,6 @@
  * @packageDocumentation
  */
 
-import { id } from "date-fns/locale";
 import { EditorNode, TextNode, ContainerNode } from "./types";
 
 /**
@@ -2093,7 +2092,7 @@ function MyComponent() {
   const { state } = useEditor();
   
   // Export to HTML
-  const html = serializeToHtml(state.history[state.historyIndex]);
+  const html = serializeToHtml(state.current);
   
   // Returns formatted HTML like:
   // <h1>Title</h1>

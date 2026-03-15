@@ -4,12 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { useEditorState, useEditorDispatch } from "@/lib/store/editor-store";
 import { EditorActions } from "@/lib/reducer/actions";
 import { Button } from "@/components/ui/button";
-import { 
-  ImageIcon, 
-  X, 
-  Upload, 
+import {
+  Upload,
   MoveVertical,
-  Trash2 
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +22,7 @@ export function CoverImage({ onUploadImage, readOnly = false }: CoverImageProps)
   const { coverImage } = state;
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [, setIsUploading] = useState(false);
   const [dragPosition, setDragPosition] = useState(coverImage?.position ?? 50);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,21 +77,6 @@ export function CoverImage({ onUploadImage, readOnly = false }: CoverImageProps)
     if (file) {
       handleFileSelect(file);
     }
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      await handleFileSelect(file);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
   };
 
   const handleRemove = () => {

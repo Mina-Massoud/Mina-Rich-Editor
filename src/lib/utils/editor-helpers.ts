@@ -9,14 +9,9 @@ import {
   EditorNode,
   ContainerNode,
   isContainerNode,
-  SelectionInfo,
-  InlineText,
 } from "../types";
 
-/**
- * Parse DOM element back into inline children structure
- * This preserves formatting when user types in a formatted block
- */
+/** Parses a contentEditable DOM element back into the inline children structure, preserving all formatting. */
 export function parseDOMToInlineChildren(
   element: HTMLElement
 ): TextNode["children"] {
@@ -42,6 +37,7 @@ export function parseDOMToInlineChildren(
         | "li"
         | "blockquote";
       styles?: Record<string, string>;
+      href?: string;
     } = {}
   ) => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -56,7 +52,8 @@ export function parseDOMToInlineChildren(
         inheritedFormats.code ||
         inheritedFormats.className ||
         inheritedFormats.elementType ||
-        inheritedFormats.styles;
+        inheritedFormats.styles ||
+        inheritedFormats.href;
 
       // Always add content if it exists OR if it's empty but has formatting
       // This prevents structure changes when user deletes the last character
@@ -72,6 +69,7 @@ export function parseDOMToInlineChildren(
             className: inheritedFormats.className || undefined,
             elementType: inheritedFormats.elementType,
             styles: inheritedFormats.styles,
+            href: inheritedFormats.href || undefined,
           });
         } else {
           children.push({ content });
@@ -79,107 +77,151 @@ export function parseDOMToInlineChildren(
       }
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
-      const classList = Array.from(el.classList);
 
-      // Detect formatting from classes
-      const bold = classList.includes("font-bold");
-      const italic = classList.includes("italic");
-      const underline = classList.includes("underline");
-      const strikethrough = classList.includes("line-through");
-      const code = classList.includes("font-mono");
+      // ── PRIMARY PATH: read formatting from data-* attributes ──────────────
+      // These are written by buildHTML and are the single source of truth.
+      const hasDataAttrs =
+        el.dataset.bold !== undefined ||
+        el.dataset.italic !== undefined ||
+        el.dataset.underline !== undefined ||
+        el.dataset.strikethrough !== undefined ||
+        el.dataset.code !== undefined ||
+        el.dataset.href !== undefined ||
+        el.dataset.elementType !== undefined ||
+        el.dataset.className !== undefined ||
+        el.dataset.styles !== undefined;
 
-      // Extract inline styles from the element
-      let inlineStyles: Record<string, string> | undefined = undefined;
-      if (el.style && el.style.length > 0) {
-        inlineStyles = {};
-        // Iterate through all inline styles
-        for (let i = 0; i < el.style.length; i++) {
-          const property = el.style[i];
-          const value = el.style.getPropertyValue(property);
-          if (value) {
-            // Convert kebab-case to camelCase (font-size -> fontSize)
-            const camelCaseProperty = property.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
-            inlineStyles[camelCaseProperty] = value;
+      let bold: boolean | undefined;
+      let italic: boolean | undefined;
+      let underline: boolean | undefined;
+      let strikethrough: boolean | undefined;
+      let code: boolean | undefined;
+      let hrefFromData: string | undefined;
+      let elementTypeFromData:
+        | "p" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "blockquote"
+        | undefined;
+      let classNameFromData: string | undefined;
+      let inlineStyles: Record<string, string> | undefined;
+
+      if (hasDataAttrs) {
+        // Reliable path: data attributes were set by buildHTML
+        bold = el.dataset.bold === "true" || undefined;
+        italic = el.dataset.italic === "true" || undefined;
+        underline = el.dataset.underline === "true" || undefined;
+        strikethrough = el.dataset.strikethrough === "true" || undefined;
+        code = el.dataset.code === "true" || undefined;
+        hrefFromData = el.dataset.href || undefined;
+        const rawElementType = el.dataset.elementType;
+        if (rawElementType) {
+          const validElementTypes = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"] as const;
+          if ((validElementTypes as readonly string[]).includes(rawElementType)) {
+            elementTypeFromData = rawElementType as typeof elementTypeFromData;
           }
         }
-        // If no styles were actually extracted, set to undefined
-        if (Object.keys(inlineStyles).length === 0) {
-          inlineStyles = undefined;
+        classNameFromData = el.dataset.className || undefined;
+        if (el.dataset.styles) {
+          try {
+            inlineStyles = JSON.parse(el.dataset.styles);
+          } catch {
+            inlineStyles = undefined;
+          }
         }
+      } else {
+        // ── FALLBACK PATH: CSS class-based detection (backward compatibility) ─
+        const classList = Array.from(el.classList);
+
+        bold = classList.includes("font-bold") || undefined;
+        italic = classList.includes("italic") || undefined;
+        underline = classList.includes("underline") || undefined;
+        strikethrough = classList.includes("line-through") || undefined;
+        code = classList.includes("font-mono") || undefined;
+
+        // Extract inline styles from the element
+        if (el.style && el.style.length > 0) {
+          inlineStyles = {};
+          for (let i = 0; i < el.style.length; i++) {
+            const property = el.style[i];
+            const value = el.style.getPropertyValue(property);
+            if (value) {
+              // Convert kebab-case to camelCase (font-size -> fontSize)
+              const camelCaseProperty = property.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+              inlineStyles[camelCaseProperty] = value;
+            }
+          }
+          if (Object.keys(inlineStyles).length === 0) {
+            inlineStyles = undefined;
+          }
+        }
+
+        // Detect element type from classes
+        if (classList.some((c) => c.includes("text-4xl"))) {
+          elementTypeFromData = "h1";
+        } else if (classList.some((c) => c.includes("text-3xl"))) {
+          elementTypeFromData = "h2";
+        } else if (classList.some((c) => c.includes("text-2xl"))) {
+          elementTypeFromData = "h3";
+        } else if (classList.some((c) => c.includes("text-xl"))) {
+          elementTypeFromData = "h4";
+        } else if (
+          classList.some((c) => c.includes("text-lg")) &&
+          classList.includes("font-semibold")
+        ) {
+          elementTypeFromData = "h5";
+        } else if (
+          classList.some((c) => c.includes("text-base")) &&
+          classList.includes("font-semibold")
+        ) {
+          elementTypeFromData = "h6";
+        } else if (classList.includes("border-l-4")) {
+          elementTypeFromData = "blockquote";
+        } else if (
+          classList.some((c) => c.includes("text-base")) &&
+          classList.some((c) => c.includes("leading-relaxed"))
+        ) {
+          elementTypeFromData = "p";
+        }
+
+        // Extract custom classes (filter out known formatting classes and extra spacing classes)
+        const knownClasses = [
+          "font-bold",
+          "italic",
+          "underline",
+          "line-through",
+          "font-mono",
+          "bg-warm-800/10",
+          "dark:bg-warm-200/10",
+          "px-1",
+          "py-0.5",
+          "rounded",
+          "text-sm",
+          "text-5xl",
+          "text-4xl",
+          "text-3xl",
+          "text-2xl",
+          "text-xl",
+          "text-lg",
+          "font-semibold",
+          "border-l-4",
+          "pl-4",
+          "text-primary",
+          "hover:underline",
+          "cursor-pointer",
+          "inline-block",
+          "inline",
+        ];
+        const customClasses = classList.filter((c) => !knownClasses.includes(c));
+        classNameFromData =
+          customClasses.length > 0 ? customClasses.join(" ") : undefined;
       }
 
-      // Detect element type from classes
-      let elementType:
-        | "p"
-        | "h1"
-        | "h2"
-        | "h3"
-        | "h4"
-        | "h5"
-        | "h6"
-        | "blockquote"
-        | undefined = undefined;
-      if (classList.some((c) => c.includes("text-4xl"))) {
-        elementType = "h1";
-      } else if (classList.some((c) => c.includes("text-3xl"))) {
-        elementType = "h2";
-      } else if (classList.some((c) => c.includes("text-2xl"))) {
-        elementType = "h3";
-      } else if (classList.some((c) => c.includes("text-xl"))) {
-        elementType = "h4";
-      } else if (
-        classList.some((c) => c.includes("text-lg")) &&
-        classList.includes("font-semibold")
-      ) {
-        elementType = "h5";
-      } else if (
-        classList.some((c) => c.includes("text-base")) &&
-        classList.includes("font-semibold")
-      ) {
-        elementType = "h6";
-      } else if (classList.includes("border-l-4")) {
-        elementType = "blockquote";
-      } else if (
-        classList.some((c) => c.includes("text-base")) &&
-        classList.some((c) => c.includes("leading-relaxed"))
-      ) {
-        elementType = "p";
-      }
-
-      // Extract custom classes (filter out known formatting classes and extra spacing classes)
-      const knownClasses = [
-        "font-bold",
-        "italic",
-        "underline",
-        "line-through",
-        "font-mono",
-        "bg-gray-100",
-        "dark:bg-gray-800",
-        "px-1",
-        "py-0.5",
-        "rounded",
-        "text-sm",
-        "text-5xl",
-        "text-4xl",
-        "text-3xl",
-        "text-2xl",
-        "text-xl",
-        "text-lg",
-        "font-semibold",
-        "border-l-4",
-        "pl-4",
-        "text-primary",
-        "hover:underline",
-        "cursor-pointer",
-        "inline-block",
-        "inline",
-      ];
-      const customClasses = classList.filter((c) => !knownClasses.includes(c));
-      const customClassName =
-        customClasses.length > 0 ? customClasses.join(" ") : undefined;
+      // Resolve href: prefer data-href, then <a> tag's href attribute
+      const resolvedHref =
+        hrefFromData ||
+        (el.tagName === "A" ? el.getAttribute("href") || undefined : undefined) ||
+        inheritedFormats.href;
 
       // Merge inline styles with inherited styles
-      const mergedStyles = 
+      const mergedStyles =
         inlineStyles || inheritedFormats.styles
           ? { ...inheritedFormats.styles, ...inlineStyles }
           : undefined;
@@ -191,16 +233,17 @@ export function parseDOMToInlineChildren(
         underline: underline || inheritedFormats.underline,
         strikethrough: strikethrough || inheritedFormats.strikethrough,
         code: code || inheritedFormats.code,
-        className: customClassName || inheritedFormats.className,
-        elementType: elementType || inheritedFormats.elementType,
+        className: classNameFromData || inheritedFormats.className,
+        elementType: elementTypeFromData || inheritedFormats.elementType,
         styles: mergedStyles,
+        href: resolvedHref,
       };
 
-      // If it's a span with formatting, walk its children with inherited formats
-      if (el.tagName === "SPAN") {
-        // Check if the span is empty (no child nodes)
+      // If it's a span or anchor element with formatting, walk its children with inherited formats
+      if (el.tagName === "SPAN" || el.tagName === "A") {
+        // Check if the element is empty (no child nodes)
         if (node.childNodes.length === 0) {
-          // Empty span with formatting - preserve it
+          // Empty element with formatting - preserve it
           const hasAnyFormatting =
             currentFormats.bold ||
             currentFormats.italic ||
@@ -209,7 +252,8 @@ export function parseDOMToInlineChildren(
             currentFormats.code ||
             currentFormats.className ||
             currentFormats.elementType ||
-            currentFormats.styles;
+            currentFormats.styles ||
+            currentFormats.href;
 
           if (hasAnyFormatting) {
             children.push({
@@ -222,10 +266,11 @@ export function parseDOMToInlineChildren(
               className: currentFormats.className || undefined,
               elementType: currentFormats.elementType,
               styles: currentFormats.styles,
+              href: currentFormats.href || undefined,
             });
           }
         } else {
-          // Span has children, walk them with inherited formats
+          // Element has children, walk them with current inherited formats
           for (let i = 0; i < node.childNodes.length; i++) {
             walkNode(node.childNodes[i], currentFormats);
           }
@@ -268,9 +313,7 @@ export function parseDOMToInlineChildren(
   });
 }
 
-/**
- * Detect which formats are active in a given range of a node
- */
+/** Detects which inline formats (bold, italic, etc.) are active across a given character range within a node. */
 export function detectFormatsInRange(
   node: TextNode,
   start: number,
@@ -347,11 +390,6 @@ export function detectFormatsInRange(
 
   // Node has children array - analyze the range
   let currentPos = 0;
-  let hasAnyBold = false;
-  let hasAnyItalic = false;
-  let hasAnyUnderline = false;
-  let hasAnyStrikethrough = false;
-  let hasAnyCode = false;
   let allBold = true;
   let allItalic = true;
   let allUnderline = true;
@@ -378,35 +416,11 @@ export function detectFormatsInRange(
     if (overlaps) {
       charsInRange += Math.min(childEnd, end) - Math.max(childStart, start);
 
-      if (child.bold) {
-        hasAnyBold = true;
-      } else {
-        allBold = false;
-      }
-
-      if (child.italic) {
-        hasAnyItalic = true;
-      } else {
-        allItalic = false;
-      }
-
-      if (child.underline) {
-        hasAnyUnderline = true;
-      } else {
-        allUnderline = false;
-      }
-
-      if (child.strikethrough) {
-        hasAnyStrikethrough = true;
-      } else {
-        allStrikethrough = false;
-      }
-
-      if (child.code) {
-        hasAnyCode = true;
-      } else {
-        allCode = false;
-      }
+      if (!child.bold) allBold = false;
+      if (!child.italic) allItalic = false;
+      if (!child.underline) allUnderline = false;
+      if (!child.strikethrough) allStrikethrough = false;
+      if (!child.code) allCode = false;
 
       // Check element type
       const childElementType = child.elementType || null;
@@ -460,9 +474,7 @@ export function detectFormatsInRange(
   return detectedFormats;
 }
 
-/**
- * Helper function to find a node in the tree (including nested containers)
- */
+/** Finds a node by ID anywhere in the tree, returning the node along with its parent ID and siblings. */
 export function findNodeInTree(
   searchId: string,
   container: ContainerNode
@@ -490,9 +502,7 @@ export function findNodeInTree(
   return null;
 }
 
-/**
- * Helper to find a node anywhere (root or in container)
- */
+/** Searches both the root level and inside containers for a node by ID, returning the node with optional parent info. */
 export function findNodeAnywhere(
   id: string,
   container: ContainerNode
@@ -521,9 +531,7 @@ export function findNodeAnywhere(
   return null;
 }
 
-/**
- * Helper to restore selection after formatting
- */
+/** Restores a collapsed or range text selection to the given character offsets within an element. */
 export function restoreSelection(
   element: HTMLElement,
   start: number,

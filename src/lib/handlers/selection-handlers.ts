@@ -12,23 +12,23 @@ import {
 } from "../utils/editor-helpers";
 import { findNodeById } from "../utils/tree-operations";
 
+/** Parameters shared by all selection handler factory functions. */
 export interface SelectionHandlerParams {
-  container: ContainerNode;
+  container: ContainerNode | (() => ContainerNode);
   state: any;
   dispatch: React.Dispatch<any>;
   selectionManager: any;
   nodeRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }
 
-/**
- * Track text selection - updates ref immediately, state with debounce
- */
+/** Creates a selection-change handler that detects the active node, measures the selection range, and dispatches format state updates with a debounce. */
 export function createHandleSelectionChange(
   params: SelectionHandlerParams,
   selectionDispatchTimerRef: React.MutableRefObject<NodeJS.Timeout | null>
 ) {
   return () => {
-    const { container, state, dispatch, selectionManager, nodeRefs } = params;
+    const { container: containerOrGetter, state, dispatch, selectionManager, nodeRefs } = params;
+    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
     const selection = window.getSelection();
     const hasText =
       selection !== null &&
@@ -91,12 +91,6 @@ export function createHandleSelectionChange(
             let start = preSelectionRange.toString().length;
             let end = start + range.toString().length;
 
-            // Get the selected text
-            const selectedText = selection.toString();
-
-            // For collapsed cursor (no selection), we still want to detect formatting at cursor position
-            const isCollapsed = start === end;
-
             // Detect active formats in the selected range
             const detected = detectFormatsInRange(actualNode, start, end);
 
@@ -139,9 +133,10 @@ export function createHandleSelectionChange(
                 clearTimeout(selectionDispatchTimerRef.current);
               }
 
+              // Debounce: batch rapid selection-change events into one toolbar re-render.
               selectionDispatchTimerRef.current = setTimeout(() => {
                 dispatch(EditorActions.setCurrentSelection(selectionInfo));
-              }, 150); // 150ms debounce for toolbar updates
+              }, 150);
             }
             return; // Exit early on success
           }
@@ -160,6 +155,7 @@ export function createHandleSelectionChange(
         clearTimeout(selectionDispatchTimerRef.current);
       }
 
+      // Debounce: avoid clearing the toolbar selection on every transient pointer event.
       selectionDispatchTimerRef.current = setTimeout(() => {
         dispatch(EditorActions.setCurrentSelection(null));
       }, 150);
@@ -167,49 +163,34 @@ export function createHandleSelectionChange(
   };
 }
 
-/**
- * Handle format button clicks - completely state-driven!
- */
+/** Creates a format-toggle handler that dispatches the given format to the reducer and restores the selection afterwards. */
 export function createHandleFormat(params: SelectionHandlerParams) {
   return (format: "bold" | "italic" | "underline" | "strikethrough" | "code") => {
-    const { container, dispatch, selectionManager, nodeRefs } = params;
-    console.group("🔘 [handleFormat] Button clicked");
+    const { dispatch, selectionManager, nodeRefs } = params;
 
     // Get fresh selection from ref (more up-to-date than state)
     const refSelection = selectionManager.getSelection();
     if (!refSelection) {
-      console.warn("❌ No current selection, aborting");
-      console.groupEnd();
       return;
     }
 
     // Save selection for restoration
-    const { start, end, nodeId, formats } = refSelection;
+    const { start, end, nodeId } = refSelection;
 
     // Dispatch toggle format action - reducer handles everything!
     dispatch(EditorActions.toggleFormat(format));
 
-    // After state updates, check what happened
-    setTimeout(() => {
-      const updatedNode = container.children.find((n) => n.id === nodeId);
-    }, 100);
-
-    // Restore selection after formatting
-    setTimeout(() => {
+    // Restore selection after the browser has painted the formatted DOM.
+    requestAnimationFrame(() => {
       const element = nodeRefs.current.get(nodeId);
       if (element) {
         restoreSelection(element, start, end);
-      } else {
-        console.warn("❌ Element not found for selection restoration");
       }
-      console.groupEnd();
-    }, 0);
+    });
   };
 }
 
-/**
- * Handle color selection
- */
+/** Creates a handler that applies a CSS color value as an inline style to the current selection. */
 export function createHandleApplyColor(
   params: SelectionHandlerParams,
   toast: any,
@@ -233,19 +214,17 @@ export function createHandleApplyColor(
       description: `Applied color: ${color}`,
     });
 
-    // Restore selection with a slightly longer delay to allow state update
-    setTimeout(() => {
+    // Restore selection after the browser has painted the color-styled DOM.
+    requestAnimationFrame(() => {
       const element = nodeRefs.current.get(nodeId);
       if (element) {
         restoreSelection(element, start, end);
       }
-    }, 50);
+    });
   };
 }
 
-/**
- * Handle font size selection
- */
+/** Creates a handler that applies a font-size inline style value to the current text selection. */
 export function createHandleApplyFontSize(
   params: SelectionHandlerParams,
   toast: any
@@ -266,19 +245,17 @@ export function createHandleApplyFontSize(
       description: `Applied font size: ${fontSize}`,
     });
 
-    // Restore selection with a slightly longer delay to allow state update
-    setTimeout(() => {
+    // Restore selection after the browser has painted the font-size-styled DOM.
+    requestAnimationFrame(() => {
       const element = nodeRefs.current.get(nodeId);
       if (element) {
         restoreSelection(element, start, end);
       }
-    }, 50);
+    });
   };
 }
 
-/**
- * Handle type change
- */
+/** Creates a handler that changes the block or inline element type of the currently selected text. */
 export function createHandleTypeChange(
   params: SelectionHandlerParams,
   handleSelectionChange: () => void
@@ -293,22 +270,22 @@ export function createHandleTypeChange(
     // Save selection info before dispatch
     const { start, end, nodeId } = refSelection;
 
-    // List types should change the entire block, not inline formatting
-    if (type === "ol" || type === "li") {
+    // Block-level types should change the entire block, not inline formatting
+    if (type === "ol" || type === "li" || type === "code") {
       dispatch(EditorActions.updateNode(nodeId, { type: type }));
-      
-      setTimeout(() => {
+
+      // Restore selection after the browser has painted the converted list node.
+      requestAnimationFrame(() => {
         const element = nodeRefs.current.get(nodeId);
         if (element) {
           restoreSelection(element, start, end);
           handleSelectionChange();
         }
-      }, 0);
+      });
       return;
     }
 
     // Apply as inline element type to selected text (or at cursor position)
-    // Note: "code" is excluded here - use the code formatting button for inline code
     const elementType = type as
       | "p"
       | "h1"
@@ -318,23 +295,17 @@ export function createHandleTypeChange(
       | "h5"
       | "h6"
       | "blockquote";
-    
-    // Skip applying if trying to apply "code" - that should be a block-level change only
-    if (type === "code") {
-      console.warn("Code element type not supported as inline - use the code formatting button instead");
-      return;
-    }
-    
+
     dispatch(EditorActions.applyInlineElementType(elementType));
 
-    // Restore selection after state update and trigger re-detection
-    setTimeout(() => {
+    // Restore selection after the browser has painted the type-changed inline node.
+    requestAnimationFrame(() => {
       const element = nodeRefs.current.get(nodeId);
       if (element) {
         restoreSelection(element, start, end);
         // Manually trigger selection change detection to update the UI
         handleSelectionChange();
       }
-    }, 0);
+    });
   };
 }
