@@ -1,6 +1,6 @@
 {
   "name": "@mina-editor/core",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A flexible, TypeScript-first rich text editor with JSON-based document model",
   "license": "MIT",
   "repository": {
@@ -16,6 +16,7 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./styles.css": "./dist/styles.css",
     "./styles": "./src/styles/editor-variables.css",
     "./themes/notion": "./src/styles/themes/notion.css",
     "./themes/minimal": "./src/styles/themes/minimal.css",
@@ -42,7 +43,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
-    "build:lib": "tsup",
+    "build:lib": "tsup && tailwindcss -i src/styles/editor-input.css -o dist/styles.css --minify",
     "sync:registry": "./scripts/sync-to-registry.sh",
     "start": "next start",
     "test": "vitest",
@@ -104,6 +105,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@tailwindcss/cli": "^4.2.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

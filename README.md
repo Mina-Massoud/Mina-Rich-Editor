@@ -41,6 +41,16 @@ npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-e
 
 > This installs the editor as a local component in your shadcn/ui project — no npm dependency needed.
 
+### Import styles
+
+Add this import once in your app (e.g. `layout.tsx` or `globals.css`):
+
+```tsx
+import "@mina-editor/core/styles.css";
+```
+
+This includes all the Tailwind classes the editor needs — no extra Tailwind config required.
+
 ### CompactEditor — recommended for CMS
 
 The `CompactEditor` is self-contained. Drop it anywhere and wire up `onChange`:
