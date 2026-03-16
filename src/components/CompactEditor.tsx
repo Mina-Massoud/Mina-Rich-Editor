@@ -821,10 +821,18 @@ export function CompactEditor({
   onUploadImage,
   minHeight = "200px",
 }: CompactEditorProps) {
+  // SSR guard: defer all ID generation and rendering until the client mounts.
+  // generateId() uses a global counter that drifts between server and client,
+  // causing React hydration mismatches. Rendering a size-matched placeholder
+  // during SSR avoids the mismatch with no visible layout shift.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // Build a default container. Use useState (not useMemo/useRef) so the value
   // survives React Strict Mode double-render. useState lazy init runs once per
   // mount cycle, and React preserves state across Strict Mode re-renders.
-  const [defaultContent] = useState<ContainerNode>(() => {
+  const [defaultContent] = useState<ContainerNode | null>(() => {
+    if (typeof window === "undefined") return null;
     if (initialContent) return initialContent;
     return {
       id: generateId("root"),
@@ -833,6 +841,19 @@ export function CompactEditor({
       attributes: {},
     } as ContainerNode;
   });
+
+  // SSR / pre-mount: render a placeholder shell matching the editor dimensions
+  if (!mounted || !defaultContent) {
+    return (
+      <div
+        style={{ minHeight }}
+        className={cn(
+          "mina-editor border rounded-lg overflow-hidden flex flex-col bg-background",
+          className
+        )}
+      />
+    );
+  }
 
   const inner = (
     <div

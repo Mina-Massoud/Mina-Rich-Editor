@@ -375,6 +375,100 @@ describe('handleRemoveLink', () => {
   });
 });
 
+describe('handleReplaceSelectionWithInlines', () => {
+  it('returns state when node not found', () => {
+    const state = createInitialState({
+      id: 'root',
+      type: 'container',
+      children: [{ id: 'p-1', type: 'p', content: 'Hello world' }],
+    });
+    const result = editorReducer(
+      state,
+      EditorActions.replaceSelectionWithInlines('nonexistent', 0, 5, [{ content: 'Hi', bold: true }]),
+    );
+    expect(result.undoStack.length).toBe(state.undoStack.length);
+  });
+
+  it('replaces selection range with InlineText[] containing bold/italic segments', () => {
+    const state = createInitialState({
+      id: 'root',
+      type: 'container',
+      children: [{ id: 'p-1', type: 'p', content: 'Hello world' }],
+    });
+    const result = editorReducer(
+      state,
+      EditorActions.replaceSelectionWithInlines('p-1', 0, 5, [
+        { content: 'Good', bold: true },
+        { content: 'bye', italic: true },
+      ]),
+    );
+    const node = findNodeById(result.current, 'p-1') as TextNode;
+    expect(hasInlineChildren(node)).toBe(true);
+    const boldChild = node.children!.find((c) => c.content === 'Good');
+    expect(boldChild).toBeDefined();
+    expect(boldChild!.bold).toBe(true);
+    const italicChild = node.children!.find((c) => c.content === 'bye');
+    expect(italicChild).toBeDefined();
+    expect(italicChild!.italic).toBe(true);
+    // " world" should still be there
+    const rest = node.children!.find((c) => (c.content || '').includes('world'));
+    expect(rest).toBeDefined();
+  });
+
+  it('works with partial overlap on existing formatted children', () => {
+    const state = createInitialState({
+      id: 'root',
+      type: 'container',
+      children: [{
+        id: 'p-1',
+        type: 'p',
+        content: undefined,
+        children: [
+          { content: 'Hello', bold: true },
+          { content: ' world' },
+        ],
+      } as TextNode],
+    });
+    const result = editorReducer(
+      state,
+      EditorActions.replaceSelectionWithInlines('p-1', 3, 8, [
+        { content: 'REPLACED', code: true },
+      ]),
+    );
+    const node = findNodeById(result.current, 'p-1') as TextNode;
+    expect(hasInlineChildren(node)).toBe(true);
+    const codeChild = node.children!.find((c) => c.content === 'REPLACED');
+    expect(codeChild).toBeDefined();
+    expect(codeChild!.code).toBe(true);
+  });
+
+  it('clears selection after replacement', () => {
+    const state = stateWithSelection('Hello world', 0, 5);
+    const result = editorReducer(
+      state,
+      EditorActions.replaceSelectionWithInlines('p-1', 0, 5, [{ content: 'Bye' }]),
+    );
+    expect(result.currentSelection).toBeNull();
+  });
+
+  it('undo restores previous state', () => {
+    const state = createInitialState({
+      id: 'root',
+      type: 'container',
+      children: [{ id: 'p-1', type: 'p', content: 'Hello world' }],
+    });
+    const afterReplace = editorReducer(
+      state,
+      EditorActions.replaceSelectionWithInlines('p-1', 0, 5, [
+        { content: 'Bye', bold: true },
+      ]),
+    );
+    const afterUndo = editorReducer(afterReplace, EditorActions.undo());
+    const node = findNodeById(afterUndo.current, 'p-1') as TextNode;
+    expect(node.content).toBe('Hello world');
+  });
+});
+
 describe('handleReplaceSelectionText', () => {
   it('replaces text content in range', () => {
     const state = createInitialState({

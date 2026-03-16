@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { EditorProvider, createInitialState } from "@/lib";
+import { createInitialState } from "@/lib";
+import { DynamicEditorProvider } from "@/components/DynamicEditorProvider";
 import { createEmptyContent } from "@/lib/empty-content";
 import { ContainerNode, EditorState } from "@/lib/types";
 import { Editor } from "@/components/Editor";
@@ -542,7 +543,7 @@ import { Editor } from 'mina-rich-editor';
 // 2. Wrap your editor:
 function CollabEditor() {
   return (
-    <EditorProvider initialState={initialState}>
+    <DynamicEditorProvider initialState={initialState}>
       <CollaborationProvider
         roomId="my-doc-123"
         serverUrl="ws://localhost:1234"
@@ -550,7 +551,7 @@ function CollabEditor() {
       >
         <Editor />
       </CollaborationProvider>
-    </EditorProvider>
+    </DynamicEditorProvider>
   );
 }`}
           </pre>
@@ -561,19 +562,19 @@ function CollabEditor() {
       <div ref={editorContainerRef} className="relative mx-auto w-full max-w-5xl flex-1 px-4 py-4">
         {/* Broadcast mode */}
         <div style={{ display: isBroadcast ? undefined : "none" }}>
-          <EditorProvider initialState={broadcastInitialState}>
+          <DynamicEditorProvider initialState={broadcastInitialState}>
             <BroadcastSyncManager
               onSyncState={handleBroadcastState}
               editorContainerRef={editorContainerRef}
             />
             <Editor readOnly={false} onUploadImage={handleImageUpload} notionBased={false} />
-          </EditorProvider>
+          </DynamicEditorProvider>
         </div>
 
         {/* WebSocket (Y.js) mode — dev only */}
         {IS_DEV && (
           <div style={{ display: !isBroadcast ? undefined : "none" }}>
-            <EditorProvider initialState={wsInitialState}>
+            <DynamicEditorProvider initialState={wsInitialState}>
               {wsActive && (
                 <CollaborationProvider
                   roomId={roomId}
@@ -584,7 +585,7 @@ function CollabEditor() {
                 </CollaborationProvider>
               )}
               <Editor readOnly={false} onUploadImage={handleImageUpload} notionBased={false} />
-            </EditorProvider>
+            </DynamicEditorProvider>
           </div>
         )}
       </div>

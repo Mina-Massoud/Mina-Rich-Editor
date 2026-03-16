@@ -14,6 +14,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
+import { WrapText, ArrowRightLeft } from "lucide-react";
 import {
   TextNode,
   getNodeTextContent,
@@ -271,6 +272,19 @@ export const Block = React.memo(function Block({
     [textNode, dispatch]
   );
 
+  // Code block word-wrap toggle
+  const isCodeBlock = textNode.type === 'code';
+  const wordWrap = textNode.attributes?.wordWrap !== false; // default: wrapped
+  const handleToggleWrap = useCallback(() => {
+    dispatch({
+      type: 'UPDATE_NODE',
+      payload: {
+        id: textNode.id,
+        updates: { attributes: { ...textNode.attributes, wordWrap: !wordWrap } } as any,
+      },
+    });
+  }, [dispatch, textNode.id, textNode.attributes, wordWrap]);
+
   // Check if block is empty
   const textContent = getNodeTextContent(textNode);
   const isEmpty = !textContent || textContent.trim() === "";
@@ -398,6 +412,7 @@ export const Block = React.memo(function Block({
     className: `lg:!ml-5
       ${isListItem ? "relative" : ""}
       ${getTypeClassName(textNode.type)}
+      ${isCodeBlock && !wordWrap ? "!whitespace-pre !overflow-x-auto !break-normal" : ""}
       ${className}
       ${readOnly ? "" : "outline-none"}
       ${isListItem ? "px-3 py-0.5 mb-1" : textNode.type.startsWith('h') ? "px-3 py-2 mb-2" : "px-3 py-1.5 mb-2"}
@@ -442,6 +457,19 @@ export const Block = React.memo(function Block({
               onSetDropPosition={onSetDropPosition}
               onSetDraggingNodeId={onSetDraggingNodeId}
             />
+          )}
+
+          {/* Code block word-wrap toggle */}
+          {isCodeBlock && !readOnly && (
+            <button
+              type="button"
+              onClick={handleToggleWrap}
+              className="absolute top-2 right-2 z-10 p-1 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+              title={wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
+              aria-label={wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
+            >
+              {wordWrap ? <ArrowRightLeft className="w-3.5 h-3.5" /> : <WrapText className="w-3.5 h-3.5" />}
+            </button>
           )}
 
           <ElementType

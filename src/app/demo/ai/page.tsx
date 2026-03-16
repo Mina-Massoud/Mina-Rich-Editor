@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { EditorProvider, createInitialState } from "@/lib";
+import { createInitialState } from "@/lib";
+import { DynamicEditorProvider } from "@/components/DynamicEditorProvider";
 import { createEmptyContent } from "@/lib/empty-content";
 import { ContainerNode, EditorState } from "@/lib/types";
 import { Editor } from "@/components/Editor";
@@ -312,9 +313,9 @@ export default function AIDemoPage() {
       />
 
       <div className="flex-1 min-h-[600px] flex flex-col">
-        <EditorProvider initialState={initialState}>
+        <DynamicEditorProvider initialState={initialState}>
           <EditorWithAI aiProvider={aiProvider} />
-        </EditorProvider>
+        </DynamicEditorProvider>
       </div>
     </DemoPageShell>
   );

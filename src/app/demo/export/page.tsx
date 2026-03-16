@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { EditorProvider, createInitialState } from "@/lib";
+import { createInitialState } from "@/lib";
+import { DynamicEditorProvider } from "@/components/DynamicEditorProvider";
 import { Editor } from "@/components/Editor";
 import { DemoPageShell } from "@/components/demo/DemoPageShell";
 import { ContainerNode, EditorState, TextNode, getNodeTextContent, isTextNode, isContainerNode } from "@/lib/types";
@@ -165,7 +166,7 @@ export default function ExportDemoPage() {
       description="Edit content on the left, see live output in all four formats on the right. Use the tabs to switch between JSON, HTML, Markdown, and Plain Text."
       codeExample={codeExample}
     >
-      <EditorProvider initialState={initialState}>
+      <DynamicEditorProvider initialState={initialState}>
         <div className="flex flex-col gap-4 lg:flex-row lg:gap-6" style={{ minHeight: "70vh" }}>
           {/* Editor - Left side */}
           <div className="w-full lg:w-[60%]">
@@ -181,7 +182,7 @@ export default function ExportDemoPage() {
             <OutputPanel />
           </div>
         </div>
-      </EditorProvider>
+      </DynamicEditorProvider>
     </DemoPageShell>
   );
 }

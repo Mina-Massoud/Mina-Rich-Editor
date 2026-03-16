@@ -65,6 +65,9 @@ export class CommandManager {
 }
 
 export class CommandChain {
+  /** Allow dynamic command names added by the Proxy at runtime. */
+  [key: string]: ((...args: any[]) => CommandChain) | any;
+
   private queue: Array<() => boolean> = [];
   private extensionManager: ExtensionManager;
   private context: CommandContext;

@@ -86,3 +86,76 @@ export async function waitForBlockCount(page: Page, min: number, timeout = 5000)
     { timeout }
   );
 }
+
+/**
+ * Returns an ordered array of data-node-id values from the editor content area.
+ */
+export async function getBlockOrder(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const editor = document.querySelector('[data-editor-content]');
+    if (!editor) return [];
+    const blocks = editor.querySelectorAll('[data-node-id]');
+    return Array.from(blocks).map((el) => el.getAttribute('data-node-id')!).filter(Boolean);
+  });
+}
+
+/**
+ * Insert an image block via the /image slash command.
+ * Returns the data-node-id of the new image block.
+ */
+export async function insertImageBlock(page: Page): Promise<string> {
+  const p = page.locator('[data-node-type="p"][contenteditable="true"]').first();
+  await p.click();
+  await page.keyboard.type('/image', { delay: 40 });
+  await page.waitForTimeout(500);
+  await page.locator('[cmdk-item]').filter({ hasText: /image/i }).first().click();
+  await page.waitForTimeout(800);
+  const imgBlock = page.locator('[data-node-type="img"]').last();
+  const nodeId = await imgBlock.getAttribute('data-node-id');
+  return nodeId!;
+}
+
+/**
+ * Get the text content of a block by its data-node-id.
+ */
+export async function getBlockText(page: Page, nodeId: string): Promise<string> {
+  return page.evaluate((id) => {
+    const el = document.querySelector(`[data-node-id="${id}"]`);
+    return el?.textContent ?? '';
+  }, nodeId);
+}
+
+/**
+ * Perform a drag-and-drop from one block's drag handle to a target block.
+ * position: 'before' drops above the midpoint, 'after' drops below.
+ */
+export async function dragBlockToBlock(
+  page: Page,
+  sourceNodeId: string,
+  targetNodeId: string,
+  position: 'before' | 'after' = 'after'
+) {
+  const source = page.locator(`[data-node-id="${sourceNodeId}"]`);
+  const target = page.locator(`[data-node-id="${targetNodeId}"]`);
+
+  // Hover source to reveal its drag handle
+  await source.hover();
+  await page.waitForTimeout(400);
+
+  // The drag handle is the [draggable="true"] element in the source block's group wrapper
+  const sourceParentGroup = source.locator('xpath=ancestor::div[contains(@class,"group")]').first();
+  const dragHandle = sourceParentGroup.locator('[draggable="true"]').first();
+
+  const targetBox = await target.boundingBox();
+  if (!targetBox) throw new Error(`Target block ${targetNodeId} not found`);
+
+  const targetY = position === 'before'
+    ? targetBox.y + 5
+    : targetBox.y + targetBox.height - 5;
+
+  await dragHandle.dragTo(target, {
+    targetPosition: { x: targetBox.width / 2, y: position === 'before' ? 5 : targetBox.height - 5 },
+  });
+
+  await page.waitForTimeout(500);
+}

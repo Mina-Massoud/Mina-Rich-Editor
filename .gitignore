@@ -42,3 +42,12 @@ next-env.d.ts
 
 # Generated API docs
 docs/api/
+
+# Build artifacts
+/dist/
+
+# Test artifacts
+/test-results/
+
+# Claude Code
+.claude/

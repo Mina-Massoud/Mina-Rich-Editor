@@ -297,6 +297,83 @@ export function handleReplaceSelectionText(
   );
 }
 
+export function handleReplaceSelectionWithInlines(
+  state: EditorState,
+  payload: { nodeId: string; start: number; end: number; children: import('../../types').InlineText[] }
+): EditorState {
+  const { nodeId, start, end, children: newInlines } = payload;
+
+  const currentContainer = getCurrentContainer(state);
+  const node = findNodeById(currentContainer, nodeId) as TextNode | undefined;
+
+  if (!node || !isTextNode(node)) {
+    return state;
+  }
+
+  const children = getInlineChildren(node.children, hasInlineChildren(node), node.content, undefined);
+
+  // Replace the selected range with the InlineText[] array.
+  // Same algorithm as handleReplaceSelectionText but splices in full InlineText[] instead of plain text.
+  const result: import('../../types').InlineText[] = [];
+  let currentPos = 0;
+  let replaced = false;
+
+  for (const child of children) {
+    const childLength = (child.content || '').length;
+    const childStart = currentPos;
+    const childEnd = currentPos + childLength;
+
+    if (childEnd <= start || childStart >= end) {
+      // No overlap — keep as is
+      result.push({ ...child });
+    } else {
+      // There's overlap
+      const overlapStart = Math.max(childStart, start);
+      const overlapEnd = Math.min(childEnd, end);
+
+      // Before overlap
+      if (childStart < overlapStart) {
+        result.push({
+          ...child,
+          content: child.content!.substring(0, overlapStart - childStart),
+        });
+      }
+
+      // Insert replacement inlines only once (at first overlap)
+      if (!replaced) {
+        result.push(...newInlines);
+        replaced = true;
+      }
+
+      // After overlap
+      if (childEnd > overlapEnd) {
+        result.push({
+          ...child,
+          content: child.content!.substring(overlapEnd - childStart),
+        });
+      }
+    }
+
+    currentPos = childEnd;
+  }
+
+  const newChildren = mergeAdjacentTextNodes(result);
+
+  const newContainer = updateNodeById(currentContainer, nodeId, () => ({
+    content: undefined,
+    children: newChildren,
+  })) as import('../../types').ContainerNode;
+
+  return addToHistory(
+    {
+      ...state,
+      currentSelection: null,
+      metadata: { ...state.metadata, updatedAt: new Date().toISOString() },
+    },
+    newContainer
+  );
+}
+
 export function handleRemoveLink(
   state: EditorState,
   payload: Record<string, never>

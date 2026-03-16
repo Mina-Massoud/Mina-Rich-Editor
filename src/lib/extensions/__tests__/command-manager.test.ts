@@ -16,8 +16,9 @@ function createMockContext(): ExtensionContext {
   return {
     state: {
       version: '1.0.0',
-      history: [{ id: 'root', type: 'container', children: [] }],
-      historyIndex: 0,
+      current: { id: 'root', type: 'container', children: [] },
+      undoStack: [],
+      redoStack: [],
       activeNodeId: null,
       hasSelection: false,
       selectionKey: 0,

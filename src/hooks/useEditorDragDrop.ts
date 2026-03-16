@@ -3,9 +3,12 @@
  *
  * Encapsulates all drag-and-drop state and handlers for the editor,
  * including both block-level drag-drop and flex-container drag-drop.
+ *
+ * Uses refs for draggingNodeId and dropPosition so that useCallback
+ * dependencies stay stable and handlers always read current values.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { ContainerNode } from "../lib";
 import {
   createHandleImageDragStart,
@@ -44,6 +47,13 @@ export function useEditorDragDrop({
     "left" | "right" | null
   >(null);
 
+  // Refs for stable callback access to current values
+  const draggingNodeIdRef = useRef(draggingNodeId);
+  draggingNodeIdRef.current = draggingNodeId;
+
+  const dropPositionRef = useRef(dropPosition);
+  dropPositionRef.current = dropPosition;
+
   const handleImageDragStart = useCallback(
     createHandleImageDragStart(setDraggingNodeId),
     []
@@ -57,17 +67,18 @@ export function useEditorDragDrop({
   const handleDragEnter = useCallback(createHandleDragEnter(), []);
 
   const handleDragOver = useCallback(
-    createHandleDragOver({
-      get container() {
-        return getContainer();
-      },
-      dispatch,
-      draggingNodeId,
-      setDraggingNodeId,
-      setDragOverNodeId,
-      setDropPosition,
-    }),
-    [draggingNodeId, dispatch, getContainer]
+    (e: React.DragEvent, nodeId: string) => {
+      const handler = createHandleDragOver({
+        container: getContainer,
+        dispatch,
+        draggingNodeId: draggingNodeIdRef.current,
+        setDraggingNodeId,
+        setDragOverNodeId,
+        setDropPosition,
+      });
+      return handler(e, nodeId);
+    },
+    [dispatch, getContainer]
   );
 
   const handleDragLeave = useCallback(
@@ -76,37 +87,38 @@ export function useEditorDragDrop({
   );
 
   const handleDrop = useCallback(
-    createHandleDrop(
-      {
-        get container() {
-          return getContainer();
+    (e: React.DragEvent, nodeId: string) => {
+      const handler = createHandleDrop(
+        {
+          container: getContainer,
+          dispatch,
+          toast,
+          draggingNodeId: draggingNodeIdRef.current,
+          setDraggingNodeId,
+          setDragOverNodeId,
+          setDropPosition,
+          setIsUploading: () => {},
+          onUploadImage,
         },
-        dispatch,
-        toast,
-        draggingNodeId,
-        setDraggingNodeId,
-        setDragOverNodeId,
-        setDropPosition,
-        setIsUploading: () => {},
-        onUploadImage,
-      },
-      dropPosition
-    ),
-    [draggingNodeId, dropPosition, dispatch, getContainer, toast, onUploadImage]
+        dropPositionRef.current
+      );
+      return handler(e, nodeId);
+    },
+    [dispatch, getContainer, toast, onUploadImage]
   );
 
   const handleFlexContainerDragOver = useCallback(
-    createHandleFlexContainerDragOver({
-      get container() {
-        return getContainer();
-      },
-      dispatch,
-      toast,
-      draggingNodeId,
-      setDragOverFlexId,
-      setFlexDropPosition,
-    }),
-    [draggingNodeId, dispatch, getContainer, toast]
+    (e: React.DragEvent, flexContainerId: string, position: "left" | "right" | null) => {
+      const handler = createHandleFlexContainerDragOver({
+        container: getContainer(),
+        dispatch,
+        draggingNodeId: draggingNodeIdRef.current,
+        setDragOverFlexId,
+        setFlexDropPosition,
+      });
+      return handler(e, flexContainerId, position);
+    },
+    [dispatch, getContainer]
   );
 
   const handleFlexContainerDragLeave = useCallback(
@@ -115,17 +127,17 @@ export function useEditorDragDrop({
   );
 
   const handleFlexContainerDrop = useCallback(
-    createHandleFlexContainerDrop({
-      get container() {
-        return getContainer();
-      },
-      dispatch,
-      toast,
-      draggingNodeId,
-      setDragOverFlexId,
-      setFlexDropPosition,
-    }),
-    [draggingNodeId, dispatch, getContainer, toast]
+    (e: React.DragEvent, flexContainerId: string, position: "left" | "right" | null) => {
+      const handler = createHandleFlexContainerDrop({
+        container: getContainer(),
+        dispatch,
+        draggingNodeId: draggingNodeIdRef.current,
+        setDragOverFlexId,
+        setFlexDropPosition,
+      });
+      return handler(e, flexContainerId, position);
+    },
+    [dispatch, getContainer]
   );
 
   return {

@@ -17,6 +17,7 @@
 - CMS-ready: `onChange`, `getHTML()`, `getJSON()`, `getMarkdown()`, `setContent()`
 - Zero re-renders on content changes for non-active blocks (`BlockWrapper` pattern)
 - TypeScript-first with full type exports
+- AI selection editing — rephrase, fix grammar, change tone, plus AI-powered styling (bold, italic, code)
 - Works at any width — 300 px sidebar to full-width page layout
 - 969 tests (759 unit + 210 E2E)
 

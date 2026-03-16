@@ -53,6 +53,7 @@ const AI_FEATURES = [
   { title: "Streaming Generation", desc: "AI responses stream token-by-token directly into editor blocks in real time." },
   { title: "Stream to Blocks", desc: "Markdown from the LLM is parsed into structured blocks as it arrives — headings, lists, code." },
   { title: "/ai Slash Command", desc: "Users type /ai followed by a prompt to generate content inline." },
+  { title: "AI Styling", desc: "AI-powered formatting — emphasize key words, add bold/italic, mark code terms. Smart styling, not just rephrasing." },
 ];
 
 const COLLAB_FEATURES = [

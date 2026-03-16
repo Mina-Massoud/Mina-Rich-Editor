@@ -1,14 +1,22 @@
 /**
  * Drag and Drop Handler Functions
- * 
- * Functions for handling drag and drop operations in the editor
+ *
+ * Factory functions for handling drag and drop operations in the editor.
+ * Drop logic is delegated to focused strategy functions in drop-strategies.ts.
  */
 
 import { EditorActions } from '../reducer/actions';
 import { ContainerNode, TextNode, isTextNode, isContainerNode } from '../types';
-import { uploadImage } from '../utils/image-upload';
 import { findNodeAnywhere } from '../utils/editor-helpers';
-import { generateId } from '../utils/id-generator';
+import {
+  DropContext,
+  DropPosition,
+  handleFlexReorder,
+  handleFlexMerge,
+  handleFlexExtract,
+  handleRootMove,
+  handleFileDrop,
+} from './drop-strategies';
 
 /** Parameters shared by drag-and-drop handler factory functions. */
 export interface DragDropHandlerParams {
@@ -52,9 +60,6 @@ export function createHandleDragOver(params: Omit<DragDropHandlerParams, 'toast'
     const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
     e.preventDefault();
     e.stopPropagation();
-
-    // Check if we're dragging an existing block (image) or files from outside
-    const draggedNodeId = e.dataTransfer.getData("text/plain");
 
     // Don't show drop indicator if we're hovering over the dragged element itself
     if (draggingNodeId === nodeId) {
@@ -169,9 +174,7 @@ export function createHandleDragOver(params: Omit<DragDropHandlerParams, 'toast'
       );
       const targetIndex = container.children.findIndex((n) => n.id === nodeId);
 
-      // Don't allow drops that would result in no movement:
-      // - Dropping "after" on the previous block (would stay in same position)
-      // - Dropping "before" on the next block (would stay in same position)
+      // Don't allow drops that would result in no movement
       if (
         (position === "after" && targetIndex === draggedIndex - 1) ||
         (position === "before" && targetIndex === draggedIndex + 1)
@@ -183,10 +186,8 @@ export function createHandleDragOver(params: Omit<DragDropHandlerParams, 'toast'
       }
     }
 
-    // Allow drop - this is required for drop to work
-    // Use "move" for existing blocks, "copy" for external files
-    e.dataTransfer.dropEffect =
-      draggedNodeId || draggingNodeId ? "move" : "copy";
+    // Allow drop - use "move" for existing blocks, "copy" for external files
+    e.dataTransfer.dropEffect = draggingNodeId ? "move" : "copy";
 
     setDragOverNodeId(nodeId);
     setDropPosition(position);
@@ -210,7 +211,7 @@ export function createHandleDragLeave(setDragOverNodeId: (id: string | null) => 
   };
 }
 
-/** Creates an async drop handler that moves existing blocks, merges images into flex containers, or uploads dropped media files. */
+/** Creates an async drop handler that delegates to the appropriate drop strategy. */
 export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "before" | "after" | "left" | "right" | null) {
   return async (e: React.DragEvent, nodeId: string) => {
     const {
@@ -222,536 +223,67 @@ export function createHandleDrop(params: DragDropHandlerParams, dropPosition: "b
       setDragOverNodeId,
       setDropPosition,
       setIsUploading,
-      onUploadImage
+      onUploadImage,
     } = params;
     const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
-    
+
     e.preventDefault();
     e.stopPropagation();
 
-    // Check if we're moving an existing image block
-    const draggedNodeId = e.dataTransfer.getData("text/plain");
-
-    if (draggedNodeId && draggingNodeId) {
-      // Moving an existing image
-
-      // Don't drop on itself
-      if (draggingNodeId === nodeId) {
-        setDragOverNodeId(null);
-        setDropPosition(null);
-        setDraggingNodeId(null);
-        return;
-      }
-
-      const draggingResult = findNodeAnywhere(draggingNodeId, container);
-      const targetResult = findNodeAnywhere(nodeId, container);
-
-      if (!draggingResult || !targetResult) {
-        setDragOverNodeId(null);
-        setDropPosition(null);
-        setDraggingNodeId(null);
-        return;
-      }
-
-      const draggingNode = draggingResult.node;
-      const targetNode = targetResult.node;
-      const inSameFlexContainer =
-        draggingResult.parentId &&
-        targetResult.parentId &&
-        draggingResult.parentId === targetResult.parentId;
-
-      // Check if this is a horizontal drop (left/right)
-      if (dropPosition === "left" || dropPosition === "right") {
-        // Case 1: Reordering images within the same flex container
-        if (
-          inSameFlexContainer &&
-          draggingResult.parent &&
-          targetResult.parent
-        ) {
-          const parent = draggingResult.parent;
-          const newChildren = [...parent.children];
-
-          const dragIndex = newChildren.findIndex(
-            (c) => c.id === draggingNodeId
-          );
-          const targetIndex = newChildren.findIndex((c) => c.id === nodeId);
-
-          // Remove the dragged item from its current position
-          const [draggedItem] = newChildren.splice(dragIndex, 1);
-
-          // Calculate the new target index after removal
-          const adjustedTargetIndex =
-            dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
-
-          // Insert at the correct position based on drop side
-          if (dropPosition === "left") {
-            newChildren.splice(adjustedTargetIndex, 0, draggedItem);
-          } else {
-            // "right"
-            newChildren.splice(adjustedTargetIndex + 1, 0, draggedItem);
-          }
-
-          // Update the container with new order (single action for history)
-          dispatch(
-            EditorActions.updateNode(parent.id, {
-              children: newChildren as any,
-            })
-          );
-
-          toast({
-            title: "Image repositioned!",
-            description: "Image order updated in flex layout",
-          });
-
-          setDragOverNodeId(null);
-          setDropPosition(null);
-          setDraggingNodeId(null);
-          return;
-        }
-
-        // Case 2: Merging two separate images into a flex container (or adding to existing one)
-        if (isTextNode(draggingNode) && isTextNode(targetNode)) {
-
-          // If one of them is already in a flex container, add the dragged one to it
-          if (
-            draggingResult.parentId &&
-            draggingResult.parent?.attributes?.layoutType === "flex"
-          ) {
-            // Dragging node is in a flex container, extract it and merge with target
-          } else if (
-            targetResult.parentId &&
-            targetResult.parent?.attributes?.layoutType === "flex"
-          ) {
-            // Target is in flex container, add dragged node to it
-            const parent = targetResult.parent;
-            const targetIndex = parent.children.findIndex(
-              (c) => c.id === nodeId
-            );
-            const newChildren = [...parent.children];
-
-            // Insert dragged node at the appropriate position
-            if (dropPosition === "left") {
-              newChildren.splice(targetIndex, 0, draggingNode as TextNode);
-            } else {
-              newChildren.splice(targetIndex + 1, 0, draggingNode as TextNode);
-            }
-
-            // Batch: delete from old location and update container (single history entry)
-            dispatch(
-              EditorActions.batch([
-                EditorActions.deleteNode(draggingNodeId),
-                EditorActions.updateNode(parent.id, {
-                  children: newChildren as any,
-                }),
-              ])
-            );
-
-            toast({
-              title: "Image added!",
-              description: "Image added to the flex layout",
-            });
-
-            setDragOverNodeId(null);
-            setDropPosition(null);
-            setDraggingNodeId(null);
-            return;
-          }
-
-          // Neither is in a flex container - create a new one
-
-          // Find reference nodes at root level
-          const targetRootIndex = container.children.findIndex(
-            (n) =>
-              n.id === nodeId ||
-              (isContainerNode(n) &&
-                (n as ContainerNode).children.some((c) => c.id === nodeId))
-          );
-          const draggingRootIndex = container.children.findIndex(
-            (n) =>
-              n.id === draggingNodeId ||
-              (isContainerNode(n) &&
-                (n as ContainerNode).children.some(
-                  (c) => c.id === draggingNodeId
-                ))
-          );
-
-          // Find a stable reference node for insertion
-          let referenceNodeId: string | null = null;
-          let insertPosition: "before" | "after" = "after";
-
-          const firstIndex = Math.min(targetRootIndex, draggingRootIndex);
-          if (firstIndex > 0) {
-            referenceNodeId = container.children[firstIndex - 1].id;
-            insertPosition = "after";
-          } else if (container.children.length > 2) {
-            for (let i = 0; i < container.children.length; i++) {
-              if (i !== targetRootIndex && i !== draggingRootIndex) {
-                referenceNodeId = container.children[i].id;
-                insertPosition = i < firstIndex ? "after" : "before";
-                break;
-              }
-            }
-          }
-
-          // Create a flex container with both images
-          const flexContainer: ContainerNode = {
-            id: generateId("flex-container"),
-            type: "container",
-            children:
-              dropPosition === "left"
-                ? [draggingNode as TextNode, targetNode as TextNode]
-                : [targetNode as TextNode, draggingNode as TextNode],
-            attributes: {
-              layoutType: "flex",
-              gap: "4",
-            },
-          };
-
-          // Batch: delete both images and insert flex container (single history entry)
-          const actions: any[] = [
-            EditorActions.deleteNode(draggingNodeId),
-            EditorActions.deleteNode(nodeId),
-          ];
-
-          if (referenceNodeId) {
-            actions.push(
-              EditorActions.insertNode(
-                flexContainer,
-                referenceNodeId,
-                insertPosition
-              )
-            );
-          } else {
-            actions.push(
-              EditorActions.replaceContainer({
-                ...container,
-                children: [flexContainer],
-              })
-            );
-          }
-
-          dispatch(EditorActions.batch(actions));
-
-          toast({
-            title: "Images merged!",
-            description: "Images placed side by side in a flex layout",
-          });
-
-          setDragOverNodeId(null);
-          setDropPosition(null);
-          setDraggingNodeId(null);
-          return;
-        }
-      }
-
-      // Vertical drop - extract from container or move at root level
-
-      // If the dragging node is in a flex container, we need to extract it
-      if (draggingResult.parentId && draggingResult.parent) {
-        
-        const parent = draggingResult.parent;
-        const remainingChildren = parent.children.filter(
-          (c) => c.id !== draggingNodeId
-        );
-        
-        const insertPos =
-          dropPosition === "before" || dropPosition === "after"
-            ? dropPosition
-            : "after";
-
-        // Batch all actions for single history entry
-        const actions: any[] = [];
-
-        // If only one child remains, unwrap the container
-        if (remainingChildren.length === 1) {
-          // Find where to insert the remaining child
-          const parentIndex = container.children.findIndex(
-            (c) => c.id === parent.id
-          );
-          
-          // Check if target is the flex container itself
-          const isTargetTheFlexContainer = nodeId === parent.id;
-          
-          if (isTargetTheFlexContainer) {
-            // We're trying to drop on the flex container itself
-            // We need to find a better reference point
-            let referenceNodeId: string | null = null;
-            let referencePosition: "before" | "after" = insertPos === "before" ? "before" : "after";
-            
-            if (parentIndex > 0) {
-              // Use the previous sibling
-              referenceNodeId = container.children[parentIndex - 1].id;
-              referencePosition = "after";
-            } else if (parentIndex < container.children.length - 1) {
-              // Use the next sibling
-              referenceNodeId = container.children[parentIndex + 1].id;
-              referencePosition = "before";
-            }
-            
-            if (referenceNodeId) {
-              // Insert remaining child first (it will replace the flex container position)
-              actions.push(
-                EditorActions.insertNode(
-                  remainingChildren[0],
-                  referenceNodeId,
-                  referencePosition
-                )
-              );
-              
-              // Now insert the dragged node next to the remaining child
-              actions.push(
-                EditorActions.insertNode(
-                  draggingNode,
-                  remainingChildren[0].id,
-                  insertPos
-                )
-              );
-              
-              // Delete the flex container (which also removes dragging node)
-              actions.push(EditorActions.deleteNode(parent.id));
-            } else {
-              // Fallback: no siblings, use container
-              actions.push(EditorActions.insertNode(remainingChildren[0], container.id, "append"));
-              actions.push(EditorActions.insertNode(draggingNode, remainingChildren[0].id, insertPos));
-              actions.push(EditorActions.deleteNode(parent.id));
-            }
-          } else {
-            // Target is NOT the flex container - normal case
-            
-            // Check if the target node is right before or after the flex container
-            const targetIndex = container.children.findIndex((c) => c.id === nodeId);
-            const isTargetBeforeFlex = targetIndex === parentIndex - 1 && insertPos === "after";
-            const isTargetAfterFlex = targetIndex === parentIndex + 1 && insertPos === "before";
-            
-            if (isTargetBeforeFlex || isTargetAfterFlex) {
-              // We're inserting right next to where the flex container is
-              // Need to be careful about ordering
-              
-              // Insert dragged node at the target position
-              actions.push(EditorActions.insertNode(draggingNode, nodeId, insertPos));
-              
-              // Insert remaining child next to the dragged node (maintaining order)
-              if (isTargetBeforeFlex) {
-                // Inserting before flex, so remaining child should be after dragged node
-                actions.push(
-                  EditorActions.insertNode(
-                    remainingChildren[0],
-                    draggingNodeId,
-                    "after"
-                  )
-                );
-              } else {
-                // Inserting after flex, so remaining child should be before dragged node
-                actions.push(
-                  EditorActions.insertNode(
-                    remainingChildren[0],
-                    draggingNodeId,
-                    "before"
-                  )
-                );
-              }
-              
-              // Delete the flex container (also removes old dragged node reference)
-              actions.push(EditorActions.deleteNode(parent.id));
-            } else {
-              // Target is somewhere else - use standard logic
-              
-              // Insert dragged node at new position first
-              actions.push(EditorActions.insertNode(draggingNode, nodeId, insertPos));
-              
-              // Delete the dragging node from flex
-              actions.push(EditorActions.deleteNode(draggingNodeId));
-              
-              // Insert remaining child where the flex container was
-              if (parentIndex > 0) {
-                const prevNode = container.children[parentIndex - 1];
-                actions.push(
-                  EditorActions.insertNode(
-                    remainingChildren[0],
-                    prevNode.id,
-                    "after"
-                  )
-                );
-              } else if (parentIndex === 0 && container.children.length > 1) {
-                const nextNode = container.children[1];
-                actions.push(
-                  EditorActions.insertNode(
-                    remainingChildren[0],
-                    nextNode.id,
-                    "before"
-                  )
-                );
-              } else {
-                // Only the flex container exists, just insert at root
-                actions.push(
-                  EditorActions.insertNode(
-                    remainingChildren[0],
-                    container.id,
-                    "append"
-                  )
-                );
-              }
-              
-              // Delete the flex container
-              actions.push(EditorActions.deleteNode(parent.id));
-            }
-          }
-        } else {    
-          // Multiple children remain, just update the flex container
-          actions.push(
-            EditorActions.updateNode(parent.id, {
-              children: remainingChildren as any,
-            })
-          );
-          
-          // Insert dragged node at new position
-          actions.push(EditorActions.insertNode(draggingNode, nodeId, insertPos));
-        }
-        
-        actions.push(EditorActions.setActiveNode(draggingNodeId));
-
-        dispatch(EditorActions.batch(actions));
-
-        toast({
-          title: "Image moved!",
-          description: "Image extracted and repositioned",
-        });
-
-        setDragOverNodeId(null);
-        setDropPosition(null);
-        setDraggingNodeId(null);
-        return;
-      }
-
-      // Standard move at root level
-      const draggingNodeAtRoot = container.children.find(
-        (n) => n.id === draggingNodeId
-      );
-      
-      if (draggingNodeAtRoot) {
-        const targetNodeAtRoot = container.children.find((n) => n.id === nodeId);
-        
-        // Check if both are at root level and not images - use swap for blocks
-        const isDraggingImage = isTextNode(draggingNode) && (draggingNode as TextNode).type === 'img';
-        const isTargetImage = targetNodeAtRoot && isTextNode(targetNodeAtRoot) && (targetNodeAtRoot as TextNode).type === 'img';
-        
-        // Use swap for non-image blocks, use move for images
-        if (!isDraggingImage && !isTargetImage && targetNodeAtRoot) {
-          dispatch(EditorActions.swapNodes(draggingNodeId, nodeId));
-          dispatch(EditorActions.setActiveNode(draggingNodeId));
-
-          toast({
-            title: "Blocks swapped!",
-            description: "Block positions exchanged",
-          });
-        } else {
-          // Convert dropPosition to valid InsertPosition
-          const insertPos =
-            dropPosition === "before" || dropPosition === "after"
-              ? dropPosition
-              : "after";
-
-          dispatch(EditorActions.moveNode(draggingNodeId, nodeId, insertPos));
-          dispatch(EditorActions.setActiveNode(draggingNodeId));
-
-          toast({
-            title: isDraggingImage ? "Image moved!" : "Block moved!",
-            description: `${isDraggingImage ? 'Image' : 'Block'} repositioned ${dropPosition} the block`,
-          });
-        }
-      }
-
+    const cleanup = () => {
       setDragOverNodeId(null);
       setDropPosition(null);
       setDraggingNodeId(null);
+    };
+
+    // If no dragging node, handle as file drop
+    if (!draggingNodeId) {
+      await handleFileDrop(e, nodeId, {
+        dispatch, toast, setIsUploading, onUploadImage, dropPosition, cleanup,
+      });
       return;
     }
 
-    // Otherwise, handle file upload
-
-    // Try to get files from dataTransfer
-    let files: File[] = [];
-
-    if (e.dataTransfer.items) {
-      // Use DataTransferItemList interface
-      const items = Array.from(e.dataTransfer.items);
-      files = items
-        .filter((item) => item.kind === "file")
-        .map((item) => item.getAsFile())
-        .filter((file): file is File => file !== null);
-    } else {
-      // Use DataTransferList interface
-      files = Array.from(e.dataTransfer.files);
-    }
-
-    // Find first image or video file
-    const mediaFile = files.find((file) => 
-      file.type.startsWith("image/") || file.type.startsWith("video/")
-    );
-
-    if (!mediaFile) {
-      setDragOverNodeId(null);
-      setDropPosition(null);
-      setDraggingNodeId(null);
+    // Don't drop on itself
+    if (draggingNodeId === nodeId) {
+      cleanup();
       return;
     }
 
-    const isVideo = mediaFile.type.startsWith("video/");
-    setIsUploading(true);
+    const draggingResult = findNodeAnywhere(draggingNodeId, container);
+    const targetResult = findNodeAnywhere(nodeId, container);
 
-    try {
-      // Use custom upload handler if provided, otherwise use default
-      let mediaUrl: string;
+    if (!draggingResult || !targetResult) {
+      cleanup();
+      return;
+    }
 
-      if (onUploadImage) {
-        mediaUrl = await onUploadImage(mediaFile);
+    const ctx: DropContext = {
+      container, dispatch, draggingNodeId,
+      draggingResult, targetNodeId: nodeId, targetResult,
+      dropPosition: (dropPosition || "after") as DropPosition,
+      cleanup,
+    };
+
+    const inSameFlexContainer =
+      draggingResult.parentId &&
+      targetResult.parentId &&
+      draggingResult.parentId === targetResult.parentId;
+
+    const isHorizontal = dropPosition === "left" || dropPosition === "right";
+
+    if (isHorizontal) {
+      if (inSameFlexContainer && draggingResult.parent && targetResult.parent) {
+        handleFlexReorder(ctx);
+      } else if (isTextNode(draggingResult.node) && isTextNode(targetResult.node)) {
+        handleFlexMerge(ctx);
       } else {
-        const result = await uploadImage(mediaFile);
-        if (!result.success || !result.url) {
-          throw new Error(result.error || "Upload failed");
-        }
-        mediaUrl = result.url;
+        cleanup();
       }
-
-      const mediaNode: TextNode = {
-        id: generateId(isVideo ? 'video' : 'img'),
-        type: isVideo ? "video" : "img",
-        content: "", // Optional caption
-        attributes: {
-          src: mediaUrl,
-          alt: mediaFile.name,
-        },
-      };
-
-      // Insert at the determined position
-      // Convert dropPosition to valid InsertPosition
-      const insertPos =
-        dropPosition === "before" || dropPosition === "after"
-          ? dropPosition
-          : "after";
-
-      dispatch(EditorActions.insertNode(mediaNode, nodeId, insertPos));
-      dispatch(EditorActions.setActiveNode(mediaNode.id));
-
-      toast({
-        title: `${isVideo ? 'Video' : 'Image'} uploaded!`,
-        description: `${isVideo ? 'Video' : 'Image'} placed ${dropPosition} the block`,
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Upload failed",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to upload file. Please try again.",
-      });
-    } finally {
-      setIsUploading(false);
-      setDragOverNodeId(null);
-      setDropPosition(null);
-      setDraggingNodeId(null);
+    } else if (draggingResult.parentId && draggingResult.parent) {
+      handleFlexExtract(ctx);
+    } else {
+      handleRootMove(ctx);
     }
   };
 }
-

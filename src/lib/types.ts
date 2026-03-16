@@ -340,7 +340,8 @@ export interface EditorState {
  * }
  * ```
  */
-export function isContainerNode(node: EditorNode): node is ContainerNode {
+export function isContainerNode(node: EditorNode | undefined | null): node is ContainerNode {
+  if (!node) return false;
   return node.type === 'container';
 }
 
@@ -350,7 +351,8 @@ export function isContainerNode(node: EditorNode): node is ContainerNode {
  * @param node - The node to check
  * @returns True if node is a StructuralNode
  */
-export function isStructuralNode(node: EditorNode): node is StructuralNode {
+export function isStructuralNode(node: EditorNode | undefined | null): node is StructuralNode {
+  if (!node) return false;
   return node.type === 'table' || node.type === 'thead' || node.type === 'tbody' || node.type === 'tr';
 }
 
@@ -367,7 +369,8 @@ export function isStructuralNode(node: EditorNode): node is StructuralNode {
  * }
  * ```
  */
-export function isTextNode(node: EditorNode): node is TextNode {
+export function isTextNode(node: EditorNode | undefined | null): node is TextNode {
+  if (!node) return false;
   return node.type !== 'container' && !isStructuralNode(node);
 }
 

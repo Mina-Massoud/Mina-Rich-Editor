@@ -15,18 +15,42 @@ import { generateId } from '../utils/id-generator';
 
 // ─── Inline Markdown Parsing ─────────────────────────────────────────────────
 
+/**
+ * Strip orphaned markdown markers (e.g. standalone `**`, `~~`) that the LLM
+ * left unclosed. Only removes markers that don't have a matching closing pair.
+ */
+function cleanOrphanedMarkers(text: string): string {
+  // Count occurrences of each marker. Odd count means one is orphaned.
+  const markers = ['**', '~~'] as const;
+  let cleaned = text;
+  for (const marker of markers) {
+    // Split by the marker — if odd number of segments, there's an orphaned one
+    const parts = cleaned.split(marker);
+    if (parts.length % 2 === 0) {
+      // Odd number of markers (even number of parts) — remove the last orphaned one
+      const lastIdx = cleaned.lastIndexOf(marker);
+      cleaned = cleaned.slice(0, lastIdx) + cleaned.slice(lastIdx + marker.length);
+    }
+  }
+  return cleaned.trim();
+}
+
 /** Parse inline markdown formatting into InlineText children. */
-function parseInlineMarkdown(text: string): InlineText[] {
+export function parseInlineMarkdown(text: string): InlineText[] {
   if (!text) return [{ content: text }];
+
+  // Clean up orphaned markers before parsing
+  const cleaned = cleanOrphanedMarkers(text);
+  if (!cleaned) return [{ content: '' }];
 
   const segments: InlineText[] = [];
   const inlineRe = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|~~(.+?)~~)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = inlineRe.exec(text)) !== null) {
+  while ((match = inlineRe.exec(cleaned)) !== null) {
     if (match.index > lastIndex) {
-      segments.push({ content: text.slice(lastIndex, match.index) });
+      segments.push({ content: cleaned.slice(lastIndex, match.index) });
     }
 
     if (match[2] !== undefined) {
@@ -42,14 +66,14 @@ function parseInlineMarkdown(text: string): InlineText[] {
     lastIndex = match.index + match[0].length;
   }
 
-  if (lastIndex < text.length) {
-    segments.push({ content: text.slice(lastIndex) });
+  if (lastIndex < cleaned.length) {
+    segments.push({ content: cleaned.slice(lastIndex) });
   }
 
-  return segments.length > 0 ? segments : [{ content: text }];
+  return segments.length > 0 ? segments : [{ content: cleaned }];
 }
 
-function hasInlineFormatting(text: string): boolean {
+export function hasInlineFormatting(text: string): boolean {
   return /(\*\*.+?\*\*|\*[^*]+?\*|`.+?`|~~.+?~~)/.test(text);
 }
 
@@ -79,6 +103,27 @@ function createBlock(type: NodeType, content: string, attributes?: NodeAttribute
   };
 }
 
+// ─── Preamble detection ─────────────────────────────────────────────────────
+
+/** Common AI preamble patterns that should be stripped from the beginning of output. */
+const PREAMBLE_PATTERNS = [
+  /^here['']?s?\s/i,
+  /^sure[!,.\s]/i,
+  /^of course[!,.\s]/i,
+  /^i['']?d be happy to/i,
+  /^i['']?ll /i,
+  /^let me /i,
+  /^absolutely[!,.\s]/i,
+  /^certainly[!,.\s]/i,
+  /^great[!,.\s]/i,
+];
+
+function isPreambleLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  return PREAMBLE_PATTERNS.some((re) => re.test(trimmed));
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -104,6 +149,8 @@ export async function streamToBlocks(
   // Content from finalized complete lines only — prevents partial preview
   // from being double-counted when the partial line becomes complete.
   let committedContent = '';
+  // Whether we've seen real content yet (for preamble stripping)
+  let pastPreamble = false;
 
   function lastInsertedId(): string {
     return insertedBlockIds.length > 0
@@ -216,8 +263,17 @@ export async function streamToBlocks(
         continue;
       }
 
+      // Strip preamble lines at the start of the response
+      if (!pastPreamble) {
+        if (isPreambleLine(line)) continue;
+        pastPreamble = true;
+      }
+
       // Regular content line
       const { type, content, attributes } = parseLineType(line);
+
+      // Skip empty content (e.g. bare `- ` with no text, or standalone `**`)
+      if (!content.trim() && type !== 'hr') continue;
 
       if (!s.block) {
         insertBlock(type, content, attributes);

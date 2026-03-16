@@ -439,6 +439,20 @@ export interface ReplaceSelectionTextAction {
 }
 
 /**
+ * REPLACE_SELECTION_WITH_INLINES action - replaces text in a selection range with rich InlineText[].
+ * Used by AI styling to replace selected text with formatted (bold/italic/code) content.
+ */
+export interface ReplaceSelectionWithInlinesAction {
+  type: 'REPLACE_SELECTION_WITH_INLINES';
+  payload: {
+    nodeId: string;
+    start: number;
+    end: number;
+    children: import('../types').InlineText[];
+  };
+}
+
+/**
  * Union type of all possible editor actions.
  */
 export type EditorAction =
@@ -472,7 +486,8 @@ export type EditorAction =
   | SetCoverImageAction
   | RemoveCoverImageAction
   | UpdateCoverImagePositionAction
-  | ReplaceSelectionTextAction;
+  | ReplaceSelectionTextAction
+  | ReplaceSelectionWithInlinesAction;
 
 /**
  * Action creator helpers for type-safe action creation.
@@ -733,6 +748,19 @@ export const EditorActions = {
   ): ReplaceSelectionTextAction => ({
     type: 'REPLACE_SELECTION_TEXT',
     payload: { nodeId, start, end, newText },
+  }),
+
+  /**
+   * Creates a REPLACE_SELECTION_WITH_INLINES action.
+   */
+  replaceSelectionWithInlines: (
+    nodeId: string,
+    start: number,
+    end: number,
+    children: import('../types').InlineText[]
+  ): ReplaceSelectionWithInlinesAction => ({
+    type: 'REPLACE_SELECTION_WITH_INLINES',
+    payload: { nodeId, start, end, children },
   }),
 };
 

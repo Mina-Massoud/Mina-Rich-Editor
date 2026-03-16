@@ -358,8 +358,8 @@ function serializeContainerNode(node: ContainerNode, indent: string = ''): strin
   
   // Determine container type and classes
   const listTypeFromAttribute = node.attributes?.listType as string | undefined;
-  const listType = listTypeFromAttribute || 
-    (isTextNode(firstChild) && (firstChild as TextNode).type === 'li' ? 'ol' : undefined);
+  const listType = listTypeFromAttribute ||
+    (firstChild && isTextNode(firstChild) && (firstChild as TextNode).type === 'li' ? 'ol' : undefined);
   const isListContainer = !!listType;
   
   // Get custom className from attributes

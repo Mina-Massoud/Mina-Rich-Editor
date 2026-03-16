@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { EditorProvider, createInitialState } from "@/lib";
+import { createInitialState } from "@/lib";
+import { DynamicEditorProvider } from "@/components/DynamicEditorProvider";
 import { createEmptyContent } from "@/lib/empty-content";
 import { ContainerNode, EditorState } from "@/lib/types";
 import { Editor } from "@/components/Editor";
@@ -218,7 +219,7 @@ export default function DemoPage() {
       <div className="flex flex-grow">
         <div className="flex w-full flex-col flex-grow">
           <div className="w-full flex-1 min-h-screen flex flex-col">
-            <EditorProvider initialState={initialState}>
+            <DynamicEditorProvider initialState={initialState}>
               {/* Demo-only controls — not part of the library */}
               <DemoControls
                 readOnly={readOnly}
@@ -236,7 +237,7 @@ export default function DemoPage() {
                 dir={dir}
                 onDirChange={setDir}
               />
-            </EditorProvider>
+            </DynamicEditorProvider>
             {/* Demo navigation */}
             <div className="fixed bottom-4 right-4 z-40 flex gap-2">
               <Link

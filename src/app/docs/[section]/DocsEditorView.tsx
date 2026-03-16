@@ -6,7 +6,7 @@ import { ArrowLeft, Github } from "lucide-react";
 import { DocsSidebar } from "../_components/DocsSidebar";
 import { DocsMobileNav } from "../_components/DocsMobileNav";
 import { DocsEditorControls } from "@/components/DocsEditorControls";
-import { EditorProvider } from "@/lib/store/editor-store";
+import { DynamicEditorProvider } from "@/components/DynamicEditorProvider";
 import { createInitialState } from "@/lib/reducer/editor-reducer";
 import { Editor } from "@/components/Editor";
 import { createDocsContent, docsSections, sectionNodeIds } from "@/lib/docs-content";
@@ -164,13 +164,13 @@ export default function DocsEditorView({ slug }: DocsEditorViewProps) {
 
         {/* Main Content — Editor */}
         <main className="flex-1 min-w-0 py-6 md:py-10" id="docs-content">
-          <EditorProvider key={editorKey} initialState={initialState}>
+          <DynamicEditorProvider key={editorKey} initialState={initialState}>
             <Editor
               readOnly={readOnly}
               notionBased={false}
               className="max-w-3xl mx-auto"
             />
-          </EditorProvider>
+          </DynamicEditorProvider>
         </main>
       </div>
     </div>

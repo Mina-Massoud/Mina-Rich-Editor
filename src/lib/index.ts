@@ -104,6 +104,7 @@ export type {
   ResetAction,
   BatchAction,
   EditorAction,
+  ReplaceSelectionWithInlinesAction,
 } from './reducer/actions';
 
 export { EditorActions } from './reducer/actions';
@@ -245,7 +246,7 @@ export type { AnthropicProviderOptions } from './ai/anthropic-provider';
 export { createGeminiProvider } from './ai/gemini-provider';
 export type { GeminiProviderOptions } from './ai/gemini-provider';
 
-export { streamToBlocks } from './ai/stream-to-blocks';
+export { streamToBlocks, parseInlineMarkdown, hasInlineFormatting } from './ai/stream-to-blocks';
 
 export { useEditorAI } from '../hooks/useEditorAI';
 export type { UseEditorAIOptions, UseEditorAIReturn } from '../hooks/useEditorAI';
