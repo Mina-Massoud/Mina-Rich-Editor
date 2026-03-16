@@ -6,7 +6,7 @@ import { openEditor, getFreshParagraph, mod } from "./helpers";
  */
 async function insertImage(page: import("@playwright/test").Page) {
   const p = await getFreshParagraph(page);
-  await page.keyboard.type("/image", { delay: 40 });
+  await page.keyboard.type("/");
   await page.waitForTimeout(500);
   await page
     .locator("[cmdk-item]")
@@ -215,7 +215,7 @@ test.describe("Image resize", () => {
       .locator('[data-node-type="p"][contenteditable="true"]')
       .last();
     await p2.click();
-    await page.keyboard.type("/image", { delay: 40 });
+    await page.keyboard.type("/");
     await page.waitForTimeout(500);
     await page
       .locator("[cmdk-item]")

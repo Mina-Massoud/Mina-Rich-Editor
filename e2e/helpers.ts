@@ -104,13 +104,20 @@ export async function getBlockOrder(page: Page): Promise<string[]> {
  * Returns the data-node-id of the new image block.
  */
 export async function insertImageBlock(page: Page): Promise<string> {
+  // Ensure we have a fresh paragraph to type into
   const p = page.locator('[data-node-type="p"][contenteditable="true"]').first();
   await p.click();
-  await page.keyboard.type('/image', { delay: 40 });
+  await page.keyboard.press(`${mod}+a`);
+  await page.keyboard.press('Backspace');
+  await page.waitForTimeout(300);
+  // Type "/" to open command menu
+  await page.keyboard.type('/');
   await page.waitForTimeout(500);
+  // Click the Image option directly
   await page.locator('[cmdk-item]').filter({ hasText: /image/i }).first().click();
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(1000);
   const imgBlock = page.locator('[data-node-type="img"]').last();
+  await imgBlock.waitFor({ state: 'attached', timeout: 5000 });
   const nodeId = await imgBlock.getAttribute('data-node-id');
   return nodeId!;
 }

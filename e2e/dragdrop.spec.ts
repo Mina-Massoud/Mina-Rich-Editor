@@ -162,7 +162,7 @@ test.describe("Drag and drop — image blocks", () => {
 
   test("Insert image block via slash command", async ({ page }) => {
     const p = await getFreshParagraph(page);
-    await page.keyboard.type("/image", { delay: 40 });
+    await page.keyboard.type("/");
     await page.waitForTimeout(500);
 
     const imageOption = page
@@ -179,7 +179,7 @@ test.describe("Drag and drop — image blocks", () => {
 
   test("Image block has draggable card", async ({ page }) => {
     const p = await getFreshParagraph(page);
-    await page.keyboard.type("/image", { delay: 40 });
+    await page.keyboard.type("/");
     await page.waitForTimeout(500);
     await page
       .locator("[cmdk-item]")
@@ -211,7 +211,7 @@ test.describe("Drag and drop — image resize", () => {
   test("Resize handles appear on image hover", async ({ page }) => {
     // Insert an image block
     const p = await getFreshParagraph(page);
-    await page.keyboard.type("/image", { delay: 40 });
+    await page.keyboard.type("/");
     await page.waitForTimeout(500);
     await page
       .locator("[cmdk-item]")
@@ -237,7 +237,7 @@ test.describe("Drag and drop — image resize", () => {
     page,
   }) => {
     const p = await getFreshParagraph(page);
-    await page.keyboard.type("/image", { delay: 40 });
+    await page.keyboard.type("/");
     await page.waitForTimeout(500);
     await page
       .locator("[cmdk-item]")
@@ -261,7 +261,7 @@ test.describe("Drag and drop — image resize", () => {
 
   test("Clicking width preset changes image width", async ({ page }) => {
     const p = await getFreshParagraph(page);
-    await page.keyboard.type("/image", { delay: 40 });
+    await page.keyboard.type("/");
     await page.waitForTimeout(500);
     await page
       .locator("[cmdk-item]")
