@@ -142,10 +142,13 @@ export default function LandingPageV2() {
         badgeLabel="MIT Licensed"
         ctaButtons={[
           { text: "Try the editor", href: "/demo" },
+          { text: "AI Demo", href: "/demo/ai" },
+          { text: "Collaboration", href: "/collab" },
           { text: "Documentation", href: "/docs" },
         ]}
         microDetails={["AI generation", "Live collaboration", "Extension system", "969 tests"]}
-      />
+      >
+      </Hero>
 
       {/* === HOW IT WORKS -- 3-COLUMN GRID ==================================== */}
       <section className="relative overflow-hidden">
@@ -161,7 +164,7 @@ export default function LandingPageV2() {
               <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">01</span>
               <h3 className="mt-3 text-lg font-medium text-foreground" style={{ letterSpacing: "-0.01em" }}>Quick Start</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                <code className="text-xs bg-muted px-1 py-0.5 rounded">npm install @mina-editor/core</code> or use the shadcn CLI. Three lines. Working editor. Import, render, ship.
+                Three lines. Working editor. Import, render, ship. Installation packages coming soon.
               </p>
             </div>
             {/* Step 02 */}
@@ -619,13 +622,7 @@ export default function LandingPageV2() {
             No ProseMirror dependency. Simple, powerful extensions. No PhD required.
           </p>
 
-          <div className="mt-10 flex flex-col items-center gap-3">
-            <CopyNpm command="npm install @mina-editor/core" />
-            <span className="text-xs text-muted-foreground">or via shadcn CLI</span>
-            <CopyNpm command="npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json" />
-          </div>
-
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link href="/demo" className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:opacity-90 transition-opacity">
               <Play className="w-3.5 h-3.5" /> Try the Editor
             </Link>

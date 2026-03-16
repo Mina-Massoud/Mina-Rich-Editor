@@ -25,31 +25,7 @@
 
 ### Installation
 
-**npm / yarn / pnpm:**
-
-```bash
-npm install @mina-editor/core zustand
-```
-
-> `react`, `react-dom`, and `zustand` are peer dependencies.
-
-**shadcn CLI:**
-
-```bash
-npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json
-```
-
-> This installs the editor as a local component in your shadcn/ui project — no npm dependency needed.
-
-### Import styles
-
-Add this import once in your app (e.g. `layout.tsx` or `globals.css`):
-
-```tsx
-import "@mina-editor/core/styles.css";
-```
-
-This includes all the Tailwind classes the editor needs — no extra Tailwind config required.
+Installation packages are being prepared. Check back soon or [try the live demo](/demo) in the meantime.
 
 ### CompactEditor — recommended for CMS
 

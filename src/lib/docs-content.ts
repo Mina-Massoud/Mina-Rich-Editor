@@ -127,8 +127,7 @@ function s01_Installation(): EditorNode[] {
     ...sectionHeader("01", "Installation", "Get started in under a minute"),
 
     heading("h3", "Step 1: Install the component"),
-    code(`npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json`),
-    text("This automatically installs all required shadcn components, npm packages, and editor files into your project."),
+    text("Installation packages are being prepared. Check back soon or try the live demo in the meantime."),
 
     heading("h3", "Step 2: Configure the theme provider"),
     richText("p", codeInline("The editor includes dark mode support. Wrap your app with the ", "ThemeProvider", " from next-themes.")),

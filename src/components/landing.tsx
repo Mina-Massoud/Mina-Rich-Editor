@@ -374,8 +374,8 @@ The new dashboard is ready for review.
           <p className="font-light mb-12 text-warm-300">
             No ProseMirror. No plugins. No PhD in text editor internals.
           </p>
-          <div className="inline-block border px-8 py-4 mb-12 font-mono text-sm select-all text-warm-200" style={{ borderColor: `rgba(200,180,160,0.15)` }}>
-            npm install @mina-editor/core
+          <div className="inline-block border px-8 py-4 mb-12 font-mono text-sm text-warm-200" style={{ borderColor: `rgba(200,180,160,0.15)` }}>
+            Installation coming soon
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/demo" className="px-10 py-4 font-medium tracking-wide transition-opacity hover:opacity-80 active:scale-[0.98] bg-warm-200 text-warm-900">
