@@ -163,7 +163,7 @@ html {
   --secondary: #f8f8f6;
   --secondary-foreground: #1a1a1a;
   --muted: #f8f8f6;
-  --muted-foreground: #666666;
+  --muted-foreground: #3a3a3a;
   --accent: #f8f8f6;
   --accent-foreground: #1a1a1a;
   --destructive: oklch(0.577 0.245 27.325);
@@ -189,8 +189,8 @@ html {
   --int-bg-shell: #f8f8f6;
   --int-bg-card: #ffffff;
   --int-text-primary: #1a1a1a;
-  --int-text-secondary: #666666;
-  --int-text-tertiary: #999999;
+  --int-text-secondary: #3a3a3a;
+  --int-text-tertiary: #555555;
   --int-border: rgba(0, 0, 0, 0.08);
   --int-border-strong: rgba(0, 0, 0, 0.12);
   --int-gradient: linear-gradient(

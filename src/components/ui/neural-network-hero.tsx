@@ -363,8 +363,8 @@ export default function Hero({
 
       <div className="relative mx-auto flex max-w-7xl flex-col w-full items-start gap-6 px-6 pb-24 pt-36 sm:gap-8 sm:pt-44 md:px-10 lg:px-16">
         <div ref={badgeRef} className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-sm ${isDark ? 'border-white/10 bg-white/5' : 'border-black/10 bg-black/5'}`}>
-          <span className={`text-[10px] font-light uppercase tracking-[0.08em] ${isDark ? 'text-white/70' : 'text-black/60'}`}>{badgeLabel}</span>
-          <span className={`h-1 w-1 rounded-full ${isDark ? 'bg-white/40' : 'bg-black/30'}`} />
+          <span className={`text-[10px] font-light uppercase tracking-[0.08em] ${isDark ? 'text-white/70' : 'text-black/70'}`}>{badgeLabel}</span>
+          <span className={`h-1 w-1 rounded-full ${isDark ? 'bg-white/40' : 'bg-black/60'}`} />
           <span className={`text-xs font-light tracking-tight ${isDark ? 'text-white/80' : 'text-black/70'}`}>{badgeText}</span>
         </div>
 
@@ -372,7 +372,7 @@ export default function Hero({
           {title}
         </h1>
 
-        <p ref={paraRef} className={`max-w-xl text-left text-base font-light leading-relaxed tracking-tight sm:text-lg ${isDark ? 'text-white/75' : 'text-gray-600'}`}>
+        <p ref={paraRef} className={`max-w-xl text-left text-base font-normal leading-relaxed tracking-tight sm:text-lg ${isDark ? 'text-white/75' : 'text-gray-700'}`}>
           {description}
         </p>
 
@@ -400,12 +400,12 @@ export default function Hero({
           ))}
         </div>
 
-        <ul ref={microRef} className={`mt-8 flex flex-wrap gap-6 text-xs font-extralight tracking-tight ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+        <ul ref={microRef} className={`mt-8 flex flex-wrap gap-6 text-xs font-normal tracking-tight ${isDark ? 'text-white/60' : 'text-gray-800'}`}>
           {microDetails.map((detail, index) => {
             const refMap = [microItem1Ref, microItem2Ref, microItem3Ref];
             return (
               <li key={index} ref={refMap[index]} className="flex items-center gap-2">
-                <span className={`h-1 w-1 rounded-full ${isDark ? 'bg-white/40' : 'bg-black/30'}`} /> {detail}
+                <span className={`h-1 w-1 rounded-full ${isDark ? 'bg-white/40' : 'bg-black/60'}`} /> {detail}
               </li>
             );
           })}
@@ -415,7 +415,7 @@ export default function Hero({
       <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t ${isDark ? 'from-black/40' : 'from-white/40'} to-transparent`} />
 
       <div className="inset-x-0 bottom-6 flex justify-center pointer-events-auto mt-auto pb-10">
-        <div className={`text-center text-xs font-light tracking-tight ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+        <div className={`text-center text-xs font-normal tracking-tight ${isDark ? 'text-white/50' : 'text-gray-700'}`}>
           <p className="mb-2">Under MIT License • Structure and idea developed by mina-massoud @2025</p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <a

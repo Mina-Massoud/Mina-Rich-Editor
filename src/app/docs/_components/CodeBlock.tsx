@@ -31,7 +31,7 @@ export function CodeBlock({ children, label }: CodeBlockProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleCopy}
-              className="text-muted-foreground/70 hover:text-foreground/80 transition-colors"
+              className="text-muted-foreground hover:text-foreground/80 transition-colors"
               aria-label="Copy code"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -48,7 +48,7 @@ export function CodeBlock({ children, label }: CodeBlockProps) {
         <div className="absolute top-2 right-3">
           <button
             onClick={handleCopy}
-            className="text-muted-foreground/70 hover:text-foreground/80 transition-colors p-1"
+            className="text-muted-foreground hover:text-foreground/80 transition-colors p-1"
             aria-label="Copy code"
           >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}

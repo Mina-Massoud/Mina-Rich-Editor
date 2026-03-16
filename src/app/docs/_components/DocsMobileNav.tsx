@@ -39,7 +39,7 @@ export function DocsMobileNav({ sections, activeSection, onNavigate }: DocsMobil
           />
           <div className="fixed inset-y-0 left-0 z-50 w-72 bg-background border-r border-border overflow-y-auto lg:hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
                 Navigation
               </span>
               <button
@@ -65,7 +65,7 @@ export function DocsMobileNav({ sections, activeSection, onNavigate }: DocsMobil
                         onClick={() => handleClick(s.id)}
                         className={`text-left ${className}`}
                       >
-                        <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70 shrink-0">
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground shrink-0">
                           {s.num}
                         </span>
                         <span>{s.label}</span>
@@ -76,7 +76,7 @@ export function DocsMobileNav({ sections, activeSection, onNavigate }: DocsMobil
                         onClick={() => setOpen(false)}
                         className={className}
                       >
-                        <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70 shrink-0">
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground shrink-0">
                           {s.num}
                         </span>
                         <span>{s.label}</span>

@@ -158,15 +158,15 @@ export default function LandingPageV2() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {/* Step 01 */}
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">01</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">01</span>
               <h3 className="mt-3 text-lg font-medium text-foreground" style={{ letterSpacing: "-0.01em" }}>Quick Start</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                <code className="text-[11px] bg-muted px-1 py-0.5 rounded">npm install @mina-editor/core</code> or use the shadcn CLI. Three lines. Working editor. Import, render, ship.
+                <code className="text-xs bg-muted px-1 py-0.5 rounded">npm install @mina-editor/core</code> or use the shadcn CLI. Three lines. Working editor. Import, render, ship.
               </p>
             </div>
             {/* Step 02 */}
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">02</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">02</span>
               <h3 className="mt-3 text-lg font-medium text-foreground" style={{ letterSpacing: "-0.01em" }}>AI Integration</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 Provider-agnostic AI that streams content directly into blocks. OpenAI, Anthropic, Ollama, or your own endpoint.
@@ -174,7 +174,7 @@ export default function LandingPageV2() {
             </div>
             {/* Step 03 */}
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">03</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">03</span>
               <h3 className="mt-3 text-lg font-medium text-foreground" style={{ letterSpacing: "-0.01em" }}>Real-time Collaboration</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 Same CRDT engine behind Figma and VS Code Live Share. Y.js-powered conflict resolution with cursor presence.
@@ -193,7 +193,7 @@ export default function LandingPageV2() {
           <div className="int-divider mb-16" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">01 — Performance</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">01 — Performance</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
                 Fast by architecture, not by <em className="not-italic font-light text-muted-foreground">accident</em>
               </h2>
@@ -297,7 +297,7 @@ export default function LandingPageV2() {
 
             {/* Right: content */}
             <div className="order-1 lg:order-2">
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">02 — AI Integration</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">02 — AI Integration</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
                 <em className="not-italic font-light text-muted-foreground">Your</em> LLM, <em className="not-italic font-light text-muted-foreground">your</em> editor
               </h2>
@@ -329,7 +329,7 @@ export default function LandingPageV2() {
           <div className="int-divider mb-16" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">03 — Content Management</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">03 — Content Management</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
                 Programmatic control over <em className="not-italic font-light text-muted-foreground">everything</em>
               </h2>
@@ -344,7 +344,7 @@ export default function LandingPageV2() {
                 {EXPORT_FORMATS.map((item) => (
                   <div key={item.fn} className="int-card !p-4">
                     <div className="font-mono text-sm font-medium text-foreground">{item.fn}</div>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.desc}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -420,7 +420,7 @@ export default function LandingPageV2() {
 
             {/* Right: content */}
             <div className="order-1 lg:order-2">
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">04 — Collaboration</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">04 — Collaboration</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
                 Built for <em className="not-italic font-light text-muted-foreground">multiplayer</em>
               </h2>
@@ -452,7 +452,7 @@ export default function LandingPageV2() {
           <div className="int-divider mb-16" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">05 — Extension System</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">05 — Extension System</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
                 Extend the editor <em className="not-italic font-light text-muted-foreground">your way</em>
               </h2>
@@ -530,7 +530,7 @@ export default function LandingPageV2() {
         <div className="relative z-10 max-w-[1200px] mx-auto px-6 py-16 md:py-24">
           <div className="int-divider mb-12" />
           <div className="mb-12">
-            <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">06 — Developer Experience</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">06 — Developer Experience</span>
             <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
               Built by developers, <em className="not-italic font-light text-muted-foreground">for developers</em>
             </h2>
@@ -543,15 +543,15 @@ export default function LandingPageV2() {
             {DX_ITEMS.map((item, i) => (
               <div key={item.tag} className="int-card">
                 <div className="flex items-baseline gap-3 mb-3">
-                  <span className="text-[11px] font-mono tabular-nums text-muted-foreground">
+                  <span className="text-xs font-mono tabular-nums text-muted-foreground">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded bg-foreground/[0.04] text-muted-foreground">
+                  <span className="text-[11px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded bg-foreground/[0.04] text-muted-foreground">
                     {item.tag}
                   </span>
                 </div>
                 <h4 className="text-sm font-medium mb-2 text-foreground">{item.title}</h4>
-                <p className="text-xs leading-relaxed text-muted-foreground">{item.desc}</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -562,7 +562,7 @@ export default function LandingPageV2() {
       <section className="relative bg-background py-24 md:py-32">
         <div className="max-w-[800px] mx-auto px-6">
           <div className="mb-14">
-            <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">07 — FAQ</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">07 — FAQ</span>
             <h2
               className="mt-4 text-3xl lg:text-[44px] font-medium leading-tight text-foreground"
               style={{ letterSpacing: "-0.03em" }}

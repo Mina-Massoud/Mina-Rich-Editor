@@ -17,7 +17,7 @@ export default function S01_Installation() {
         {/* Method 1: npm */}
         <div>
           <div className="flex items-center gap-3 mb-4">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground border border-border px-2 py-0.5">Method 1</span>
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground border border-border px-2 py-0.5">Method 1</span>
             <span className="text-sm font-light text-foreground">npm — standalone projects</span>
           </div>
           <p className="mb-3 text-sm text-muted-foreground">
@@ -32,7 +32,7 @@ export default function S01_Installation() {
         {/* Method 2: shadcn registry */}
         <div>
           <div className="flex items-center gap-3 mb-4">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground border border-border px-2 py-0.5">Method 2</span>
+            <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground border border-border px-2 py-0.5">Method 2</span>
             <span className="text-sm font-light text-foreground">shadcn registry — shadcn/ui projects</span>
           </div>
           <p className="mb-3 text-sm text-muted-foreground">

@@ -10,7 +10,7 @@ export function NotesList({ items }: NotesListProps) {
       <ul className="space-y-2 text-sm text-muted-foreground">
         {items.map((item, i) => (
           <li key={i} className="flex gap-2">
-            <span className="text-muted-foreground/70 shrink-0">--</span>
+            <span className="text-muted-foreground shrink-0">--</span>
             <span>{item}</span>
           </li>
         ))}

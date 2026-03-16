@@ -19,7 +19,7 @@ export function DocsSidebar({ sections, activeSection, onNavigate }: DocsSidebar
   return (
     <nav className="sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto py-8 pr-6">
       <div className="mb-4">
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
+        <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Documentation
         </span>
       </div>
@@ -29,7 +29,7 @@ export function DocsSidebar({ sections, activeSection, onNavigate }: DocsSidebar
           const className = `w-full text-left flex items-center gap-3 px-3 py-1.5 text-sm font-light transition-all duration-200 border-l-2 ${
             isActive
               ? "border-foreground/30 text-foreground bg-muted"
-              : "border-transparent text-muted-foreground/70 hover:text-muted-foreground hover:border-border"
+              : "border-transparent text-muted-foreground hover:text-muted-foreground hover:border-border"
           }`;
           return (
             <li key={s.id}>
@@ -38,7 +38,7 @@ export function DocsSidebar({ sections, activeSection, onNavigate }: DocsSidebar
                   onClick={() => onNavigate(s.id)}
                   className={className}
                 >
-                  <span className="font-mono text-[10px] tabular-nums shrink-0">{s.num}</span>
+                  <span className="font-mono text-xs tabular-nums shrink-0">{s.num}</span>
                   <span className="truncate">{s.label}</span>
                 </button>
               ) : (
@@ -46,7 +46,7 @@ export function DocsSidebar({ sections, activeSection, onNavigate }: DocsSidebar
                   href={`/docs/${s.id}`}
                   className={className}
                 >
-                  <span className="font-mono text-[10px] tabular-nums shrink-0">{s.num}</span>
+                  <span className="font-mono text-xs tabular-nums shrink-0">{s.num}</span>
                   <span className="truncate">{s.label}</span>
                 </Link>
               )}

@@ -142,7 +142,7 @@ export default function DocsSectionPage() {
           {/* Section title area */}
           {currentSection && (
             <div className="mb-4">
-              <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-muted-foreground">
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-muted-foreground">
                 {currentSection.num} / {sections.length.toString().padStart(2, "0")}
               </span>
             </div>
@@ -161,7 +161,7 @@ export default function DocsSectionPage() {
               >
                 <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
                 <div className="min-w-0">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Previous</div>
+                  <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1">Previous</div>
                   <div className="text-sm font-medium text-foreground truncate">{prevSection.label}</div>
                 </div>
               </Link>
@@ -175,7 +175,7 @@ export default function DocsSectionPage() {
                 style={{ borderColor: "var(--int-border)" }}
               >
                 <div className="min-w-0">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Next</div>
+                  <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1">Next</div>
                   <div className="text-sm font-medium text-foreground truncate">{nextSection.label}</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />

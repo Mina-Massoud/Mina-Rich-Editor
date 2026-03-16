@@ -11,9 +11,9 @@ export function SectionHeading({ num, label, id, children }: SectionHeadingProps
   return (
     <div id={id} data-section-id={id} className="scroll-mt-20 mb-10">
       <div className="flex items-center gap-4 mb-6">
-        <span className="font-mono text-xs tabular-nums text-muted-foreground/70">{num}</span>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">{num}</span>
         <div className="h-px flex-1 bg-border" />
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
           {label}
         </span>
       </div>

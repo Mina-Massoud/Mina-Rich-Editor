@@ -83,7 +83,7 @@ export function DocsTOC({ contentSelector }: DocsTOCProps) {
   return (
     <nav className="sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto py-8 pl-6 pr-4">
       <div className="mb-4">
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
+        <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground/70">
           On this page
         </span>
       </div>
@@ -97,7 +97,7 @@ export function DocsTOC({ contentSelector }: DocsTOCProps) {
                 className={`w-full text-left px-3 py-1 text-xs leading-relaxed transition-all duration-200 border-l-2 ${
                   isActive
                     ? "border-foreground/30 text-foreground"
-                    : "border-transparent text-muted-foreground/60 hover:text-muted-foreground hover:border-border"
+                    : "border-transparent text-muted-foreground hover:text-muted-foreground hover:border-border"
                 }`}
               >
                 <span className="line-clamp-2">{h.text}</span>
