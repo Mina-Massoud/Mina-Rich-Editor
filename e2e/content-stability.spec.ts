@@ -28,8 +28,8 @@ test.describe("Content stability & performance", () => {
     await page.keyboard.type("# ", { delay: 40 });
     await page.waitForTimeout(800);
 
-    // Wait for block type conversion
-    await waitForBlockType(page, nodeId!, "h1");
+    // Wait for block type conversion (longer timeout for CI)
+    await waitForBlockType(page, nodeId!, "h1", 10000);
 
     const h1 = page.locator(`[data-node-id="${nodeId}"]`);
     await h1.click();

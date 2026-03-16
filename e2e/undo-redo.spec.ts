@@ -5,16 +5,16 @@ import { openEditor, mod } from "./helpers";
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Focus the h1 block, clear it, and type new text */
-async function typeInH1(page: Page, text: string) {
-  const h1 = page
-    .locator('[data-node-type="h1"][contenteditable="true"]')
+/** Focus the first editable block, clear it, and type new text */
+async function typeInBlock(page: Page, text: string) {
+  const block = page
+    .locator('[contenteditable="true"]')
     .first();
-  await h1.click();
+  await block.click();
   await page.keyboard.press(`${mod}+a`);
   await page.keyboard.type(text, { delay: 30 });
   await page.waitForTimeout(500);
-  return h1;
+  return block;
 }
 
 /** Select text in a block by node ID */
@@ -65,7 +65,7 @@ async function redoN(page: Page, n: number) {
 }
 
 // ---------------------------------------------------------------------------
-// Tests — all use the h1 block for reliability (always first, always exists)
+// Tests — all use the first editable block (paragraph)
 // ---------------------------------------------------------------------------
 
 test.describe("Undo / Redo (operation-based history)", () => {
@@ -74,7 +74,7 @@ test.describe("Undo / Redo (operation-based history)", () => {
   });
 
   test("Ctrl+Z undoes typed text", async ({ page }) => {
-    const h1 = await typeInH1(page, "Hello Undo");
+    const h1 = await typeInBlock(page, "Hello Undo");
     expect(await h1.textContent()).toContain("Hello Undo");
 
     await undoN(page, 20);
@@ -85,7 +85,7 @@ test.describe("Undo / Redo (operation-based history)", () => {
 
   test("Ctrl+Y redoes after a single undo", async ({ page }) => {
     const h1 = page
-      .locator('[data-node-type="h1"][contenteditable="true"]')
+      .locator('[contenteditable="true"]')
       .first();
     await h1.click();
     await page.keyboard.press("End");
@@ -118,18 +118,18 @@ test.describe("Undo / Redo (operation-based history)", () => {
     await expect(page.locator("[data-editor-content]")).toBeVisible();
 
     // Should still be able to type
-    const h1 = await typeInH1(page, "Still works");
+    const h1 = await typeInBlock(page, "Still works");
     expect(await h1.textContent()).toContain("Still works");
   });
 
   test("typing after undo clears redo", async ({ page }) => {
-    const h1 = await typeInH1(page, "AAA");
+    const h1 = await typeInBlock(page, "AAA");
 
     // Undo
     await undoN(page, 10);
 
     // Type something new — this should clear the redo stack
-    await page.locator('[data-node-type="h1"][contenteditable="true"]').first().click();
+    await page.locator('[contenteditable="true"]').first().click();
     await page.keyboard.type("BBB", { delay: 30 });
     await page.waitForTimeout(300);
 
@@ -143,7 +143,7 @@ test.describe("Undo / Redo (operation-based history)", () => {
   });
 
   test("undo reverts block insertion (Enter key)", async ({ page }) => {
-    const h1 = await typeInH1(page, "Before");
+    const h1 = await typeInBlock(page, "Before");
     await page.keyboard.press("End");
 
     const blocksBefore = await page.locator('[contenteditable="true"]').count();
@@ -164,7 +164,7 @@ test.describe("Undo / Redo (operation-based history)", () => {
   });
 
   test("undo reverts bold formatting", async ({ page }) => {
-    const h1 = await typeInH1(page, "BoldMe");
+    const h1 = await typeInBlock(page, "BoldMe");
     const nodeId = await h1.getAttribute("data-node-id");
     if (!nodeId) return;
 
@@ -189,7 +189,7 @@ test.describe("Undo / Redo (operation-based history)", () => {
   });
 
   test("Ctrl+Y also performs redo", async ({ page }) => {
-    const h1 = await typeInH1(page, "RedoViaY");
+    const h1 = await typeInBlock(page, "RedoViaY");
     expect(await h1.textContent()).toContain("RedoViaY");
 
     await undoN(page, 20);
@@ -234,7 +234,7 @@ test.describe("Undo / Redo (operation-based history)", () => {
   });
 
   test("rapid undo/redo cycling does not crash", async ({ page }) => {
-    const h1 = await typeInH1(page, "Stress");
+    const h1 = await typeInBlock(page, "Stress");
 
     // Rapidly cycle undo/redo 15 times
     for (let i = 0; i < 15; i++) {
@@ -247,15 +247,15 @@ test.describe("Undo / Redo (operation-based history)", () => {
     await expect(page.locator("[data-editor-content]")).toBeVisible();
 
     // Should still be able to type
-    await page.locator('[data-node-type="h1"][contenteditable="true"]').first().click();
+    await page.locator('[contenteditable="true"]').first().click();
     await page.keyboard.press("End");
     await page.keyboard.type("OK", { delay: 30 });
     await page.waitForTimeout(300);
-    expect(await page.locator('[data-node-type="h1"][contenteditable="true"]').first().textContent()).toContain("OK");
+    expect(await page.locator('[contenteditable="true"]').first().textContent()).toContain("OK");
   });
 
   test("delete block content and undo restores it", async ({ page }) => {
-    const h1 = await typeInH1(page, "DeleteMe");
+    const h1 = await typeInBlock(page, "DeleteMe");
     expect(await h1.textContent()).toContain("DeleteMe");
 
     // Select all in block and delete
