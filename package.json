@@ -3,6 +3,10 @@
   "version": "0.3.0",
   "description": "A flexible, TypeScript-first rich text editor with JSON-based document model",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mina-Massoud/Mina-Rich-Editor"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
