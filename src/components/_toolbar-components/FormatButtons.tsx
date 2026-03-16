@@ -37,7 +37,7 @@ export function FormatButtons({
   const buttonSize = size === "sm" ? "h-7 w-7" : "h-8 w-8";
 
   return (
-    <TooltipProvider delayDuration={300}>
+    <TooltipProvider {...{ delay: 300, delayDuration: 300 }}>
       <div className="flex items-center gap-1 border-x border-x-border/50 px-2">
         <Tooltip>
           <TooltipTrigger asChild>

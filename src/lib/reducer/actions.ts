@@ -425,6 +425,34 @@ export interface UpdateCoverImagePositionAction {
 }
 
 /**
+ * REPLACE_SELECTION_TEXT action - replaces text in a selection range with new text.
+ * Used by AI selection editing to replace selected text with AI-generated content.
+ */
+export interface ReplaceSelectionTextAction {
+  type: 'REPLACE_SELECTION_TEXT';
+  payload: {
+    nodeId: string;
+    start: number;
+    end: number;
+    newText: string;
+  };
+}
+
+/**
+ * REPLACE_SELECTION_WITH_INLINES action - replaces text in a selection range with rich InlineText[].
+ * Used by AI styling to replace selected text with formatted (bold/italic/code) content.
+ */
+export interface ReplaceSelectionWithInlinesAction {
+  type: 'REPLACE_SELECTION_WITH_INLINES';
+  payload: {
+    nodeId: string;
+    start: number;
+    end: number;
+    children: import('../types').InlineText[];
+  };
+}
+
+/**
  * Union type of all possible editor actions.
  */
 export type EditorAction =
@@ -457,7 +485,9 @@ export type EditorAction =
   | RedoAction
   | SetCoverImageAction
   | RemoveCoverImageAction
-  | UpdateCoverImagePositionAction;
+  | UpdateCoverImagePositionAction
+  | ReplaceSelectionTextAction
+  | ReplaceSelectionWithInlinesAction;
 
 /**
  * Action creator helpers for type-safe action creation.
@@ -705,6 +735,32 @@ export const EditorActions = {
   updateCoverImagePosition: (position: number): UpdateCoverImagePositionAction => ({
     type: 'UPDATE_COVER_IMAGE_POSITION',
     payload: { position },
+  }),
+
+  /**
+   * Creates a REPLACE_SELECTION_TEXT action.
+   */
+  replaceSelectionText: (
+    nodeId: string,
+    start: number,
+    end: number,
+    newText: string
+  ): ReplaceSelectionTextAction => ({
+    type: 'REPLACE_SELECTION_TEXT',
+    payload: { nodeId, start, end, newText },
+  }),
+
+  /**
+   * Creates a REPLACE_SELECTION_WITH_INLINES action.
+   */
+  replaceSelectionWithInlines: (
+    nodeId: string,
+    start: number,
+    end: number,
+    children: import('../types').InlineText[]
+  ): ReplaceSelectionWithInlinesAction => ({
+    type: 'REPLACE_SELECTION_WITH_INLINES',
+    payload: { nodeId, start, end, children },
   }),
 };
 

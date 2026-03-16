@@ -5,10 +5,12 @@
  */
 
 import React from "react";
-import { TextNode, ContainerNode } from "../../types";
-import { EditorAction } from "../../reducer/actions";
+import { TextNode, ContainerNode, InlineText } from "../../types";
+import { EditorAction, EditorActions } from "../../reducer/actions";
 import { findParentById } from "../../utils/tree-operations";
+import { generateId } from "../../utils/id-generator";
 
+/** Parameters shared by all block-level event handler factory functions. */
 export interface BlockEventHandlerParams {
   textNode: TextNode;
   readOnly: boolean;
@@ -29,9 +31,7 @@ export interface BlockEventHandlerParams {
   setCommandMenuAnchor: (el: HTMLElement | null) => void;
 }
 
-/**
- * Create handle composition start
- */
+/** Creates a factory that returns a compositionstart handler marking the IME composition as active. */
 export function createHandleCompositionStart() {
   return (isComposingRef: React.MutableRefObject<boolean>) => {
     return () => {
@@ -40,40 +40,34 @@ export function createHandleCompositionStart() {
   };
 }
 
-/**
- * Create handle composition end
- */
+/** Creates a factory that returns a compositionend handler which clears the IME flag and flushes any pending content update. */
 export function createHandleCompositionEnd() {
-  return (isComposingRef: React.MutableRefObject<boolean>) => {
+  return (
+    isComposingRef: React.MutableRefObject<boolean>,
+    onInput?: (element: HTMLElement) => void,
+    localRef?: React.RefObject<HTMLElement | null>
+  ) => {
     return () => {
       isComposingRef.current = false;
+
+      // Flush any pending content update immediately after composition ends
+      // so we don't wait for the next input event or debounce timer
+      if (onInput && localRef?.current) {
+        onInput(localRef.current);
+      }
     };
   };
 }
 
-/**
- * Create handle input
- */
-export function createHandleInput(params: Pick<BlockEventHandlerParams, 'textNode' | 'readOnly' | 'onInput' | 'onChangeBlockType' | 'showCommandMenu' | 'setShowCommandMenu' | 'setCommandMenuAnchor' | 'shouldPreserveSelectionRef'>) {
+/** Creates an input handler that detects "/" to open the command menu and forwards content updates while guarding selection preservation. */
+export function createHandleInput(params: Pick<BlockEventHandlerParams, 'textNode' | 'readOnly' | 'onInput' | 'onChangeBlockType' | 'showCommandMenu' | 'setShowCommandMenu' | 'setCommandMenuAnchor' | 'shouldPreserveSelectionRef' | 'dispatch'>) {
   return (e: React.FormEvent<HTMLDivElement>) => {
-    const { textNode, readOnly, onInput, onChangeBlockType, showCommandMenu, setShowCommandMenu, setCommandMenuAnchor, shouldPreserveSelectionRef } = params;
+    const { textNode, readOnly, onInput, onChangeBlockType, showCommandMenu, setShowCommandMenu, setCommandMenuAnchor, shouldPreserveSelectionRef, dispatch } = params;
     const element = e.currentTarget;
     const text = element.textContent || "";
 
-    // DEBUG: Log what user is typing
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`📝 [INPUT] Block ${textNode.id}:`, {
-        text,
-        innerHTML: element.innerHTML,
-        currentNodeContent: textNode.content,
-      });
-    }
-
-    // Check if this is a header block (h1) - headers don't show command menu
-    const isHeaderBlock = textNode.type === 'h1';
-
-    // Check if the block is empty and user typed "/" (but not for header blocks)
-    if (text === "/" && !readOnly && onChangeBlockType && !isHeaderBlock) {
+    // Check if the block is empty and user typed "/"
+    if (text === "/" && !readOnly && onChangeBlockType) {
       setShowCommandMenu(true);
       setCommandMenuAnchor(element);
     } else if (showCommandMenu && text !== "/") {
@@ -81,23 +75,121 @@ export function createHandleInput(params: Pick<BlockEventHandlerParams, 'textNod
       setShowCommandMenu(false);
     }
 
-    // Set flag to prevent content updates until next render
+    // Check for inline Markdown formatting patterns (only on plain text, not readOnly).
+    // We check the DOM element's childElementCount rather than textNode.children
+    // because during typing the textNode closure may be stale.
+    const hasFormattedSpans = element.childElementCount > 0;
+    if (!readOnly && !hasFormattedSpans) {
+      const inlineFormatApplied = detectAndApplyInlineFormatting(text, element, textNode, dispatch);
+      if (inlineFormatApplied) {
+        // Don't set shouldPreserveSelectionRef — we WANT the Block's
+        // useEffect to fire and update innerHTML with the formatted HTML.
+        // Don't call onInput either — the dispatch already updated state.
+        return;
+      }
+    }
+
+    // Guard: prevent the useEffect from clobbering the DOM while the
+    // debounced content dispatch triggers a second re-render.
+    // The content debounce is 50ms, and React needs additional time to
+    // process the state update and re-render. We use 120ms to safely
+    // cover the full debounce + re-render window.
     shouldPreserveSelectionRef.current = true;
 
     // Call the parent onInput handler
     onInput(element);
 
-    // Reset the flag quickly to allow Block component to sync with state
-    // Reduced from 200ms since we're no longer debouncing state updates
     setTimeout(() => {
       shouldPreserveSelectionRef.current = false;
-    }, 50);
+    }, 120);
   };
 }
 
 /**
- * Create handle key down
+ * Detects inline Markdown patterns in the full text content of a block and, if found,
+ * dispatches an UPDATE_NODE action to replace the raw text with formatted inline children.
+ *
+ * Supported patterns (checked in priority order):
+ *   **text**  → bold
+ *   ~~text~~  → strikethrough
+ *   `text`    → inline code
+ *   *text*    → italic  (only single-star, not double)
+ *
+ * Returns true when a pattern was matched and the state was updated (caller should
+ * skip the normal onInput path).  Returns false when no pattern matched.
  */
+function detectAndApplyInlineFormatting(
+  text: string,
+  element: HTMLElement,
+  textNode: TextNode,
+  dispatch: React.Dispatch<EditorAction>
+): boolean {
+  // Helper: build the inline children array from the three segments and dispatch.
+  function applyFormat(
+    before: string,
+    content: string,
+    after: string,
+    format: Partial<InlineText>
+  ): boolean {
+    const children: InlineText[] = [];
+    if (before) children.push({ content: before });
+    children.push({ content, ...format });
+    if (after) children.push({ content: after });
+
+    dispatch(EditorActions.updateNode(textNode.id, { children, content: undefined }));
+
+    // Force the DOM to update: the shouldPreserveSelectionRef guard in
+    // Block's useEffect would normally skip the innerHTML write during
+    // typing. But we WANT the DOM to update here (to show formatted text
+    // instead of raw markers). We schedule this after React re-renders.
+    requestAnimationFrame(() => {
+      // By the time rAF fires, React will have re-rendered with the new
+      // textNode (which has children). The useEffect will have fired and
+      // updated innerHTML IF shouldPreserveSelectionRef was false.
+      // If it didn't update, force it now:
+      element.focus();
+      const sel = window.getSelection();
+      if (sel) {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
+
+    return true;
+  }
+
+  // 1. Bold: **text**  (must be checked before single-star italic)
+  const boldMatch = text.match(/^([\s\S]*?)\*\*(.+?)\*\*([\s\S]*)$/);
+  if (boldMatch) {
+    return applyFormat(boldMatch[1], boldMatch[2], boldMatch[3], { bold: true });
+  }
+
+  // 2. Strikethrough: ~~text~~
+  const strikeMatch = text.match(/^([\s\S]*?)~~(.+?)~~([\s\S]*)$/);
+  if (strikeMatch) {
+    return applyFormat(strikeMatch[1], strikeMatch[2], strikeMatch[3], { strikethrough: true });
+  }
+
+  // 3. Inline code: `text`  (single backtick, not triple)
+  const codeMatch = text.match(/^([\s\S]*?)(?<!`)(`{1})(?!`)(.+?)(?<!`)\2(?!`)([\s\S]*)$/);
+  if (codeMatch) {
+    return applyFormat(codeMatch[1], codeMatch[3], codeMatch[4], { code: true });
+  }
+
+  // 4. Italic: *text*  — single star, NOT preceded/followed by another star
+  //    Negative lookbehind/lookahead ensures we don't match inside **bold**.
+  const italicMatch = text.match(/^([\s\S]*?)(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)([\s\S]*)$/);
+  if (italicMatch) {
+    return applyFormat(italicMatch[1], italicMatch[2], italicMatch[3], { italic: true });
+  }
+
+  return false;
+}
+
+/** Creates a keydown handler that manages command menu navigation, list item creation, and Shift+Enter nesting within a block. */
 export function createHandleKeyDown(params: BlockEventHandlerParams) {
   return (e: React.KeyboardEvent<HTMLDivElement>) => {
     const {
@@ -110,19 +202,6 @@ export function createHandleKeyDown(params: BlockEventHandlerParams) {
       currentContainer,
       dispatch,
     } = params;
-
-    // DEBUG: Log key presses
-    if (process.env.NODE_ENV === 'development' && e.key === 'Enter') {
-      const element = e.currentTarget;
-      console.log(`⏎ [ENTER] Block ${textNode.id}:`, {
-        key: e.key,
-        shiftKey: e.shiftKey,
-        textContent: element.textContent,
-        innerHTML: element.innerHTML,
-        currentNodeContent: textNode.content,
-        nodeType: textNode.type,
-      });
-    }
 
     // Close command menu on Escape
     if (e.key === "Escape" && showCommandMenu) {
@@ -178,7 +257,7 @@ export function createHandleKeyDown(params: BlockEventHandlerParams) {
       if (parent) {
         // Create a new list item with the same type
         const newListItem: TextNode = {
-          id: `li-${Date.now()}`,
+          id: generateId('li'),
           type: textNode.type, // Keep the same type (ul/ol/li)
           content: "",
         };
@@ -193,19 +272,15 @@ export function createHandleKeyDown(params: BlockEventHandlerParams) {
           },
         });
 
-        // Focus the new list item after a short delay
-        setTimeout(() => {
+        // Wait for the browser to paint the new list item before focusing it.
+        requestAnimationFrame(() => {
           const newElement = document.querySelector(
             `[data-node-id="${newListItem.id}"]`
           ) as HTMLElement;
           if (newElement) {
             newElement.focus();
           }
-        }, 0);
-      } else {
-        console.warn(
-          "🔷 [Block.tsx] Could not find parent container for list item"
-        );
+        });
       }
 
       return;
@@ -216,9 +291,7 @@ export function createHandleKeyDown(params: BlockEventHandlerParams) {
   };
 }
 
-/**
- * Create handle click
- */
+/** Creates a click handler that prevents link navigation in edit mode and calls the parent onClick callback. */
 export function createHandleClick(params: Pick<BlockEventHandlerParams, 'readOnly' | 'onClick'>) {
   return (e: React.MouseEvent<HTMLDivElement>) => {
     const { readOnly, onClick } = params;
@@ -239,9 +312,7 @@ export function createHandleClick(params: Pick<BlockEventHandlerParams, 'readOnl
   };
 }
 
-/**
- * Create handle command select
- */
+/** Creates a handler that routes a command-menu selection to the appropriate block-type change, image, list, or table operation. */
 export function createHandleCommandSelect(params: {
   textNode: TextNode;
   onChangeBlockType?: (nodeId: string, newType: string) => void;
@@ -301,17 +372,15 @@ export function createHandleCommandSelect(params: {
     if (onChangeBlockType) {
       onChangeBlockType(textNode.id, commandValue);
 
-      // Focus back on the block
-      setTimeout(() => {
+      // Wait for the browser to paint the updated block before refocusing it.
+      requestAnimationFrame(() => {
         localRef.current?.focus();
-      }, 0);
+      });
     }
   };
 }
 
-/**
- * Create handle background color change
- */
+/** Creates a handler that dispatches a background-color attribute update for the given text node. */
 export function createHandleBackgroundColorChange(
   textNode: TextNode,
   dispatch: React.Dispatch<EditorAction>

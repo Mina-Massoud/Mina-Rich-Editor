@@ -70,7 +70,6 @@ export function ElementSelector({
   onValueChange,
   elements = ELEMENT_OPTIONS,
   variant = "default",
-  placeholder = "Select element",
   className,
   disabled = false,
   showDescription = true,
@@ -93,7 +92,7 @@ export function ElementSelector({
   return (
     <Select
       value={value || "p"}
-      onValueChange={onValueChange}
+      onValueChange={onValueChange as any}
       disabled={disabled}
     >
       <SelectTrigger className={triggerClassName}>

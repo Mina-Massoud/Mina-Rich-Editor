@@ -7,6 +7,7 @@
 import { EditorActions } from '../reducer/actions';
 import { ContainerNode, TextNode } from '../types';
 import { uploadImage } from '../utils/image-upload';
+import { generateId } from '../utils/id-generator';
 
 export interface FileUploadHandlerParams {
   container: ContainerNode;
@@ -60,7 +61,7 @@ export function createHandleFileChange(params: FileUploadHandlerParams) {
 
       // Create new media node (image or video)
       const mediaNode: TextNode = {
-        id: `${isVideo ? 'video' : 'img'}-${Date.now()}`,
+        id: generateId(isVideo ? 'video' : 'img'),
         type: isVideo ? "video" : "img",
         content: "", // Optional caption
         attributes: {
@@ -145,13 +146,12 @@ export function createHandleMultipleFilesChange(params: FileUploadHandlerParams)
       const mediaUrls = await Promise.all(uploadPromises);
 
       // Create media nodes (images and videos)
-      const timestamp = Date.now();
       const mediaNodes: TextNode[] = mediaUrls.map((url, index) => {
         const file = validFiles[index];
         const isVideo = file.type.startsWith('video/');
-        
+
         return {
-          id: `${isVideo ? 'video' : 'img'}-${timestamp}-${index}`,
+          id: generateId(isVideo ? 'video' : 'img'),
           type: isVideo ? "video" : "img",
           content: "",
           attributes: {
@@ -163,7 +163,7 @@ export function createHandleMultipleFilesChange(params: FileUploadHandlerParams)
 
       // Create flex container with media
       const flexContainer: ContainerNode = {
-        id: `flex-container-${timestamp}`,
+        id: generateId("flex-container"),
         type: "container",
         children: mediaNodes,
         attributes: {
@@ -279,7 +279,7 @@ export function createHandleFreeImageFileChange(params: FileUploadHandlerParams)
 
       // Create new free-positioned image node
       const freeImageNode: TextNode = {
-        id: `free-img-${Date.now()}`,
+        id: generateId("free-img"),
         type: "img",
         content: "", // Optional caption
         attributes: {

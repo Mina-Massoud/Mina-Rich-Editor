@@ -46,13 +46,6 @@ const categoryIcons: Record<TemplateMetadata["category"], React.ComponentType<{ 
   personal: User,
 };
 
-// Category colors (solid colors for cleaner look)
-const categoryColors: Record<TemplateMetadata["category"], string> = {
-  productivity: "bg-blue-500 hover:bg-blue-600",
-  creative: "bg-purple-500 hover:bg-purple-600",
-  business: "bg-green-500 hover:bg-green-600",
-  personal: "bg-orange-500 hover:bg-orange-600",
-};
 
 export function TemplateSwitcherButton({
   onTemplateChange,
@@ -89,7 +82,7 @@ export function TemplateSwitcherButton({
 
   // Check if there's existing content
   const hasExistingContent = () => {
-    const container = currentState.history[currentState.historyIndex];
+    const container = currentState.current;
     if (!container || !container.children || container.children.length === 0) {
       return false;
     }
@@ -133,15 +126,14 @@ export function TemplateSwitcherButton({
     // This ensures all editor state is properly reset
     const newState: EditorState = {
       version: "1.0.0",
-      history: [
-        {
-          id: "root",
-          type: "container",
-          children: template.content,
-          attributes: {},
-        },
-      ],
-      historyIndex: 0,
+      current: {
+        id: "root",
+        type: "container",
+        children: template.content,
+        attributes: {},
+      },
+      undoStack: [],
+      redoStack: [],
       activeNodeId: null,
       hasSelection: false,
       selectionKey: 0,

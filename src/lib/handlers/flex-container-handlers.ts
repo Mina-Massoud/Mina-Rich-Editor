@@ -1,6 +1,6 @@
 /**
  * Flex Container Drag-and-Drop Handlers
- * 
+ *
  * Handles drag and drop operations for flex containers
  */
 
@@ -11,7 +11,6 @@ import { findNodeAnywhere } from '../utils/editor-helpers';
 export interface FlexContainerHandlerParams {
   container: ContainerNode;
   dispatch: React.Dispatch<any>;
-  toast: any;
   draggingNodeId: string | null;
   setDragOverFlexId: (id: string | null) => void;
   setFlexDropPosition: (pos: "left" | "right" | null) => void;
@@ -23,21 +22,18 @@ export interface FlexContainerHandlerParams {
 export function createHandleFlexContainerDragOver(params: FlexContainerHandlerParams) {
   return (e: React.DragEvent, flexContainerId: string, position: "left" | "right" | null) => {
     const { container, draggingNodeId, setDragOverFlexId, setFlexDropPosition } = params;
-    
+
     e.preventDefault();
     e.stopPropagation();
 
-    // Check if we're dragging something
-    const draggedNodeId = e.dataTransfer.getData("text/plain");
-    if (!draggedNodeId && !draggingNodeId) {
+    // Only proceed if we have a dragging node from state
+    if (!draggingNodeId) {
       return;
     }
 
-    const actualDraggingId = draggingNodeId || draggedNodeId;
-    
     // Find the dragging node
-    const draggingResult = actualDraggingId ? findNodeAnywhere(actualDraggingId, container) : null;
-    
+    const draggingResult = findNodeAnywhere(draggingNodeId, container);
+
     if (!draggingResult || !isTextNode(draggingResult.node)) {
       // Not a valid node to drag
       setDragOverFlexId(null);
@@ -46,7 +42,7 @@ export function createHandleFlexContainerDragOver(params: FlexContainerHandlerPa
     }
 
     const draggingNode = draggingResult.node as TextNode;
-    
+
     // Only allow image nodes
     if (draggingNode.type !== 'img') {
       setDragOverFlexId(null);
@@ -87,15 +83,14 @@ export function createHandleFlexContainerDragLeave(
  */
 export function createHandleFlexContainerDrop(params: FlexContainerHandlerParams) {
   return (e: React.DragEvent, flexContainerId: string, position: "left" | "right" | null) => {
-    const { 
-      container, 
-      dispatch, 
-      toast, 
+    const {
+      container,
+      dispatch,
       draggingNodeId,
       setDragOverFlexId,
       setFlexDropPosition,
     } = params;
-    
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -129,58 +124,44 @@ export function createHandleFlexContainerDrop(params: FlexContainerHandlerParams
     const isInSameContainer = draggingResult.parentId === flexContainerId;
 
     if (isInSameContainer) {
-      // Case 1: Reordering within the same flex container
-      
+      // Reordering within the same flex container
       const currentIndex = flexContainer.children.findIndex(c => c.id === draggingNodeId);
       const newChildren = [...flexContainer.children];
-      
+
       // Remove from current position
       const [movedNode] = newChildren.splice(currentIndex, 1);
-      
+
       // Insert at new position
       if (position === "left") {
         newChildren.unshift(movedNode);
       } else {
         newChildren.push(movedNode);
       }
-      
+
       dispatch(EditorActions.updateNode(flexContainerId, {
         children: newChildren as any,
       }));
-      
-      toast({
-        title: "Image repositioned!",
-        description: "Image moved within the flex container",
-      });
     } else {
-      // Case 2: Adding image from outside to the flex container
-      
+      // Adding image from outside to the flex container
       const newChildren = [...flexContainer.children];
-      
+
       if (position === "left") {
-        newChildren.unshift(draggingNode);    
+        newChildren.unshift(draggingNode);
       } else {
         newChildren.push(draggingNode);
       }
-      
-      // Batch: delete from old location and update container
-      const actions = [
-        EditorActions.deleteNode(draggingNodeId),
-        EditorActions.updateNode(flexContainerId, {
-          children: newChildren as any,
-        }),
-      ];
-      
-      dispatch(EditorActions.batch(actions));
-      
-      toast({
-        title: "Image added!",
-        description: "Image added to the flex container",
-      });
+
+      dispatch(
+        EditorActions.batch([
+          EditorActions.deleteNode(draggingNodeId),
+          EditorActions.updateNode(flexContainerId, {
+            children: newChildren as any,
+          }),
+        ])
+      );
     }
 
     setDragOverFlexId(null);
     setFlexDropPosition(null);
   };
 }
-

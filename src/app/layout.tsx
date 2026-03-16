@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Caveat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { ModeToggle } from "@/components/ui/mode-toggle";
 import { Toaster } from "@/components/ui/sonner";
+import { SITE_URL, SITE_NAME, GITHUB_URL, NPM_URL } from "@/lib/constants/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,11 +15,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mina-rich-editor.vercel.app"), // Update with your actual domain
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Mina Rich Editor - Block-based Rich Text Editor for React",
-    template: "%s | Mina Rich Editor",
+    template: `%s | ${SITE_NAME}`,
   },
   description:
     "A powerful, block-based rich text editor with tables, images, formatting, and mobile-optimized UX. Built with React, TypeScript, shadcn/ui, and Tailwind CSS. Free and open-source.",
@@ -57,11 +69,11 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://mina-rich-editor.vercel.app",
+    url: SITE_URL,
     title: "Mina Rich Editor - Block-based Rich Text Editor for React",
     description:
       "A powerful, block-based rich text editor with tables, images, formatting, and mobile-optimized UX. Built with React, TypeScript, shadcn/ui, and Tailwind CSS.",
-    siteName: "Mina Rich Editor",
+    siteName: SITE_NAME,
     images: [
       {
         url: "/opengraph.png",
@@ -91,19 +103,13 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://mina-rich-editor.vercel.app",
-  },
-  verification: {
-    google: "your-google-site-verification-code", // Add your Google verification code
-    // yandex: "your-yandex-verification-code",
-    // bing: "your-bing-verification-code",
+    canonical: SITE_URL,
   },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -112,25 +118,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
-          rel="stylesheet"
-        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
-              name: "Mina Rich Editor",
+              name: SITE_NAME,
+              url: SITE_URL,
               description:
                 "A powerful, block-based rich text editor with tables, images, formatting, and mobile-optimized UX.",
               applicationCategory: "DeveloperApplication",
@@ -156,27 +153,28 @@ export default function RootLayout({
                 "Dark mode",
                 "Undo/Redo",
                 "HTML export",
+                "AI content generation",
+                "Real-time collaboration",
+                "Drag and drop",
+                "Markdown shortcuts",
               ],
-              screenshot: "/opengraph.png",
-              softwareVersion: "1.0.0",
-              aggregateRating: {
-                "@type": "AggregateRating",
-                ratingValue: "5",
-                ratingCount: "1",
-              },
+              screenshot: `${SITE_URL}/opengraph.png`,
+              downloadUrl: NPM_URL,
+              codeRepository: GITHUB_URL,
+              license: "https://opensource.org/licenses/MIT",
             }),
           }}
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col w-full overflow-x-clip`}
+        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${caveat.variable} antialiased min-h-screen flex flex-col w-full overflow-x-clip`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
+          enableSystem
           disableTransitionOnChange
         >
-          {/* <ModeToggle /> */}
           {children}
           <Toaster />
         </ThemeProvider>

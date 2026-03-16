@@ -8,6 +8,7 @@
  */
 
 import { EditorNode, ContainerNode, StructuralNode, isContainerNode, isStructuralNode } from "../types";
+import { generateId } from "./id-generator";
 
 /**
  * Recursively finds a node by its ID in the tree.
@@ -165,12 +166,17 @@ export function deleteNodeById(
 
   // If it's a container or structural node, filter out the target from children
   if (isContainerNode(node) || isStructuralNode(node)) {
-    const newChildren = node.children
-      .map((child) => deleteNodeById(child, targetId))
+    const mappedChildren = node.children
+      .map((child) => deleteNodeById(child, targetId));
+    const newChildren = mappedChildren
       .filter((child): child is EditorNode => child !== null);
 
-    // Only create new object if children changed
-    if (newChildren.length !== node.children.length) {
+    // Create new object if a direct child was removed OR if a descendant changed
+    const childrenChanged =
+      newChildren.length !== node.children.length ||
+      newChildren.some((newChild, index) => newChild !== node.children[index]);
+
+    if (childrenChanged) {
       return {
         ...node,
         children: newChildren,
@@ -214,7 +220,6 @@ export function insertNode(
   if (position === "prepend" || position === "append") {
     return updateNodeById(root, targetId, (node) => {
       if (!isContainerNode(node) && !isStructuralNode(node)) {
-        console.warn(`Cannot ${position} to non-container/structural node ${targetId}`);
         return {};
       }
 
@@ -304,21 +309,18 @@ export function moveNode(
 ): EditorNode {
   // Cannot move a node to itself
   if (nodeId === targetId) {
-    console.warn("Cannot move a node to itself");
     return root;
   }
 
   // Find the node to move
   const nodeToMove = findNodeById(root, nodeId);
   if (!nodeToMove) {
-    console.warn(`Node ${nodeId} not found`);
     return root;
   }
 
   // Verify target exists
   const targetNode = findNodeById(root, targetId);
   if (!targetNode) {
-    console.warn(`Target node ${targetId} not found`);
     return root;
   }
 
@@ -348,7 +350,7 @@ export function moveNode(
 export function cloneNode(node: EditorNode, newId?: string): EditorNode {
   const cloned: EditorNode = {
     ...node,
-    id: newId || `${node.id}-clone-${Date.now()}`,
+    id: newId || generateId('node'),
   };
 
   if ((isContainerNode(cloned) || isStructuralNode(cloned)) && (isContainerNode(node) || isStructuralNode(node))) {
@@ -392,6 +394,18 @@ export function traverseTree(
       traverseTree(child, callback, depth + 1);
     }
   }
+}
+
+/**
+ * Builds a flat Map from node ID to EditorNode for O(1) lookups.
+ * The map is a derived cache — `state.current` (the tree) remains the source of truth.
+ */
+export function buildNodeMap(root: EditorNode): Map<string, EditorNode> {
+  const map = new Map<string, EditorNode>();
+  traverseTree(root, (node) => {
+    if (node.id) map.set(node.id, node);
+  });
+  return map;
 }
 
 /**

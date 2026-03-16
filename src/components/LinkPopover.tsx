@@ -97,9 +97,9 @@ export function LinkPopover() {
     dispatch(EditorActions.setCurrentSelection(savedSelectionRef.current));
 
     // Apply the link
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       dispatch(EditorActions.applyLink(hrefInput.trim()));
-      
+
       toast({
         title: 'Link Applied',
         description: `Linked to: ${hrefInput}`,
@@ -109,7 +109,7 @@ export function LinkPopover() {
       setIsOpen(false);
       setPosition(null);
       savedSelectionRef.current = null;
-    }, 0);
+    });
   };
 
   // Handle link removal
@@ -121,9 +121,9 @@ export function LinkPopover() {
     dispatch(EditorActions.setCurrentSelection(savedSelectionRef.current));
 
     // Remove the link
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       dispatch(EditorActions.removeLink());
-      
+
       toast({
         title: 'Link Removed',
         description: 'Link has been removed from selection',
@@ -133,7 +133,7 @@ export function LinkPopover() {
       setIsOpen(false);
       setPosition(null);
       savedSelectionRef.current = null;
-    }, 0);
+    });
   };
 
   const hasExistingLink = savedSelectionRef.current?.href;
@@ -178,13 +178,10 @@ export function LinkPopover() {
                 <LinkIcon className="size-4" />
               </button>
             </PopoverTrigger>
-            <PopoverContent 
-              className="w-80" 
+            <PopoverContent
+              className="w-80"
               align="start"
-              onOpenAutoFocus={(e) => {
-                // Prevent the popover from stealing focus and losing selection
-                e.preventDefault();
-              }}
+              {...{ onOpenAutoFocus: (e: any) => e.preventDefault() }}
             >
               <div className="space-y-3">
                 <div>

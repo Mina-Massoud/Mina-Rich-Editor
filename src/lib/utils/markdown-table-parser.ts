@@ -5,6 +5,7 @@
  */
 
 import { StructuralNode, TextNode } from "../types";
+import { generateId } from "./id-generator";
 
 /**
  * Parse markdown table string into table structure
@@ -85,11 +86,9 @@ export function parseMarkdownTable(markdown: string): {
       }
     }
 
-    const timestamp = Date.now();
-
     // Create header cells
-    const headerCellNodes: TextNode[] = headerCells.map((content, idx) => ({
-      id: `th-${timestamp}-${idx}`,
+    const headerCellNodes: TextNode[] = headerCells.map((content) => ({
+      id: generateId("th"),
       type: "th",
       content: content || "",
       attributes: {},
@@ -97,7 +96,7 @@ export function parseMarkdownTable(markdown: string): {
 
     // Create header row
     const headerRow: StructuralNode = {
-      id: `tr-header-${timestamp}`,
+      id: generateId("tr-header"),
       type: "tr",
       children: headerCellNodes,
       attributes: {},
@@ -105,28 +104,28 @@ export function parseMarkdownTable(markdown: string): {
 
     // Create thead
     const thead: StructuralNode = {
-      id: `thead-${timestamp}`,
+      id: generateId("thead"),
       type: "thead",
       children: [headerRow],
       attributes: {},
     };
 
     // Create body rows
-    const bodyRows: StructuralNode[] = bodyLines.map((line, rowIdx) => {
+    const bodyRows: StructuralNode[] = bodyLines.map((line) => {
       const cells = line
         .split('|')
         .slice(1, -1)
         .map(cell => cell.trim());
 
-      const cellNodes: TextNode[] = cells.map((content, colIdx) => ({
-        id: `td-${timestamp}-${rowIdx}-${colIdx}`,
+      const cellNodes: TextNode[] = cells.map((content) => ({
+        id: generateId("td"),
         type: "td",
         content: content || "",
         attributes: {},
       }));
 
       return {
-        id: `tr-${timestamp}-${rowIdx}`,
+        id: generateId("tr"),
         type: "tr",
         children: cellNodes,
         attributes: {},
@@ -135,7 +134,7 @@ export function parseMarkdownTable(markdown: string): {
 
     // Create tbody
     const tbody: StructuralNode = {
-      id: `tbody-${timestamp}`,
+      id: generateId("tbody"),
       type: "tbody",
       children: bodyRows,
       attributes: {},
@@ -143,7 +142,7 @@ export function parseMarkdownTable(markdown: string): {
 
     // Create table
     const table: StructuralNode = {
-      id: `table-${timestamp}`,
+      id: generateId("table"),
       type: "table",
       children: [thead, tbody],
       attributes: {},

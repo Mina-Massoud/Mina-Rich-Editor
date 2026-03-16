@@ -1,0 +1,48 @@
+# Mina Rich Editor
+
+> Mina Rich Editor is a free, open-source React block-based rich text editor with Notion-style blocks, built-in AI content generation, Y.js-powered real-time collaboration, and zero ProseMirror dependency — all in ~45KB gzipped.
+
+## Key Facts
+- License: MIT (free for commercial use)
+- Bundle size: ~45KB gzipped
+- Test coverage: 440+ tests
+- Block types: 15+ (paragraphs, headings, lists, code, tables, images, toggles, etc.)
+- Framework: React 18+ with TypeScript
+- Styling: Tailwind CSS + shadcn/ui
+- No ProseMirror or Slate dependency
+
+## Documentation
+- [Installation](https://editor.mina-massoud.com/docs/installation): Install with npx shadcn CLI
+- [Usage](https://editor.mina-massoud.com/docs/usage): Get started in 3 lines of code
+- [AI Integration](https://editor.mina-massoud.com/docs/ai-integration): OpenAI, Anthropic, Gemini, Ollama support
+- [Real-time Collaboration](https://editor.mina-massoud.com/docs/collaboration): Y.js CRDT with cursor presence
+- [Block Types](https://editor.mina-massoud.com/docs/block-types): 15+ block types
+- [CompactEditor](https://editor.mina-massoud.com/docs/compact-editor): Lightweight embeddable variant
+- [Text Formatting](https://editor.mina-massoud.com/docs/text-formatting): Bold, italic, underline, code, highlight
+- [Slash Commands](https://editor.mina-massoud.com/docs/slash-commands): Notion-style command menu
+- [Toolbars](https://editor.mina-massoud.com/docs/toolbars): Floating selection toolbar
+- [Keyboard Shortcuts](https://editor.mina-massoud.com/docs/keyboard-shortcuts): Full shortcut reference
+- [Markdown Rules](https://editor.mina-massoud.com/docs/markdown-rules): Auto-converting markdown shortcuts
+- [Drag and Drop](https://editor.mina-massoud.com/docs/drag-and-drop): Block reordering
+- [Image and Media](https://editor.mina-massoud.com/docs/image-and-media): Upload, paste, resize
+- [Tables](https://editor.mina-massoud.com/docs/tables): Advanced table editing
+- [Serialization](https://editor.mina-massoud.com/docs/serialization): JSON, HTML, Markdown export
+- [Hooks](https://editor.mina-massoud.com/docs/hooks): React hooks reference
+- [useEditorAPI](https://editor.mina-massoud.com/docs/editor-api): Programmatic editor control
+- [History System](https://editor.mina-massoud.com/docs/history-system): Undo/redo
+- [API Reference](https://editor.mina-massoud.com/docs/api-reference): Complete API docs
+
+## Comparisons
+- [Mina vs TipTap](https://editor.mina-massoud.com/compare/tiptap): 45KB vs 120KB+, no ProseMirror dependency, built-in AI and collab
+- [Mina vs Plate](https://editor.mina-massoud.com/compare/plate)
+- [Mina vs BlockNote](https://editor.mina-massoud.com/compare/blocknote)
+- [Mina vs Lexical](https://editor.mina-massoud.com/compare/lexical)
+- [Mina vs Editor.js](https://editor.mina-massoud.com/compare/editor-js)
+- [Mina vs Novel](https://editor.mina-massoud.com/compare/novel)
+- [Mina vs Quill](https://editor.mina-massoud.com/compare/quill)
+
+## Links
+- Website: https://editor.mina-massoud.com
+- GitHub: https://github.com/Mina-Massoud/Mina-Rich-Editor
+- npm: https://www.npmjs.com/package/@mina-editor/core
+- Demo: https://editor.mina-massoud.com/demo

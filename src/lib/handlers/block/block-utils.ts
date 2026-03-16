@@ -5,6 +5,7 @@
  */
 
 import { TextNode } from "../../types";
+import { ExtensionManager } from "../../extensions/ExtensionManager";
 
 /**
  * Helper function to escape HTML entities
@@ -45,6 +46,27 @@ export function getTypeClassName(type: string): string {
     default:
       return "text-base text-foreground leading-[1.6]";
   }
+}
+
+/**
+ * Get CSS classes for a node type, checking the extension registry first.
+ * Falls back to the hardcoded switch in getTypeClassName for backward compatibility.
+ *
+ * @param type - The node type string
+ * @param extensionManager - Optional ExtensionManager from the store
+ * @returns CSS class string for the node type
+ */
+export function getTypeClassNameFromRegistry(
+  type: string,
+  extensionManager?: ExtensionManager
+): string {
+  // Try extension registry first
+  if (extensionManager) {
+    const styles = extensionManager.getNodeStyles(type);
+    if (styles !== undefined) return styles;
+  }
+  // Fall back to hardcoded switch
+  return getTypeClassName(type);
 }
 
 /**

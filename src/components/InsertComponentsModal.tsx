@@ -8,8 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
-import { Button } from "./ui/button";
-import { INSERT_COMPONENTS, type InsertComponent } from "@/lib/insert-components-data";
+import { INSERT_COMPONENTS } from "@/lib/insert-components-data";
 import { ImagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 

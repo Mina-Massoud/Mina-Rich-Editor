@@ -8,73 +8,55 @@
  * @packageDocumentation
  */
 
-import {
-  EditorState,
-  ContainerNode,
-  isTextNode,
-  TextNode,
-  hasInlineChildren,
-} from "../types";
-import {
-  updateNodeById,
-  deleteNodeById,
-  insertNode,
-  moveNode,
-  cloneNode,
-  findNodeById,
-} from "../utils/tree-operations";
+import { EditorState, ContainerNode, TextNode } from "../types";
 import { EditorAction } from "./actions";
-import { applyFormatting } from "../utils/inline-formatting";
+import { generateId } from "../utils/id-generator";
 
-/**
- * Maximum number of history states to keep
- */
-const MAX_HISTORY_SIZE = 100;
 
-/**
- * NOTE: We removed the deepCloneContainer function that was here before.
- *
- * Deep cloning was destroying structural sharing! The tree operations
- * (updateNodeById, deleteNodeById, etc.) already return new immutable trees
- * with structural sharing - unchanged nodes keep their original references.
- *
- * Deep cloning would create new references for ALL nodes, causing ALL React
- * components to re-render even when their data didn't change. By removing it,
- * only components whose nodes actually changed will re-render.
- */
+// Node operations
+import {
+  handleUpdateNode,
+  handleUpdateAttributes,
+  handleUpdateContent,
+  handleDeleteNode,
+  handleInsertNode,
+  handleMoveNode,
+  handleSwapNodes,
+  handleDuplicateNode,
+} from "./operations/node-ops";
 
-/**
- * Add a new container state to history
- * This truncates any "future" history if we're not at the end
- */
-function addToHistory(
-  state: EditorState,
-  newContainer: ContainerNode
-): EditorState {
-  // No need to clone - the container is already immutable from tree operations
+// Format operations
+import {
+  handleApplyInlineElementType,
+  handleToggleFormat,
+  handleApplyCustomClass,
+  handleApplyInlineStyle,
+  handleApplyLink,
+  handleRemoveLink,
+  handleReplaceSelectionText,
+  handleReplaceSelectionWithInlines,
+} from "./operations/format-ops";
 
-  // Get current history up to the current index
-  const newHistory = state.history.slice(0, state.historyIndex + 1);
+// History operations
+import {
+  handleUndo,
+  handleRedo,
+  handleReplaceContainer,
+} from "./operations/history-ops";
 
-  // Add the new state (already immutable with structural sharing)
-  newHistory.push(newContainer);
-
-  // Limit history size
-  if (newHistory.length > MAX_HISTORY_SIZE) {
-    newHistory.shift(); // Remove oldest entry
-    return {
-      ...state,
-      history: newHistory,
-      historyIndex: newHistory.length - 1,
-    };
-  }
-
-  return {
-    ...state,
-    history: newHistory,
-    historyIndex: newHistory.length - 1,
-  };
-}
+// UI operations
+import {
+  handleSetActiveNode,
+  handleSetSelection,
+  handleIncrementSelectionKey,
+  handleSetCurrentSelection,
+  handleSelectAllBlocks,
+  handleClearBlockSelection,
+  handleDeleteSelectedBlocks,
+  handleSetCoverImage,
+  handleRemoveCoverImage,
+  handleUpdateCoverImagePosition,
+} from "./operations/ui-ops";
 
 /**
  * The main reducer function for the editor.
@@ -97,1184 +79,111 @@ export function editorReducer(
   action: EditorAction
 ): EditorState {
   switch (action.type) {
-    case "UPDATE_NODE": {
-      const { id, updates } = action.payload;
-      const currentContainer = state.history[state.historyIndex];
-      const newContainer = updateNodeById(
-        currentContainer,
-        id,
-        () => updates
-      ) as ContainerNode;
+    case "UPDATE_NODE":
+      return handleUpdateNode(state, action.payload);
 
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
+    case "UPDATE_ATTRIBUTES":
+      return handleUpdateAttributes(state, action.payload);
 
-    case "UPDATE_ATTRIBUTES": {
-      const { id, attributes, merge = true } = action.payload;
-      const currentContainer = state.history[state.historyIndex];
-      const newContainer = updateNodeById(currentContainer, id, (node) => ({
-        attributes: merge ? { ...node.attributes, ...attributes } : attributes,
-      })) as ContainerNode;
+    case "UPDATE_CONTENT":
+      return handleUpdateContent(state, action.payload);
 
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
+    case "DELETE_NODE":
+      return handleDeleteNode(state, action.payload);
 
-    case "UPDATE_CONTENT": {
-      const { id, content } = action.payload;
-      const currentContainer = state.history[state.historyIndex];
-      const newContainer = updateNodeById(currentContainer, id, (node) => {
-        if (isTextNode(node)) {
-          return { content };
-        }
-        console.warn(`Cannot update content of container node ${id}`);
-        return {};
-      }) as ContainerNode;
+    case "INSERT_NODE":
+      return handleInsertNode(state, action.payload);
 
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
+    case "MOVE_NODE":
+      return handleMoveNode(state, action.payload);
 
-    case "DELETE_NODE": {
-      const { id } = action.payload;
-      const currentContainer = state.history[state.historyIndex];
+    case "SWAP_NODES":
+      return handleSwapNodes(state, action.payload);
 
-      // Check if this is the only h1 header block in the root container
-      const isH1Block = currentContainer.children.find((child) => {
-        if (isTextNode(child)) {
-          const textChild = child as TextNode;
-          return textChild.id === id && textChild.type === "h1";
-        }
-        return false;
-      });
+    case "DUPLICATE_NODE":
+      return handleDuplicateNode(state, action.payload);
 
-      // If it's an h1 and it's the only child, don't delete - just clear content
-      if (isH1Block && currentContainer.children.length === 1) {
-        console.warn(
-          "Cannot delete the last h1 header block. Clearing content instead."
-        );
-        const newContainer = updateNodeById(currentContainer, id, () => ({
-          content: "",
-          children: undefined,
-        })) as ContainerNode;
+    case "REPLACE_CONTAINER":
+      return handleReplaceContainer(state, action.payload);
 
-        return addToHistory(
-          {
-            ...state,
-            metadata: {
-              ...state.metadata,
-              updatedAt: new Date().toISOString(),
-            },
-          },
-          newContainer
-        );
-      }
-
-      const result = deleteNodeById(currentContainer, id);
-
-      // If the root container was deleted, prevent it
-      if (result === null) {
-        console.warn("Cannot delete the root container");
-        return state;
-      }
-
-      // If after deletion there are no children left, create a default h1 header
-      const resultContainer = result as ContainerNode;
-      if (resultContainer.children.length === 0) {
-        const timestamp = Date.now();
-        const defaultNode: TextNode = {
-          id: `h1-${timestamp}`,
-          type: "h1",
-          content: "",
-          attributes: {
-            placeholder: "New page",
-          },
-        };
-        resultContainer.children = [defaultNode];
-
-        return addToHistory(
-          {
-            ...state,
-            activeNodeId: defaultNode.id,
-            metadata: {
-              ...state.metadata,
-              updatedAt: new Date().toISOString(),
-            },
-          },
-          resultContainer
-        );
-      }
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        resultContainer
-      );
-    }
-
-    case "INSERT_NODE": {
-      const { node, targetId, position } = action.payload;
-      const currentContainer = state.history[state.historyIndex];
-      const newContainer = insertNode(
-        currentContainer,
-        targetId,
-        node,
-        position
-      ) as ContainerNode;
-
-      // Automatically set the newly inserted node as active for better UX
-      // This ensures the node is focused immediately after insertion
-      return addToHistory(
-        {
-          ...state,
-          activeNodeId: node.id,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "MOVE_NODE": {
-      const { nodeId, targetId, position } = action.payload;
-      const currentContainer = state.history[state.historyIndex];
-      const newContainer = moveNode(
-        currentContainer,
-        nodeId,
-        targetId,
-        position
-      ) as ContainerNode;
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "SWAP_NODES": {
-      const { nodeId1, nodeId2 } = action.payload;
-      const currentContainer = state.history[state.historyIndex];
-
-      // Find indices of both nodes
-      const index1 = currentContainer.children.findIndex(
-        (n) => n.id === nodeId1
-      );
-      const index2 = currentContainer.children.findIndex(
-        (n) => n.id === nodeId2
-      );
-
-      // If either node not found, return current state
-      if (index1 === -1 || index2 === -1) {
-        return state;
-      }
-
-      // Clone container and swap positions
-      const newChildren = [...currentContainer.children];
-      [newChildren[index1], newChildren[index2]] = [
-        newChildren[index2],
-        newChildren[index1],
-      ];
-
-      const newContainer: ContainerNode = {
-        ...currentContainer,
-        children: newChildren,
-      };
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "DUPLICATE_NODE": {
-      const { id, newId } = action.payload;
-      const currentContainer = state.history[state.historyIndex];
-
-      // Clone the node with a new ID
-      const nodeToClone = updateNodeById(currentContainer, id, (node) => node);
-      const clonedNode = cloneNode(nodeToClone, newId);
-
-      // Insert the cloned node after the original
-      const newContainer = insertNode(
-        currentContainer,
-        id,
-        clonedNode,
-        "after"
-      ) as ContainerNode;
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "REPLACE_CONTAINER": {
-      const { container } = action.payload;
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        container
-      );
-    }
-
-    case "RESET": {
+    case "RESET":
       return createInitialState();
-    }
 
-    case "SET_STATE": {
-      const { state: newState } = action.payload;
-      return newState;
-    }
+    case "SET_STATE":
+      return action.payload.state;
 
-    case "BATCH": {
-      const { actions } = action.payload;
-
-      // Apply all actions sequentially
-      return actions.reduce(
+    case "BATCH":
+      return action.payload.actions.reduce(
         (currentState, batchAction) => editorReducer(currentState, batchAction),
         state
       );
-    }
 
-    case "SET_ACTIVE_NODE": {
-      const { nodeId } = action.payload;
-      return {
-        ...state,
-        activeNodeId: nodeId,
-      };
-    }
+    case "SET_ACTIVE_NODE":
+      return handleSetActiveNode(state, action.payload);
 
-    case "SET_SELECTION": {
-      const { hasSelection } = action.payload;
-      return {
-        ...state,
-        hasSelection,
-      };
-    }
+    case "SET_SELECTION":
+      return handleSetSelection(state, action.payload);
 
-    case "INCREMENT_SELECTION_KEY": {
-      return {
-        ...state,
-        selectionKey: state.selectionKey + 1,
-      };
-    }
+    case "INCREMENT_SELECTION_KEY":
+      return handleIncrementSelectionKey(state);
 
-    case "SET_CURRENT_SELECTION": {
-      const { selection } = action.payload;
+    case "SET_CURRENT_SELECTION":
+      return handleSetCurrentSelection(state, action.payload);
 
-      return {
-        ...state,
-        currentSelection: selection,
-        hasSelection: selection !== null,
-      };
-    }
+    case "APPLY_INLINE_ELEMENT_TYPE":
+      return handleApplyInlineElementType(state, action.payload);
 
-    case "APPLY_INLINE_ELEMENT_TYPE": {
-      const { elementType } = action.payload;
+    case "TOGGLE_FORMAT":
+      return handleToggleFormat(state, action.payload);
 
-      console.group("🎨 [APPLY_INLINE_ELEMENT_TYPE] Reducer executing");
+    case "APPLY_CUSTOM_CLASS":
+      return handleApplyCustomClass(state, action.payload);
 
-      if (!state.currentSelection) {
-        console.warn("❌ Cannot apply element type without active selection");
-        console.groupEnd();
-        return state;
-      }
+    case "APPLY_INLINE_STYLE":
+      return handleApplyInlineStyle(state, action.payload);
 
-      const { nodeId, start, end } = state.currentSelection;
+    case "APPLY_LINK":
+      return handleApplyLink(state, action.payload);
 
-      console.log(
-        "📍 Target node:",
-        nodeId,
-        "Range:",
-        start,
-        "-",
-        end,
-        "Element type:",
-        elementType
-      );
+    case "REMOVE_LINK":
+      return handleRemoveLink(state, {});
 
-      const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as
-        | TextNode
-        | undefined;
+    case "SELECT_ALL_BLOCKS":
+      return handleSelectAllBlocks(state);
 
-      console.log("🔍 Found node:", node);
+    case "CLEAR_BLOCK_SELECTION":
+      return handleClearBlockSelection(state);
 
-      if (!node || !isTextNode(node)) {
-        console.warn("❌ Node not found or not a text node");
-        console.groupEnd();
-        return state;
-      }
+    case "DELETE_SELECTED_BLOCKS":
+      return handleDeleteSelectedBlocks(state);
 
-      // Convert node to inline children if it's still plain content
-      const children = hasInlineChildren(node)
-        ? node.children!
-        : [{ content: node.content || "" }];
+    case "UNDO":
+      return handleUndo(state);
 
-      // Build new children array by splitting segments that overlap with selection
-      const newChildren: typeof node.children = [];
-      let currentPos = 0;
+    case "REDO":
+      return handleRedo(state);
 
-      for (const child of children) {
-        const childLength = (child.content || "").length;
-        const childStart = currentPos;
-        const childEnd = currentPos + childLength;
+    case "SET_COVER_IMAGE":
+      return handleSetCoverImage(state, action.payload);
 
-        // Check overlap with selection [start, end)
-        if (childEnd <= start || childStart >= end) {
-          // No overlap - keep as is
-          newChildren.push({ ...child });
-        } else {
-          // There's overlap - need to split this child
-          const overlapStart = Math.max(childStart, start);
-          const overlapEnd = Math.min(childEnd, end);
+    case "REMOVE_COVER_IMAGE":
+      return handleRemoveCoverImage(state);
 
-          // Before overlap (within this child)
-          if (childStart < overlapStart) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(0, overlapStart - childStart),
-            });
-          }
+    case "UPDATE_COVER_IMAGE_POSITION":
+      return handleUpdateCoverImagePosition(state, action.payload);
 
-          // Overlapping part - apply the element type
-          newChildren.push({
-            ...child,
-            content: child.content!.substring(
-              overlapStart - childStart,
-              overlapEnd - childStart
-            ),
-            elementType: elementType,
-          });
+    case "REPLACE_SELECTION_TEXT":
+      return handleReplaceSelectionText(state, action.payload);
 
-          // After overlap (within this child)
-          if (childEnd > overlapEnd) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(overlapEnd - childStart),
-            });
-          }
-        }
+    case "REPLACE_SELECTION_WITH_INLINES":
+      return handleReplaceSelectionWithInlines(state, action.payload);
 
-        currentPos = childEnd;
-      }
-
-      // Update the node in the tree
-      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
-        content: undefined, // Clear simple content
-        children: newChildren, // Set inline children
-      })) as ContainerNode;
-
-      console.groupEnd();
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "TOGGLE_FORMAT": {
-      const { format } = action.payload;
-
-      console.group("🎨 [TOGGLE_FORMAT] Reducer executing");
-
-      if (!state.currentSelection) {
-        console.warn("❌ Cannot toggle format without active selection");
-        console.groupEnd();
-        return state;
-      }
-
-      const { nodeId, start, end, formats } = state.currentSelection;
-
-      console.log("📍 Target node:", nodeId, "Range:", start, "-", end);
-
-      const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as
-        | TextNode
-        | undefined;
-
-      console.log("🔍 Found node:", node);
-
-      if (!node || !isTextNode(node)) {
-        console.warn("❌ Node not found or not a text node");
-        console.groupEnd();
-        return state;
-      }
-
-      const isActive = formats[format];
-
-      // Convert node to inline children if it's still plain content
-      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
-      // So we need to get the actual text content from the selection or use what we have
-      let children = hasInlineChildren(node)
-        ? node.children!
-        : [{ content: node.content || "" }];
-
-      // If we have empty content but the selection has text, use the selection text
-      // This handles the case where nested blocks haven't synced their content yet
-      if (
-        !hasInlineChildren(node) &&
-        !node.content &&
-        state.currentSelection.text
-      ) {
-        children = [{ content: state.currentSelection.text }];
-        console.log(
-          "⚠️ Using selection text as content source:",
-          state.currentSelection.text
-        );
-      }
-
-      // Build new children array by splitting segments that overlap with selection
-      const newChildren: typeof node.children = [];
-      let currentPos = 0;
-
-      for (const child of children) {
-        const childLength = (child.content || "").length;
-        const childStart = currentPos;
-        const childEnd = currentPos + childLength;
-
-        // Check overlap with selection [start, end)
-        if (childEnd <= start || childStart >= end) {
-          // No overlap - keep as is
-          newChildren.push({ ...child });
-        } else {
-          // There's overlap - need to split this child
-          const overlapStart = Math.max(childStart, start);
-          const overlapEnd = Math.min(childEnd, end);
-
-          // Before overlap (within this child)
-          if (childStart < overlapStart) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(0, overlapStart - childStart),
-            });
-          }
-
-          // Overlapping part - toggle the format
-          newChildren.push({
-            ...child,
-            content: child.content!.substring(
-              overlapStart - childStart,
-              overlapEnd - childStart
-            ),
-            bold: format === "bold" ? !isActive : child.bold,
-            italic: format === "italic" ? !isActive : child.italic,
-            underline: format === "underline" ? !isActive : child.underline,
-            strikethrough:
-              format === "strikethrough" ? !isActive : child.strikethrough,
-            code: format === "code" ? !isActive : child.code,
-          });
-
-          // After overlap (within this child)
-          if (childEnd > overlapEnd) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(overlapEnd - childStart),
-            });
-          }
-        }
-
-        currentPos = childEnd;
-      }
-
-      // Ensure there's always a text node at the end to allow cursor escape
-      const lastChild = newChildren[newChildren.length - 1];
-      const hasFormatting =
-        lastChild &&
-        (lastChild.bold ||
-          lastChild.italic ||
-          lastChild.underline ||
-          lastChild.strikethrough ||
-          lastChild.code ||
-          lastChild.elementType);
-
-      if (hasFormatting) {
-        // Add non-breaking space for cursor positioning (regular space gets collapsed by browser)
-        newChildren.push({ content: "\u00A0" });
-      }
-
-      // Update the node in the tree
-      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
-        content: undefined, // Clear simple content
-        children: newChildren, // Set inline children
-      })) as ContainerNode;
-
-      console.log("✅ Updated node in tree, new children:", newChildren);
-      console.log("📦 New container:", newContainer);
-
-      // Verify the update worked by finding the node again
-      const updatedNode = findNodeById(newContainer, nodeId);
-      console.log("🔍 Verification - node after update:", updatedNode);
-
-      // Update the selection's format state
-      const newSelection = {
-        ...state.currentSelection,
-        formats: {
-          ...state.currentSelection.formats,
-          [format]: !isActive,
-        },
-      };
-
-      console.groupEnd();
-
-      return addToHistory(
-        {
-          ...state,
-          currentSelection: newSelection,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "APPLY_CUSTOM_CLASS": {
-      const { className } = action.payload;
-
-      console.group("🎨 [APPLY_CUSTOM_CLASS] Reducer executing");
-
-      if (!state.currentSelection) {
-        console.warn("❌ Cannot apply custom class without active selection");
-        console.groupEnd();
-        return state;
-      }
-
-      const { nodeId, start, end } = state.currentSelection;
-
-      const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as
-        | TextNode
-        | undefined;
-
-      if (!node || !isTextNode(node)) {
-        console.warn("❌ Node not found or not a text node");
-        console.groupEnd();
-        return state;
-      }
-
-      // Convert node to inline children if it's still plain content
-      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
-      let children = hasInlineChildren(node)
-        ? node.children!
-        : [{ content: node.content || "" }];
-      
-      // If we have empty content but the selection has text, use the selection text
-      if (
-        !hasInlineChildren(node) &&
-        !node.content &&
-        state.currentSelection.text
-      ) {
-        children = [{ content: state.currentSelection.text }];
-        console.log(
-          "⚠️ [APPLY_CUSTOM_CLASS] Using selection text as content source:",
-          state.currentSelection.text
-        );
-      }
-
-      // Build new children array by splitting segments that overlap with selection
-      const newChildren: typeof node.children = [];
-      let currentPos = 0;
-
-      for (const child of children) {
-        const childLength = (child.content || "").length;
-        const childStart = currentPos;
-        const childEnd = currentPos + childLength;
-
-        // Check overlap with selection [start, end)
-        if (childEnd <= start || childStart >= end) {
-          // No overlap - keep as is
-          newChildren.push({ ...child });
-        } else {
-          // There's overlap - need to split this child
-          const overlapStart = Math.max(childStart, start);
-          const overlapEnd = Math.min(childEnd, end);
-
-          // Before overlap (within this child)
-          if (childStart < overlapStart) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(0, overlapStart - childStart),
-            });
-          }
-
-          // Overlapping part - merge className (just combine classes now, no styles)
-          const existingClasses = (child.className || "")
-            .split(" ")
-            .filter(Boolean);
-          const newClasses = className.split(" ").filter(Boolean);
-          const mergedClasses = [
-            ...new Set([...existingClasses, ...newClasses]),
-          ];
-          const mergedClassName = mergedClasses.join(" ").trim();
-
-          newChildren.push({
-            ...child,
-            content: child.content!.substring(
-              overlapStart - childStart,
-              overlapEnd - childStart
-            ),
-            className: mergedClassName || undefined,
-          });
-
-          // After overlap (within this child)
-          if (childEnd > overlapEnd) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(overlapEnd - childStart),
-            });
-          }
-        }
-
-        currentPos = childEnd;
-      }
-
-      // Update the node in the tree
-      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
-        content: undefined, // Clear simple content
-        children: newChildren, // Set inline children
-      })) as ContainerNode;
-
-      console.groupEnd();
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "APPLY_INLINE_STYLE": {
-      const { property, value } = action.payload;
-
-      console.group(`🎨 [APPLY_INLINE_STYLE] Applying ${property}: ${value}`);
-
-      if (!state.currentSelection) {
-        console.warn("❌ Cannot apply inline style without active selection");
-        console.groupEnd();
-        return state;
-      }
-
-      const { nodeId, start, end } = state.currentSelection;
-
-      const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as
-        | TextNode
-        | undefined;
-
-      if (!node || !isTextNode(node)) {
-        console.warn("❌ Node not found or not a text node");
-        console.groupEnd();
-        return state;
-      }
-
-      // Convert node to inline children if it's still plain content
-      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
-      let children = hasInlineChildren(node)
-        ? node.children!
-        : [{ content: node.content || "" }];
-      
-      // If we have empty content but the selection has text, use the selection text
-      if (
-        !hasInlineChildren(node) &&
-        !node.content &&
-        state.currentSelection.text
-      ) {
-        children = [{ content: state.currentSelection.text }];
-        console.log(
-          "⚠️ [APPLY_INLINE_STYLE] Using selection text as content source:",
-          state.currentSelection.text
-        );
-      }
-
-      // Build new children array by splitting segments that overlap with selection
-      const newChildren: typeof node.children = [];
-      let currentPos = 0;
-
-      for (const child of children) {
-        const childLength = (child.content || "").length;
-        const childStart = currentPos;
-        const childEnd = currentPos + childLength;
-
-        // Check overlap with selection [start, end)
-        if (childEnd <= start || childStart >= end) {
-          // No overlap - keep as is
-          newChildren.push({ ...child });
-        } else {
-          // There's overlap - need to split this child
-          const overlapStart = Math.max(childStart, start);
-          const overlapEnd = Math.min(childEnd, end);
-
-          // Before overlap (within this child)
-          if (childStart < overlapStart) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(0, overlapStart - childStart),
-            });
-          }
-
-          // Overlapping part - merge inline styles
-          const mergedStyles = {
-            ...child.styles,
-            [property]: value,
-          };
-
-          newChildren.push({
-            ...child,
-            content: child.content!.substring(
-              overlapStart - childStart,
-              overlapEnd - childStart
-            ),
-            styles: mergedStyles,
-          });
-
-          // After overlap (within this child)
-          if (childEnd > overlapEnd) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(overlapEnd - childStart),
-            });
-          }
-        }
-
-        currentPos = childEnd;
-      }
-
-      // Update the node in the tree
-      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
-        content: undefined, // Clear simple content
-        children: newChildren, // Set inline children
-      })) as ContainerNode;
-
-      console.groupEnd();
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "APPLY_LINK": {
-      const { href } = action.payload;
-
-      console.group("🔗 [APPLY_LINK] Reducer executing");
-
-      if (!state.currentSelection) {
-        console.warn("❌ Cannot apply link without active selection");
-        console.groupEnd();
-        return state;
-      }
-
-      const { nodeId, start, end } = state.currentSelection;
-
-      const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as
-        | TextNode
-        | undefined;
-
-      if (!node || !isTextNode(node)) {
-        console.warn("❌ Node not found or not a text node");
-        console.groupEnd();
-        return state;
-      }
-
-      // Convert node to inline children if it's still plain content
-      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
-      let children = hasInlineChildren(node)
-        ? node.children!
-        : [{ content: node.content || "" }];
-      
-      // If we have empty content but the selection has text, use the selection text
-      if (
-        !hasInlineChildren(node) &&
-        !node.content &&
-        state.currentSelection.text
-      ) {
-        children = [{ content: state.currentSelection.text }];
-        console.log(
-          "⚠️ [APPLY_LINK] Using selection text as content source:",
-          state.currentSelection.text
-        );
-      }
-
-      // Build new children array by splitting segments that overlap with selection
-      const newChildren: typeof node.children = [];
-      let currentPos = 0;
-
-      for (const child of children) {
-        const childLength = (child.content || "").length;
-        const childStart = currentPos;
-        const childEnd = currentPos + childLength;
-
-        // Check overlap with selection [start, end)
-        if (childEnd <= start || childStart >= end) {
-          // No overlap - keep as is
-          newChildren.push({ ...child });
-        } else {
-          // There's overlap - need to split this child
-          const overlapStart = Math.max(childStart, start);
-          const overlapEnd = Math.min(childEnd, end);
-
-          // Before overlap (within this child)
-          if (childStart < overlapStart) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(0, overlapStart - childStart),
-            });
-          }
-
-          // Overlapping part - apply the link
-          newChildren.push({
-            ...child,
-            content: child.content!.substring(
-              overlapStart - childStart,
-              overlapEnd - childStart
-            ),
-            href: href,
-          });
-
-          // After overlap (within this child)
-          if (childEnd > overlapEnd) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(overlapEnd - childStart),
-            });
-          }
-        }
-
-        currentPos = childEnd;
-      }
-
-      // Update the node in the tree
-      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
-        content: undefined, // Clear simple content
-        children: newChildren, // Set inline children
-      })) as ContainerNode;
-
-      console.groupEnd();
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "REMOVE_LINK": {
-      console.group("🔗 [REMOVE_LINK] Reducer executing");
-
-      if (!state.currentSelection) {
-        console.warn("❌ Cannot remove link without active selection");
-        console.groupEnd();
-        return state;
-      }
-
-      const { nodeId, start, end } = state.currentSelection;
-
-      const currentContainer = state.history[state.historyIndex];
-      const node = findNodeById(currentContainer, nodeId) as
-        | TextNode
-        | undefined;
-
-      if (!node || !isTextNode(node)) {
-        console.warn("❌ Node not found or not a text node");
-        console.groupEnd();
-        return state;
-      }
-
-      // Convert node to inline children if it's still plain content
-      // IMPORTANT: For nested blocks, the node.content might not be synced yet due to debouncing
-      let children = hasInlineChildren(node)
-        ? node.children!
-        : [{ content: node.content || "" }];
-      
-      // If we have empty content but the selection has text, use the selection text
-      if (
-        !hasInlineChildren(node) &&
-        !node.content &&
-        state.currentSelection.text
-      ) {
-        children = [{ content: state.currentSelection.text }];
-        console.log(
-          "⚠️ [REMOVE_LINK] Using selection text as content source:",
-          state.currentSelection.text
-        );
-      }
-
-      // Build new children array by splitting segments that overlap with selection
-      const newChildren: typeof node.children = [];
-      let currentPos = 0;
-
-      for (const child of children) {
-        const childLength = (child.content || "").length;
-        const childStart = currentPos;
-        const childEnd = currentPos + childLength;
-
-        // Check overlap with selection [start, end)
-        if (childEnd <= start || childStart >= end) {
-          // No overlap - keep as is
-          newChildren.push({ ...child });
-        } else {
-          // There's overlap - need to split this child
-          const overlapStart = Math.max(childStart, start);
-          const overlapEnd = Math.min(childEnd, end);
-
-          // Before overlap (within this child)
-          if (childStart < overlapStart) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(0, overlapStart - childStart),
-            });
-          }
-
-          // Overlapping part - remove the link
-          newChildren.push({
-            ...child,
-            content: child.content!.substring(
-              overlapStart - childStart,
-              overlapEnd - childStart
-            ),
-            href: undefined, // Remove the href
-          });
-
-          // After overlap (within this child)
-          if (childEnd > overlapEnd) {
-            newChildren.push({
-              ...child,
-              content: child.content!.substring(overlapEnd - childStart),
-            });
-          }
-        }
-
-        currentPos = childEnd;
-      }
-
-      // Update the node in the tree
-      const newContainer = updateNodeById(currentContainer, nodeId, () => ({
-        content: undefined, // Clear simple content
-        children: newChildren, // Set inline children
-      })) as ContainerNode;
-
-      console.groupEnd();
-
-      return addToHistory(
-        {
-          ...state,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        newContainer
-      );
-    }
-
-    case "SELECT_ALL_BLOCKS": {
-      // Select all block IDs
-      const currentContainer = state.history[state.historyIndex];
-      const allBlockIds = new Set(
-        currentContainer.children.map((child) => child.id)
-      );
-      return {
-        ...state,
-        selectedBlocks: allBlockIds,
-      };
-    }
-
-    case "CLEAR_BLOCK_SELECTION": {
-      return {
-        ...state,
-        selectedBlocks: new Set(),
-      };
-    }
-
-    case "DELETE_SELECTED_BLOCKS": {
-      if (state.selectedBlocks.size === 0) {
-        return state;
-      }
-
-      const currentContainer = state.history[state.historyIndex];
-      // Delete all selected blocks
-      const newChildren = currentContainer.children.filter(
-        (child) => !state.selectedBlocks.has(child.id)
-      );
-
-      // If all blocks were deleted, create a new empty paragraph
-      if (newChildren.length === 0) {
-        const newNode: TextNode = {
-          id: "p-" + Date.now(),
-          type: "p",
-          content: "",
-          attributes: {},
-        };
-        newChildren.push(newNode);
-      }
-
-      return addToHistory(
-        {
-          ...state,
-          selectedBlocks: new Set(),
-          activeNodeId: newChildren[0]?.id || null,
-          metadata: {
-            ...state.metadata,
-            updatedAt: new Date().toISOString(),
-          },
-        },
-        {
-          ...currentContainer,
-          children: newChildren,
-        }
-      );
-    }
-
-    case "UNDO": {
-      if (state.historyIndex > 0) {
-        const newIndex = state.historyIndex - 1;
-        return {
-          ...state,
-          historyIndex: newIndex,
-        };
-      }
-      return state;
-    }
-
-    case "REDO": {
-      if (state.historyIndex < state.history.length - 1) {
-        const newIndex = state.historyIndex + 1;
-        return {
-          ...state,
-          historyIndex: newIndex,
-        };
-      }
-      return state;
-    }
-
-    case "SET_COVER_IMAGE": {
-      const { coverImage } = action.payload;
-      return {
-        ...state,
-        coverImage,
-        metadata: {
-          ...state.metadata,
-          updatedAt: new Date().toISOString(),
-        },
-      };
-    }
-
-    case "REMOVE_COVER_IMAGE": {
-      return {
-        ...state,
-        coverImage: null,
-        metadata: {
-          ...state.metadata,
-          updatedAt: new Date().toISOString(),
-        },
-      };
-    }
-
-    case "UPDATE_COVER_IMAGE_POSITION": {
-      const { position } = action.payload;
-      if (!state.coverImage) {
-        console.warn("Cannot update position: no cover image set");
-        return state;
-      }
-      return {
-        ...state,
-        coverImage: {
-          ...state.coverImage,
-          position,
-        },
-        metadata: {
-          ...state.metadata,
-          updatedAt: new Date().toISOString(),
-        },
-      };
-    }
-
-    default:
+    default: {
       // Exhaustiveness check
       const _exhaustive: never = action;
       console.warn("Unknown action type:", _exhaustive);
       return state;
+    }
   }
 }
 
@@ -1296,16 +205,13 @@ export function createInitialState(
   // If container is provided, use it; otherwise create with at least one empty block
   let defaultChildren = container?.children;
 
-  // If no children provided or empty array, create a default empty heading
+  // If no children provided or empty array, create a default empty paragraph
   if (!defaultChildren || defaultChildren.length === 0) {
-    const timestamp = Date.now();
     const defaultNode: TextNode = {
-      id: `h1-${timestamp}`,
-      type: "h1",
+      id: generateId('p'),
+      type: "p",
       content: "",
-      attributes: {
-        placeholder: "New page",
-      },
+      attributes: {},
     };
     defaultChildren = [defaultNode];
   }
@@ -1317,12 +223,11 @@ export function createInitialState(
     ...container,
   };
 
-  // No need to clone - the container is already a new object
-  // Structural sharing will be maintained as we make edits
   return {
     version: "1.0.0",
-    history: [initialContainer],
-    historyIndex: 0,
+    current: initialContainer,
+    undoStack: [],
+    redoStack: [],
     activeNodeId: initialContainer.children[0].id,
     hasSelection: false,
     selectionKey: 0,

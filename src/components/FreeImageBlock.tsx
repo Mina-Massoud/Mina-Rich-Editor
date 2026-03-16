@@ -2,17 +2,19 @@
  * FreeImageBlock Component
  *
  * Renders a free-positioned image that can be dragged anywhere on the canvas
- * and maintains its position via styles (x, y coordinates)
+ * and maintains its position via styles (x, y coordinates).
+ * Resize logic is delegated to the useImageResize hook.
  */
 
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { TextNode } from "../lib";
 import { X, ImageIcon, Loader2, Move } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEditorDispatch } from "../lib/store/editor-store";
 import { EditorActions } from "@/lib/reducer/actions";
+import { useImageResize } from "../hooks/useImageResize";
 
 interface FreeImageBlockProps {
   node: TextNode;
@@ -24,7 +26,6 @@ interface FreeImageBlockProps {
 
 export function FreeImageBlock({
   node,
-  isActive,
   onClick,
   onDelete,
   readOnly = false,
@@ -32,19 +33,13 @@ export function FreeImageBlock({
   const dispatch = useEditorDispatch();
   const [imageError, setImageError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeSide, setResizeSide] = useState<"left" | "right" | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   const [position, setPosition] = useState({
     x: parseFloat((node.attributes?.styles as any)?.left || "100") || 0,
     y: parseFloat((node.attributes?.styles as any)?.top || "100") || 0,
   });
-  const [size, setSize] = useState<{ width: number; height: number | "auto" }>({
-    width: parseFloat((node.attributes?.styles as any)?.width || "400") || 400,
-    height: "auto",
-  });
   const dragRef = useRef<HTMLDivElement>(null);
   const startPosRef = useRef({ x: 0, y: 0, mouseX: 0, mouseY: 0 });
-  const startSizeRef = useRef({ width: 0, height: 0, mouseX: 0, mouseY: 0 });
 
   const imageUrl = node.attributes?.src as string | undefined;
   const altText = node.attributes?.alt as string | undefined;
@@ -54,37 +49,61 @@ export function FreeImageBlock({
   const hasError =
     node.attributes?.error === "true" || node.attributes?.error === true;
 
-  const handleImageLoad = () => {
+  // Parse initial width from node attributes (px mode)
+  const getInitialWidth = (): number => {
+    const styles = node.attributes?.styles;
+    if (styles && typeof styles === "object" && !Array.isArray(styles)) {
+      const width = (styles as Record<string, string>).width;
+      if (width) {
+        const v = parseFloat(width);
+        if (!isNaN(v)) return Math.max(200, Math.min(800, v));
+      }
+    }
+    return 400;
+  };
+
+  const getNodeAttributes = useCallback(
+    () => (node.attributes || {}) as Record<string, any>,
+    [node.attributes]
+  );
+
+  const {
+    currentWidth,
+    isResizing,
+    dimensionLabel,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    onKeyDown,
+  } = useImageResize({
+    nodeId: node.id,
+    initialWidth: getInitialWidth(),
+    unit: "px",
+    minWidth: 200,
+    maxWidth: 800,
+    containerRef: dragRef as React.RefObject<HTMLElement>,
+    dispatch,
+    getNodeAttributes,
+    aspectRatio,
+  });
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     setImageError(false);
+    const img = e.currentTarget;
+    if (img.naturalWidth && img.naturalHeight) {
+      setAspectRatio(img.naturalWidth / img.naturalHeight);
+    }
   };
 
   const handleImageError = () => {
     setImageError(true);
   };
 
+  // --- Drag (position) logic remains here since it's specific to FreeImageBlock ---
   const handleDragStart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
-    startPosRef.current = {
-      x: position.x,
-      y: position.y,
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-    };
-  };
-
-  const handleResizeStart = (e: React.MouseEvent, side: "left" | "right") => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-    setResizeSide(side);
-    startSizeRef.current = {
-      width: size.width,
-      height: typeof size.height === "number" ? size.height : 0,
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-    };
     startPosRef.current = {
       x: position.x,
       y: position.y,
@@ -109,7 +128,6 @@ export function FreeImageBlock({
     const handleMouseUp = () => {
       setIsDragging(false);
 
-      // Save position to node attributes
       const currentStyles = (node.attributes?.styles || {}) as Record<
         string,
         string
@@ -141,84 +159,13 @@ export function FreeImageBlock({
     };
   }, [isDragging, position, node.id, node.attributes, dispatch]);
 
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - startSizeRef.current.mouseX;
-
-      if (resizeSide === "right") {
-        // Resize from right side - only width changes
-        const newWidth = Math.max(
-          200,
-          Math.min(800, startSizeRef.current.width + deltaX)
-        );
-        setSize({ width: newWidth, height: "auto" });
-      } else if (resizeSide === "left") {
-        // Resize from left side - width and position change
-        const newWidth = Math.max(
-          200,
-          Math.min(800, startSizeRef.current.width - deltaX)
-        );
-        const widthDiff = startSizeRef.current.width - newWidth;
-        const newX = startPosRef.current.x + widthDiff;
-
-        setSize({ width: newWidth, height: "auto" });
-        setPosition({ x: newX, y: position.y });
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      setResizeSide(null);
-
-      // Save size and position to node attributes
-      const currentStyles = (node.attributes?.styles || {}) as Record<
-        string,
-        string
-      >;
-      const newStyles = {
-        ...currentStyles,
-        width: `${size.width}px`,
-        height: "auto",
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        position: "fixed",
-        zIndex: currentStyles.zIndex || "10",
-      };
-
-      dispatch(
-        EditorActions.updateNode(node.id, {
-          attributes: {
-            ...node.attributes,
-            styles: newStyles,
-          },
-        })
-      );
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [
-    isResizing,
-    resizeSide,
-    size,
-    position,
-    node.id,
-    node.attributes,
-    dispatch,
-  ]);
-
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (_e: React.MouseEvent) => {
     if (!isDragging && !isResizing) {
       onClick();
     }
   };
+
+  const showResizeHandles = !readOnly && !isUploading && !hasError && imageUrl;
 
   return (
     <div
@@ -230,14 +177,22 @@ export function FreeImageBlock({
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        width: `${size.width}px`,
-        height:
-          typeof size.height === "string" ? size.height : `${size.height}px`,
+        width: `${currentWidth}px`,
+        height: "auto",
         zIndex: isDragging || isResizing ? 1000 : 10,
       }}
       onClick={handleClick}
+      onKeyDown={onKeyDown}
+      tabIndex={0}
     >
       <div className="relative">
+        {/* Dimension overlay during resize */}
+        {isResizing && dimensionLabel && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-black/75 text-white text-xs px-2 py-1 rounded pointer-events-none">
+            {dimensionLabel}
+          </div>
+        )}
+
         {/* Drag handle - only in edit mode */}
         {!readOnly && (
           <div
@@ -324,22 +279,28 @@ export function FreeImageBlock({
         </div>
 
         {/* Resize handles - only in edit mode */}
-        {!readOnly && !isUploading && !hasError && imageUrl && (
+        {showResizeHandles && (
           <>
-            {/* Right resize handle */}
+            {/* Left resize handle — large hit area (44px), small visual indicator */}
             <div
-              className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-16 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-20 flex items-center justify-center"
-              onMouseDown={(e) => handleResizeStart(e, "right")}
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-11 h-11 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-20 flex items-center justify-center"
+              style={{ touchAction: "none" }}
+              onPointerDown={(e) => handlePointerDown(e, "left")}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
             >
-              <div className="w-1 h-12 bg-primary/50 rounded-full hover:bg-primary transition-colors" />
+              <div className="w-1.5 h-10 bg-primary/50 rounded-full hover:bg-primary transition-colors" />
             </div>
 
-            {/* Left resize handle */}
+            {/* Right resize handle — large hit area (44px), small visual indicator */}
             <div
-              className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-16 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-20 flex items-center justify-center"
-              onMouseDown={(e) => handleResizeStart(e, "left")}
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-20 flex items-center justify-center"
+              style={{ touchAction: "none" }}
+              onPointerDown={(e) => handlePointerDown(e, "right")}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
             >
-              <div className="w-1 h-12 bg-primary/50 rounded-full hover:bg-primary transition-colors" />
+              <div className="w-1.5 h-10 bg-primary/50 rounded-full hover:bg-primary transition-colors" />
             </div>
           </>
         )}

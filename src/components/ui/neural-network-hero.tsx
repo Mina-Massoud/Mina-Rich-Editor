@@ -4,6 +4,7 @@ import { useRef, useMemo } from 'react';
 import { Canvas, useFrame, extend } from '@react-three/fiber';
 import { shaderMaterial } from '@react-three/drei';
 import * as THREE from 'three';
+import { useTheme } from 'next-themes';
 
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -26,6 +27,7 @@ const fragmentShader = `
   #endif
   uniform float iTime;
   uniform vec2 iResolution;
+  uniform float uDark;
   varying vec2 vUv;
   
   vec4 buf[8];
@@ -154,35 +156,42 @@ const fragmentShader = `
     
     // Convert to grayscale using luminance formula
     float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-    
+
     // Lighter contrast for more visible patterns
     gray = pow(gray, 0.85);
     gray = smoothstep(0.1, 0.9, gray);
-    
-    // Map to dark gray and bright white gradient - more light
-    vec3 darkGray = vec3(0.05, 0.05, 0.08);
-    vec3 brightWhite = vec3(0.95, 0.95, 1.0);
-    vec3 finalColor = mix(darkGray, brightWhite, gray);
-    
+
+    // Dark mode: dark gray to bright white
+    vec3 darkLow = vec3(0.05, 0.05, 0.08);
+    vec3 darkHigh = vec3(0.95, 0.95, 1.0);
+    // Light mode: white to soft gray-blue
+    vec3 lightLow = vec3(0.96, 0.96, 0.98);
+    vec3 lightHigh = vec3(0.55, 0.55, 0.62);
+
+    vec3 lo = mix(lightLow, darkLow, uDark);
+    vec3 hi = mix(lightHigh, darkHigh, uDark);
+    vec3 finalColor = mix(lo, hi, gray);
+
     gl_FragColor = vec4(finalColor, 1.0);
   }
 `;
 
 const CPPNShaderMaterial = shaderMaterial(
-  { iTime: 0, iResolution: new THREE.Vector2(1, 1) },
+  { iTime: 0, iResolution: new THREE.Vector2(1, 1), uDark: 0.0 },
   vertexShader,
   fragmentShader
 );
 
 extend({ CPPNShaderMaterial });
 
-function ShaderPlane() {
+function ShaderPlane({ isDark }: { isDark: boolean }) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const materialRef = useRef<any>(null!);
 
   useFrame((state) => {
     if (!materialRef.current) return;
     materialRef.current.iTime = state.clock.elapsedTime;
+    materialRef.current.uDark = isDark ? 1.0 : 0.0;
     const { width, height } = state.size;
     materialRef.current.iResolution.set(width, height);
     
@@ -206,9 +215,9 @@ function ShaderPlane() {
   );
 }
 
-function ShaderBackground() {
+function ShaderBackground({ isDark }: { isDark: boolean }) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
-  
+
   const camera = useMemo(() => ({ position: [0, 0, 1] as [number, number, number], fov: 75, near: 0.1, far: 1000 }), []);
   
   useGSAP(
@@ -234,16 +243,16 @@ function ShaderBackground() {
   );
   
   return (
-    <div ref={canvasRef} className="bg-black absolute inset-0 -z-10 w-full h-full" aria-hidden>
+    <div ref={canvasRef} className={`absolute inset-0 -z-10 w-full h-full ${isDark ? 'bg-black' : 'bg-white'}`} aria-hidden>
       <Canvas
         camera={camera}
         gl={{ antialias: true, alpha: false }}
         dpr={[1, 2]}
         style={{ width: '100%', height: '100%' }}
       >
-        <ShaderPlane />
+        <ShaderPlane isDark={isDark} />
       </Canvas>
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20" />
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-t ${isDark ? 'from-black/30 via-transparent to-black/20' : 'from-white/30 via-transparent to-white/20'}`} />
     </div>
   );
 }
@@ -269,6 +278,8 @@ export default function Hero({
   ],
   microDetails = ["Low‑weight font", "Tight tracking", "Subtle motion"]
 }: HeroProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const sectionRef = useRef<HTMLElement | null>(null);
   const headerRef = useRef<HTMLHeadingElement | null>(null);
   const paraRef = useRef<HTMLParagraphElement | null>(null);
@@ -348,20 +359,20 @@ export default function Hero({
 
   return (
     <section ref={sectionRef} className="relative h-screen w-screen overflow-hidden flex flex-col">
-      <ShaderBackground />
+      <ShaderBackground isDark={isDark} />
 
       <div className="relative mx-auto flex max-w-7xl flex-col w-full items-start gap-6 px-6 pb-24 pt-36 sm:gap-8 sm:pt-44 md:px-10 lg:px-16">
-        <div ref={badgeRef} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-sm">
-          <span className="text-[10px] font-light uppercase tracking-[0.08em] text-white/70">{badgeLabel}</span>
-          <span className="h-1 w-1 rounded-full bg-white/40" />
-          <span className="text-xs font-light tracking-tight text-white/80">{badgeText}</span>
+        <div ref={badgeRef} className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-sm ${isDark ? 'border-white/10 bg-white/5' : 'border-black/10 bg-black/5'}`}>
+          <span className={`text-[10px] font-light uppercase tracking-[0.08em] ${isDark ? 'text-white/70' : 'text-black/60'}`}>{badgeLabel}</span>
+          <span className={`h-1 w-1 rounded-full ${isDark ? 'bg-white/40' : 'bg-black/30'}`} />
+          <span className={`text-xs font-light tracking-tight ${isDark ? 'text-white/80' : 'text-black/70'}`}>{badgeText}</span>
         </div>
 
-        <h1 ref={headerRef} className="max-w-2xl text-left text-5xl font-extralight leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
+        <h1 ref={headerRef} className={`max-w-2xl text-left text-5xl font-extralight leading-[1.05] tracking-tight sm:text-6xl md:text-7xl ${isDark ? 'text-white' : 'text-gray-900'}`}>
           {title}
         </h1>
 
-        <p ref={paraRef} className="max-w-xl text-left text-base font-light leading-relaxed tracking-tight text-white/75 sm:text-lg">
+        <p ref={paraRef} className={`max-w-xl text-left text-base font-light leading-relaxed tracking-tight sm:text-lg ${isDark ? 'text-white/75' : 'text-gray-600'}`}>
           {description}
         </p>
 
@@ -378,10 +389,10 @@ export default function Hero({
                   button.onClick();
                 }
               }}
-              className={`rounded-2xl border border-white/10 px-5 py-3 text-sm font-light tracking-tight transition-colors focus:outline-none focus:ring-2 focus:ring-white/30 duration-300 ${
-                button.primary
-                  ? "bg-white/10 text-white backdrop-blur-sm hover:bg-white/20"
-                  : "text-white/80 hover:bg-white/5"
+              className={`rounded-2xl border px-5 py-3 text-sm font-light tracking-tight transition-colors focus:outline-none focus:ring-2 duration-300 ${
+                isDark
+                  ? `border-white/10 focus:ring-white/30 ${button.primary ? 'bg-white/10 text-white backdrop-blur-sm hover:bg-white/20' : 'text-white/80 hover:bg-white/5'}`
+                  : `border-black/10 focus:ring-black/20 ${button.primary ? 'bg-black/10 text-gray-900 backdrop-blur-sm hover:bg-black/15' : 'text-gray-700 hover:bg-black/5'}`
               }`}
             >
               {button.text}
@@ -389,54 +400,54 @@ export default function Hero({
           ))}
         </div>
 
-        <ul ref={microRef} className="mt-8 flex flex-wrap gap-6 text-xs font-extralight tracking-tight text-white/60">
+        <ul ref={microRef} className={`mt-8 flex flex-wrap gap-6 text-xs font-extralight tracking-tight ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
           {microDetails.map((detail, index) => {
             const refMap = [microItem1Ref, microItem2Ref, microItem3Ref];
             return (
               <li key={index} ref={refMap[index]} className="flex items-center gap-2">
-                <span className="h-1 w-1 rounded-full bg-white/40" /> {detail}
+                <span className={`h-1 w-1 rounded-full ${isDark ? 'bg-white/40' : 'bg-black/30'}`} /> {detail}
               </li>
             );
           })}
         </ul>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
-      
+      <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t ${isDark ? 'from-black/40' : 'from-white/40'} to-transparent`} />
+
       <div className="inset-x-0 bottom-6 flex justify-center pointer-events-auto mt-auto pb-10">
-        <div className="text-center text-xs text-white/50 font-light tracking-tight">
+        <div className={`text-center text-xs font-light tracking-tight ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
           <p className="mb-2">Under MIT License • Structure and idea developed by mina-massoud @2025</p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
-            <a 
-              href="mailto:minamelad232@gmail.com" 
-              className="hover:text-white/70 transition-colors underline-offset-4 hover:underline"
+            <a
+              href="mailto:minamelad232@gmail.com"
+              className={`transition-colors underline-offset-4 hover:underline ${isDark ? 'hover:text-white/70' : 'hover:text-gray-800'}`}
             >
               minamelad232@gmail.com
             </a>
             <span>|</span>
-            <a 
-              href="https://github.com/Mina-Massoud/Mina-Rich-Editor" 
+            <a
+              href="https://github.com/Mina-Massoud/Mina-Rich-Editor"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-white/70 transition-colors underline-offset-4 hover:underline"
+              className={`transition-colors underline-offset-4 hover:underline ${isDark ? 'hover:text-white/70' : 'hover:text-gray-800'}`}
             >
               GitHub
             </a>
             <span>|</span>
-            <a 
-              href="https://mina-massoud.com" 
+            <a
+              href="https://mina-massoud.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-white/70 transition-colors underline-offset-4 hover:underline"
+              className={`transition-colors underline-offset-4 hover:underline ${isDark ? 'hover:text-white/70' : 'hover:text-gray-800'}`}
             >
               Portfolio
             </a>
             <span>|</span>
-            <a 
-              href="https://www.linkedin.com/in/mina-melad/" 
+            <a
+              href="https://www.linkedin.com/in/mina-melad/"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-white/70 transition-colors underline-offset-4 hover:underline"
+              className={`transition-colors underline-offset-4 hover:underline ${isDark ? 'hover:text-white/70' : 'hover:text-gray-800'}`}
             >
               LinkedIn
             </a>

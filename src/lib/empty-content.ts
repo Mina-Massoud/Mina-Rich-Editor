@@ -8,47 +8,20 @@
  */
 
 import { EditorNode, TextNode } from "./types";
+import { generateId } from "./utils/id-generator";
 
 /**
  * Creates minimal empty content for normal rich editor mode.
  * 
- * Returns 3 empty paragraph blocks ready for editing.
- * No headers, no cover images - just clean, empty blocks.
+ * Returns 1 empty paragraph block ready for editing.
+ * No headers, no cover images - just a clean, empty block.
  *
- * @param timestamp - Optional timestamp for unique IDs (defaults to current time)
- * @returns Array of empty paragraph nodes
- *
- * @example
- * ```typescript
- * import { createEmptyContent } from '@/lib/empty-content';
- *
- * const emptyNodes = createEmptyContent();
- * const newContainer: ContainerNode = {
- *   id: 'root',
- *   type: 'container',
- *   children: emptyNodes,
- *   attributes: {}
- * };
- * ```
+ * @returns Array with a single empty paragraph node
  */
-export function createEmptyContent(
-  timestamp: number = Date.now()
-): EditorNode[] {
+export function createEmptyContent(): EditorNode[] {
   return [
     {
-      id: `p-${timestamp}-1`,
-      type: "p",
-      content: "",
-      attributes: {},
-    } as TextNode,
-    {
-      id: `p-${timestamp}-2`,
-      type: "p",
-      content: "",
-      attributes: {},
-    } as TextNode,
-    {
-      id: `p-${timestamp}-3`,
+      id: generateId("p"),
       type: "p",
       content: "",
       attributes: {},

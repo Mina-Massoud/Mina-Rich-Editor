@@ -64,7 +64,7 @@ export function VideoBlock({
     }
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {};
+  const handleDragEnd = (_e: React.DragEvent) => {};
 
   const videoUrl = node.attributes?.src as string | undefined;
   const caption = node.content || "";
@@ -90,6 +90,8 @@ export function VideoBlock({
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      data-node-id={node.id}
+      data-node-type="video"
       className={`
         relative !border-0 mb-4 p-4 transition-all duration-200 cursor-move group
         ${isActive ? "ring-2 ring-primary/[0.05] bg-accent/5" : "hover:bg-accent/5"}
