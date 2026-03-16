@@ -8,10 +8,18 @@ import type { SectionMeta } from "./DocsSidebar";
 interface DocsMobileNavProps {
   sections: SectionMeta[];
   activeSection?: string;
+  onNavigate?: (sectionId: string) => void;
 }
 
-export function DocsMobileNav({ sections, activeSection }: DocsMobileNavProps) {
+export function DocsMobileNav({ sections, activeSection, onNavigate }: DocsMobileNavProps) {
   const [open, setOpen] = useState(false);
+
+  const handleClick = (sectionId: string) => {
+    setOpen(false);
+    if (onNavigate) {
+      onNavigate(sectionId);
+    }
+  };
 
   return (
     <>
@@ -45,22 +53,35 @@ export function DocsMobileNav({ sections, activeSection }: DocsMobileNavProps) {
             <ul className="p-4 space-y-0.5">
               {sections.map((s) => {
                 const isActive = activeSection === s.id;
+                const className = `w-full flex items-center gap-3 px-3 py-2 text-sm font-light transition-all duration-200 ${
+                  isActive
+                    ? "text-foreground bg-muted"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`;
                 return (
                   <li key={s.id}>
-                    <Link
-                      href={`/docs/${s.id}`}
-                      onClick={() => setOpen(false)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-light transition-all duration-200 ${
-                        isActive
-                          ? "text-foreground bg-muted"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70 shrink-0">
-                        {s.num}
-                      </span>
-                      <span>{s.label}</span>
-                    </Link>
+                    {onNavigate ? (
+                      <button
+                        onClick={() => handleClick(s.id)}
+                        className={`text-left ${className}`}
+                      >
+                        <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70 shrink-0">
+                          {s.num}
+                        </span>
+                        <span>{s.label}</span>
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/docs/${s.id}`}
+                        onClick={() => setOpen(false)}
+                        className={className}
+                      >
+                        <span className="font-mono text-[10px] tabular-nums text-muted-foreground/70 shrink-0">
+                          {s.num}
+                        </span>
+                        <span>{s.label}</span>
+                      </Link>
+                    )}
                   </li>
                 );
               })}

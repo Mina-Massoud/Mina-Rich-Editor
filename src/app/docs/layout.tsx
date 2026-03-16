@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "Documentation",
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
     description:
       "Complete documentation for Mina Rich Editor. Installation, usage, API reference, and customization guides.",
     type: "article",
-    url: "https://mina-rich-editor.vercel.app/docs",
+    url: `${SITE_URL}/docs`,
   },
   twitter: {
     card: "summary_large_image",
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
       "Complete documentation for Mina Rich Editor. Installation, usage, API reference, and customization guides.",
   },
   alternates: {
-    canonical: "https://mina-rich-editor.vercel.app/docs",
+    canonical: `${SITE_URL}/docs`,
   },
 };
 
@@ -41,4 +42,3 @@ export default function DocsLayout({
 }) {
   return <>{children}</>;
 }
-

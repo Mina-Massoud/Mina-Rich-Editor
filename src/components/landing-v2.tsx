@@ -65,6 +65,37 @@ const EXPORT_FORMATS = [
   { fn: "getPlainText()", desc: "Raw text for search indexing and previews" },
 ];
 
+const faqItems = [
+  {
+    q: "What is Mina Rich Editor?",
+    a: "Mina Rich Editor is a free, open-source React block-based rich text editor that provides Notion-style block editing, built-in AI content generation, and Y.js-powered real-time collaboration in a single ~45KB gzipped package with zero ProseMirror dependency. It is built with TypeScript, shadcn/ui, and Tailwind CSS, and is MIT-licensed for commercial use.",
+  },
+  {
+    q: "How does Mina Rich Editor compare to TipTap?",
+    a: "Mina Rich Editor is ~45KB gzipped versus TipTap's 120KB+, requires no ProseMirror dependency, and includes built-in AI streaming and real-time collaboration at no cost. TipTap requires ProseMirror as a mandatory peer dependency and charges for collaboration and AI features. Mina Rich Editor is fully MIT-licensed with no commercial restrictions.",
+  },
+  {
+    q: "What block types does Mina Rich Editor support?",
+    a: "Mina Rich Editor supports 15+ block types including paragraphs, headings (H1–H4), ordered and unordered lists, code blocks, blockquotes, tables with row and column manipulation, images with drag-to-upload and resize, horizontal rules, toggle blocks, and cover images. All block types support drag-and-drop reordering and nesting.",
+  },
+  {
+    q: "Does Mina Rich Editor support AI content generation?",
+    a: "Yes. Mina Rich Editor has built-in AI integration that works with OpenAI, Anthropic Claude, Google Gemini, Ollama, or any custom endpoint. AI responses stream token-by-token directly into editor blocks, and Markdown output is parsed into structured blocks (headings, lists, code) as it arrives. Users can type /ai followed by a prompt to generate content inline.",
+  },
+  {
+    q: "Is Mina Rich Editor free to use?",
+    a: "Yes. Mina Rich Editor is completely free and open-source under the MIT license. There are no commercial restrictions, no paid tiers, and no feature gating. AI integration, real-time collaboration, and all 15+ block types are included at no cost.",
+  },
+  {
+    q: "Does Mina Rich Editor support real-time collaboration?",
+    a: "Yes. Mina Rich Editor includes Y.js CRDT-powered real-time collaboration with cursor presence, user name labels, and conflict-free merging — even for offline edits. Integration requires wrapping the editor in a CollaborationProvider and pointing it at a WebSocket server.",
+  },
+  {
+    q: "What export formats does Mina Rich Editor support?",
+    a: "Mina Rich Editor exports content as JSON (structured tree for storage), semantic HTML (no Tailwind or framework artifacts), CommonMark-compatible Markdown, and plain text (for search indexing and previews). All formats are available via simple API calls: getJSON(), getHTML(), getMarkdown(), and getPlainText().",
+  },
+];
+
 /* ─── Syntax highlighting color helpers (uses CSS variables for dark mode) ── */
 
 const Kw = ({ children }: { children: React.ReactNode }) => <span style={{ color: "var(--syntax-keyword)" }}>{children}</span>;
@@ -76,11 +107,11 @@ const Ty = ({ children }: { children: React.ReactNode }) => <span style={{ color
 
 /* ─── Handwritten text with hand-drawn underline ──────────────────────────── */
 
-function Hw({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Hw({ children, className = "", style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
-    <span className={`relative inline-block font-handwritten italic ${className}`}>
+    <span className={`relative inline-block font-handwritten italic ${className}`} style={style}>
       {children}
-      <svg className="absolute -bottom-1 left-0 w-full" viewBox="0 0 120 8" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style={{ height: '6px' }}>
+      <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 120 8" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style={{ height: '8px' }}>
         <path d="M2 5.5C20 2 40 1.5 60 4C80 6.5 100 5 118 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       </svg>
     </span>
@@ -113,33 +144,58 @@ export default function LandingPageV2() {
       </nav>
 
       {/* === HERO ============================================================= */}
-      <section className="relative pt-32 pb-16 min-h-[90vh] md:pt-44 md:pb-24 overflow-hidden bg-background">
-        {/* Gradient accent */}
-        <div
-          className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-[300px] blur-[80px] opacity-60 pointer-events-none"
-          style={{ background: "var(--int-gradient-strong)" }}
-        />
+      <section className="relative pt-32 pb-20 min-h-[90vh] md:pt-44 md:pb-28 overflow-hidden bg-background flex items-center">
+        <div className="relative z-10 max-w-[1200px] mx-auto px-6 w-full">
+          <div className="max-w-4xl mx-auto">
+            {/* Mono tag line */}
+            <div className="flex items-center gap-3 mb-8 justify-center md:justify-start">
+              <span
+                className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 font-medium"
+                style={{ fontFamily: "var(--font-geist-mono)" }}
+              >
+                React &middot; TypeScript &middot; MIT
+              </span>
+            </div>
 
-        <img src={'/backgrounds/hero-img.webp'} className="absolute invert dark:invert-0 inset-0 w-full h-full opacity-[0.03]" />
-
-        <div className="relative z-10 max-w-[1200px] mx-auto px-6">
-          <div className="max-w-3xl">
-            <p className="text-sm font-mono uppercase tracking-[0.15em] mb-4 text-muted-foreground">
-              Mina Rich Editor
-            </p>
-            <h1
-              className="text-4xl lg:text-[56px] font-medium leading-none text-foreground"
-              style={{ letterSpacing: "-0.03em" }}
-            >
-              AI-Powered, Collaborative,
-              <br />
-              <Hw className="text-5xl lg:text-[64px]">Free</Hw>
+            <h1 className="text-foreground text-center md:text-left" style={{ lineHeight: 1.08 }}>
+              <span
+                className="block text-[clamp(2.6rem,5.8vw,4.8rem)] font-extrabold"
+                style={{ fontFamily: "var(--font-dm-sans)", letterSpacing: "-0.035em" }}
+              >
+                The rich text editor
+              </span>
+              <span
+                className="block text-[clamp(2.6rem,5.8vw,4.8rem)] font-extrabold"
+                style={{ fontFamily: "var(--font-dm-sans)", letterSpacing: "-0.035em" }}
+              >
+                with{" "}
+                <span className="text-muted-foreground/50">AI</span>
+                {","}{" "}
+                <span className="text-muted-foreground/50">live collab</span>
+                {","}
+              </span>
+              <span
+                className="block text-[clamp(2.6rem,5.8vw,4.8rem)] font-extrabold"
+                style={{ fontFamily: "var(--font-dm-sans)", letterSpacing: "-0.035em" }}
+              >
+                and{" "}
+                <span className="text-muted-foreground/50">no price tag</span>
+              </span>
             </h1>
-            <p className="mt-5 text-lg lg:text-xl font-normal leading-relaxed max-w-2xl text-muted-foreground">
-              Notion-style blocks, built-in AI generation, and real-time collaboration — with zero ProseMirror dependency. No license fees.
+
+            <p
+              className="mt-7 text-[15px] lg:text-base leading-relaxed max-w-md text-muted-foreground text-center md:text-left"
+              style={{ fontFamily: "var(--font-dm-sans)" }}
+            >
+              Notion-style blocks, streaming AI, and Y.js collaboration in ~45KB. No ProseMirror. No license fees. Just ship.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-3">
-              <Link href="/demo" className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:opacity-90 transition-opacity">
+
+            <div className="mt-9 flex flex-col sm:flex-row items-center md:items-start gap-3">
+              <Link
+                href="/demo"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold bg-foreground text-background rounded-md hover:opacity-90 transition-opacity"
+                style={{ fontFamily: "var(--font-dm-sans)" }}
+              >
                 <Play className="w-3.5 h-3.5" /> Try the Editor
               </Link>
               <CopyNpm command="npm i @mina-editor/core" />
@@ -149,7 +205,7 @@ export default function LandingPageV2() {
       </section>
 
       {/* === HOW IT WORKS -- 3-COLUMN GRID ==================================== */}
-      <section className="relative overflow-hidden bg-muted">
+      <section className="relative overflow-hidden">
         {/* Gradient blur background */}
         <div className="pointer-events-none absolute -top-20 left-1/4 w-[500px] h-[500px] rounded-full blur-[100px] opacity-[0.08]" style={{ background: "linear-gradient(135deg, #ec4899, #6366f1)" }} />
         <div className="pointer-events-none absolute -bottom-20 right-1/4 w-[400px] h-[400px] rounded-full blur-[100px] opacity-[0.06]" style={{ background: "linear-gradient(135deg, #6366f1, #06b6d4)" }} />
@@ -260,7 +316,7 @@ export default function LandingPageV2() {
       </section>
 
       {/* === FEATURE SECTION 2 -- AI ========================================== */}
-      <section className="relative overflow-hidden bg-muted">
+      <section className="relative overflow-hidden">
         {/* Blue-purple gradient blur */}
         <div className="pointer-events-none absolute top-1/4 -left-20 w-[500px] h-[500px] rounded-full blur-[100px] opacity-[0.07]" style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)" }} />
 
@@ -384,7 +440,7 @@ export default function LandingPageV2() {
       </section>
 
       {/* === COLLABORATION SECTION ============================================ */}
-      <section className="relative overflow-hidden bg-muted">
+      <section className="relative overflow-hidden">
         {/* Blue-purple gradient blur */}
         <div className="pointer-events-none absolute top-1/3 right-1/4 w-[400px] h-[400px] rounded-full blur-[100px] opacity-[0.06]" style={{ background: "linear-gradient(135deg, #8b5cf6, #3b82f6)" }} />
 
@@ -482,8 +538,50 @@ export default function LandingPageV2() {
         </div>
       </section>
 
+      {/* === FAQ (GEO-optimized) ================================================ */}
+      <section className="relative bg-background py-24 md:py-32">
+        <div className="max-w-[800px] mx-auto px-6">
+          <div className="mb-14">
+            <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">06 — FAQ</span>
+            <h2
+              className="mt-4 text-3xl lg:text-[44px] font-medium leading-tight text-foreground"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Frequently asked questions
+            </h2>
+          </div>
+
+          <div className="space-y-8">
+            {faqItems.map((faq, i) => (
+              <div key={i} className="pb-8" style={{ borderBottom: "1px solid var(--int-border)" }}>
+                <h3 className="text-base font-medium text-foreground mb-3">{faq.q}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: faqItems.map((faq) => ({
+                "@type": "Question",
+                name: faq.q,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: faq.a,
+                },
+              })),
+            }),
+          }}
+        />
+      </section>
+
       {/* === CTA FOOTER ======================================================= */}
-      <section className="relative overflow-hidden bg-muted">
+      <section className="relative overflow-hidden">
         {/* Gradient accent behind */}
         <div
           className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-[300px] blur-[100px] opacity-40 pointer-events-none"

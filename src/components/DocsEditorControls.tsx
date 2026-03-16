@@ -1,0 +1,97 @@
+"use client";
+
+import { RotateCcw, Eye, EyeOff, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
+
+interface DocsEditorControlsProps {
+  readOnly: boolean;
+  onReadOnlyChange: (readOnly: boolean) => void;
+  onReset: () => void;
+}
+
+export function DocsEditorControls({
+  readOnly,
+  onReadOnlyChange,
+  onReset,
+}: DocsEditorControlsProps) {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <TooltipProvider>
+      <div className="fixed top-[4.5rem] md:top-20 lg:top-17 right-2 md:right-4 z-[105] flex items-center gap-1 bg-background border rounded-lg shadow-lg p-1 md:p-1.5">
+        {/* Reset button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 md:h-9 md:w-9"
+              onClick={onReset}
+            >
+              <RotateCcw className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="sr-only">Reset to original</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Reset to original</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Separator orientation="vertical" className="h-5 md:h-6" />
+
+        {/* Read-only toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={readOnly ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8 md:h-9 md:w-9"
+              onClick={() => onReadOnlyChange(!readOnly)}
+            >
+              {readOnly ? (
+                <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              ) : (
+                <EyeOff className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              )}
+              <span className="sr-only">
+                {readOnly ? "View Only Mode" : "Edit Mode"}
+              </span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{readOnly ? "View Only Mode" : "Edit Mode"}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Separator orientation="vertical" className="h-5 md:h-6" />
+
+        {/* Theme toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 md:h-9 md:w-9"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              <Sun className="h-3.5 w-3.5 md:h-4 md:w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-3.5 w-3.5 md:h-4 md:w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Toggle Theme</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
+}
