@@ -397,6 +397,18 @@ export function traverseTree(
 }
 
 /**
+ * Builds a flat Map from node ID to EditorNode for O(1) lookups.
+ * The map is a derived cache — `state.current` (the tree) remains the source of truth.
+ */
+export function buildNodeMap(root: EditorNode): Map<string, EditorNode> {
+  const map = new Map<string, EditorNode>();
+  traverseTree(root, (node) => {
+    if (node.id) map.set(node.id, node);
+  });
+  return map;
+}
+
+/**
  * Validates the tree structure.
  * Checks for duplicate IDs, orphaned nodes, etc.
  *

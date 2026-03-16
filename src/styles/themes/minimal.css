@@ -1,0 +1,123 @@
+/**
+ * Mina Rich Editor — Minimal Theme
+ *
+ * An ultra-clean, monochrome theme built around generous whitespace and
+ * pure typographic contrast. No visible borders, no chrome — just content.
+ * Headings are larger and bolder to create clear hierarchy without decoration.
+ *
+ * USAGE
+ * -----
+ * 1. Import alongside the base styles:
+ *      import '@mina-editor/core/styles';
+ *      import '@mina-editor/core/themes/minimal';
+ *
+ * 2. Add the class to your editor wrapper:
+ *      <div className="mina-editor theme-minimal">…</div>
+ */
+
+/* ============================================================================
+   Light mode
+   ============================================================================ */
+
+.mina-editor.theme-minimal {
+  /* ── Typography ──────────────────────────────────────────────────────────── */
+  --mina-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --mina-font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+  --mina-font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo,
+    Consolas, monospace;
+
+  /* ── Font sizes — slightly larger for generous reading experience ────────── */
+  --mina-text-sm: 0.875rem;
+  --mina-text-base: 1.0625rem; /* 17px */
+  --mina-text-lg: 1.1875rem;
+  --mina-text-xl: 1.375rem;
+  --mina-text-2xl: 1.75rem;
+  --mina-text-3xl: 2.25rem;
+  --mina-text-4xl: 2.875rem;
+
+  /* ── Line heights — relaxed for readability ──────────────────────────────── */
+  --mina-leading-tight: 1.15;
+  --mina-leading-snug: 1.3;
+  --mina-leading-normal: 1.55;
+  --mina-leading-relaxed: 1.75;
+
+  /* ── Spacing — very generous ─────────────────────────────────────────────── */
+  --mina-block-padding-x: 0.75rem;
+  --mina-block-padding-y: 0.5rem;
+  --mina-block-margin-bottom: 0.75rem;
+  --mina-indent-size: 1.5rem;
+
+  /* ── Colors — monochrome ─────────────────────────────────────────────────── */
+  --mina-color-text: #111111;
+  --mina-color-heading: #000000;
+  --mina-color-muted: #888888;
+  --mina-color-border: transparent;
+  --mina-color-bg: #ffffff;
+  --mina-color-bg-hover: rgba(0, 0, 0, 0.02);
+  --mina-color-bg-active: rgba(0, 0, 0, 0.04);
+  --mina-color-bg-code: #f5f5f5;
+  --mina-color-primary: #111111;
+
+  /* ── Blockquote — no decoration, just indent + muted color ──────────────── */
+  --mina-blockquote-border-width: 2px;
+  --mina-blockquote-border-color: #e0e0e0;
+  --mina-blockquote-padding-left: 1.25rem;
+  --mina-blockquote-font-style: italic;
+
+  /* ── Code blocks ─────────────────────────────────────────────────────────── */
+  --mina-code-bg: #f5f5f5;
+  --mina-code-padding: 1.25rem;
+  --mina-code-border-radius: 4px;
+
+  /* ── Inline code ─────────────────────────────────────────────────────────── */
+  --mina-inline-code-bg: #f0f0f0;
+  --mina-inline-code-border-radius: 3px;
+
+  /* ── Toolbar — small, subtle ─────────────────────────────────────────────── */
+  --mina-toolbar-bg: #ffffff;
+  --mina-toolbar-border-color: #e8e8e8;
+  --mina-toolbar-button-size: 1.5rem;
+  --mina-toolbar-icon-size: 0.875rem;
+
+  /* ── Drag handle ─────────────────────────────────────────────────────────── */
+  --mina-drag-handle-color: #d4d4d4;
+  --mina-drag-handle-color-hover: #a3a3a3;
+
+  /* ── Selection — subtle gray ─────────────────────────────────────────────── */
+  --mina-block-active-border-color: #111111;
+  --mina-block-active-bg: rgba(0, 0, 0, 0.03);
+
+  /* ── Drop indicators ─────────────────────────────────────────────────────── */
+  --mina-drop-indicator-color: #111111;
+  --mina-drop-indicator-opacity: 0.2;
+
+  /* ── Border radius — no rounding ─────────────────────────────────────────── */
+  --mina-radius-sm: 2px;
+  --mina-radius-md: 3px;
+  --mina-radius-lg: 4px;
+}
+
+/* ============================================================================
+   Dark mode
+   ============================================================================ */
+
+.dark .mina-editor.theme-minimal,
+[data-theme="dark"] .mina-editor.theme-minimal {
+  --mina-color-text: #fafafa;
+  --mina-color-heading: #ffffff;
+  --mina-color-muted: #737373;
+  --mina-color-border: transparent;
+  --mina-color-bg: #0a0a0a;
+  --mina-color-bg-hover: rgba(255, 255, 255, 0.03);
+  --mina-color-bg-active: rgba(255, 255, 255, 0.05);
+  --mina-color-bg-code: #141414;
+  --mina-color-primary: #fafafa;
+  --mina-blockquote-border-color: #2a2a2a;
+  --mina-toolbar-bg: #0a0a0a;
+  --mina-toolbar-border-color: #1f1f1f;
+  --mina-inline-code-bg: #141414;
+  --mina-drag-handle-color: #292929;
+  --mina-drag-handle-color-hover: #525252;
+  --mina-block-active-border-color: #fafafa;
+  --mina-drop-indicator-color: #fafafa;
+}

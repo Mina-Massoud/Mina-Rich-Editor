@@ -21,9 +21,20 @@ import {
 } from "../types";
 import { editorReducer, createInitialState } from "../reducer/editor-reducer";
 import { EditorAction } from "../reducer/actions";
+import { buildNodeMap } from "../utils/tree-operations";
+import { ExtensionManager } from "../extensions/ExtensionManager";
+import { StarterKit } from "../extensions/starter-kit";
+import type { AnyResolvedExtension } from "../extensions/types";
 
 // Store interface
 interface EditorStore extends EditorState {
+  // Extension registry — populated with StarterKit by default.
+  extensionManager: ExtensionManager;
+
+  // Derived cache: flat map of nodeId → EditorNode for O(1) lookups.
+  // Rebuilt after every dispatch. NOT part of EditorState.
+  nodeMap: Map<string, EditorNode>;
+
   // Actions
   dispatch: (action: EditorAction) => void;
 
@@ -75,8 +86,13 @@ function findNodeById(
  */
 export function createEditorStore(
   initialContainer?: ContainerNode,
-  initialState?: EditorState
+  initialState?: EditorState,
+  extensions?: AnyResolvedExtension[]
 ) {
+  // Create extension manager — use provided extensions or fall back to StarterKit
+  const extensionManager = new ExtensionManager();
+  extensionManager.register(...(extensions ?? StarterKit));
+
   return create<EditorStore>()(
     subscribeWithSelector((set, get) => {
       // Initialize selection subscribers
@@ -94,6 +110,12 @@ export function createEditorStore(
         // Initialize with provided or default state
         ...baseState,
 
+        // Extension registry
+        extensionManager,
+
+        // Derived node map for O(1) lookups — rebuilt after every dispatch.
+        nodeMap: buildNodeMap(baseState.current),
+
         // Selection state (non-reactive)
         _selection: null,
         _selectionSubscribers: selectionSubscribers,
@@ -103,6 +125,7 @@ export function createEditorStore(
           const currentState = get();
           const newState = editorReducer(currentState, action);
           // Only update EditorState fields - preserve store methods (dispatch, getNode, etc.)
+          // Rebuild nodeMap for O(1) lookups in useBlockNode.
           set({
             version: newState.version,
             current: newState.current,
@@ -115,6 +138,7 @@ export function createEditorStore(
             selectedBlocks: newState.selectedBlocks,
             coverImage: newState.coverImage,
             metadata: newState.metadata,
+            nodeMap: buildNodeMap(newState.current),
           });
         },
 
@@ -245,9 +269,7 @@ export function useEditorStore<T>(
  */
 export function useBlockNode(nodeId: string) {
   const store = useEditorStoreContext();
-  return useStore(store, (state) => {
-    return findNodeById(state.current, nodeId);
-  });
+  return useStore(store, (state) => state.nodeMap.get(nodeId));
 }
 
 /**
@@ -302,6 +324,15 @@ export function useContainerGetter(): () => ContainerNode {
     () => store.getState().current,
     [store]
   );
+}
+
+/**
+ * Hook to access the ExtensionManager from the nearest EditorProvider.
+ * Stable reference — never causes re-renders.
+ */
+export function useExtensionManager(): ExtensionManager {
+  const store = useEditorStoreContext();
+  return useStore(store, (state) => state.extensionManager);
 }
 
 /**
@@ -370,6 +401,8 @@ export interface EditorProviderProps {
   children: React.ReactNode;
   initialContainer?: ContainerNode;
   initialState?: EditorState;
+  /** Custom extensions (defaults to StarterKit if not provided). */
+  extensions?: AnyResolvedExtension[];
   onChange?: (state: EditorState) => void;
 }
 
@@ -378,6 +411,7 @@ export function EditorProvider({
   children,
   initialContainer,
   initialState,
+  extensions,
   onChange,
 }: EditorProviderProps) {
   // Create the store exactly once per provider mount.
@@ -386,7 +420,7 @@ export function EditorProvider({
   // the store survives Strict Mode double-render and keeps the same IDs
   // that were generated during the first initialization.
   const [store] = React.useState(() =>
-    createEditorStore(initialContainer, initialState)
+    createEditorStore(initialContainer, initialState, extensions)
   );
 
   // If initialState/initialContainer change AFTER mount, sync the store.

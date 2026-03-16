@@ -5,7 +5,8 @@
  */
 
 import { TextNode } from "../../types";
-import { getTypeClassName } from "./block-utils";
+import { getTypeClassNameFromRegistry } from "./block-utils";
+import { ExtensionManager } from "../../extensions/ExtensionManager";
 
 interface BlockStyleParams {
   textNode: TextNode;
@@ -15,6 +16,8 @@ interface BlockStyleParams {
   isListItem: boolean;
   isFirstBlock: boolean;
   notionBased: boolean;
+  /** Optional ExtensionManager for registry-aware style lookup */
+  extensionManager?: ExtensionManager;
 }
 
 /**
@@ -28,13 +31,14 @@ export function buildBlockClassName({
   isListItem,
   isFirstBlock,
   notionBased,
+  extensionManager,
 }: BlockStyleParams): string {
   const parts = [
     // List item positioning
     isListItem ? "relative" : "",
-    
-    // Type-specific styles (h1, h2, p, etc.)
-    getTypeClassName(textNode.type),
+
+    // Type-specific styles (h1, h2, p, etc.) — registry takes precedence over hardcoded
+    getTypeClassNameFromRegistry(textNode.type, extensionManager),
     
     // Custom className from node attributes
     className,
@@ -46,7 +50,7 @@ export function buildBlockClassName({
     getBlockSpacing(textNode.type, isListItem),
     
     // Notion-style first block spacing
-    notionBased && isFirstBlock ? "mt-8 pb-12" : "",
+    notionBased && isFirstBlock && textNode.type === 'h1' ? "mt-8 pb-12" : "",
     
     // Transitions
     "transition-all",

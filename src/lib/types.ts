@@ -13,38 +13,21 @@
 export type TextDirection = 'ltr' | 'rtl' | 'auto';
 
 /**
- * Supported node types for the editor.
- * Can be extended for custom node types via plugins.
+ * Built-in node types — kept as a union for autocomplete and type safety.
  */
-export type NodeType =
-  | 'h1'
-  | 'h2'
-  | 'h3'
-  | 'h4'
-  | 'h5'
-  | 'h6'
-  | 'p'
-  | 'blockquote'
-  | 'ol'
-  | 'li'
-  | 'code'
-  | 'pre'
-  | 'img'
-  | 'video'
-  | 'audio'
-  | 'a'
-  | 'span'
-  | 'div'
-  | 'hr'
-  | 'br'
-  | 'table'
-  | 'thead'
-  | 'tbody'
-  | 'tr'
-  | 'th'
-  | 'td'
-  | 'container'
-  | 'text';
+export type BuiltInNodeType =
+  | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+  | 'p' | 'blockquote' | 'ol' | 'li' | 'code' | 'pre'
+  | 'img' | 'video' | 'audio' | 'a' | 'span' | 'div'
+  | 'hr' | 'br'
+  | 'table' | 'thead' | 'tbody' | 'tr' | 'th' | 'td'
+  | 'container' | 'text';
+
+/**
+ * Supported node types. Includes built-in types plus any string for custom extensions.
+ * The `(string & {})` trick preserves autocomplete for built-in types.
+ */
+export type NodeType = BuiltInNodeType | (string & {});
 
 /**
  * Dynamic attributes that can be attached to any node.

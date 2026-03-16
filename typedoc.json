@@ -1,0 +1,17 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/lib/index.ts"],
+  "out": "docs/api",
+  "name": "Mina Rich Editor API",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "includeVersion": true,
+  "categorizeByGroup": true,
+  "skipErrorChecking": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/mina-editor/core",
+    "npm": "https://www.npmjs.com/package/@mina-editor/core"
+  },
+  "tsconfig": "tsconfig.json"
+}

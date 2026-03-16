@@ -1,0 +1,112 @@
+/**
+ * Mina Rich Editor — Notion-Inspired Theme
+ *
+ * A warm, document-centric theme that mirrors Notion's aesthetic:
+ * serif headings, system-ui body text, warm gray palette, and
+ * subtly rounded corners. Blockquotes use a warm left border rather
+ * than the default primary-color accent.
+ *
+ * USAGE
+ * -----
+ * 1. Import alongside the base styles:
+ *      import '@mina-editor/core/styles';
+ *      import '@mina-editor/core/themes/notion';
+ *
+ * 2. Add the class to your editor wrapper:
+ *      <div className="mina-editor theme-notion">…</div>
+ */
+
+/* ============================================================================
+   Light mode
+   ============================================================================ */
+
+.mina-editor.theme-notion {
+  /* ── Typography ──────────────────────────────────────────────────────────── */
+  --mina-font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  --mina-font-heading: Georgia, 'Times New Roman', Times, serif;
+  --mina-font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo,
+    Courier, monospace;
+
+  /* ── Font sizes — slightly smaller, document-like ────────────────────────── */
+  --mina-text-base: 0.9375rem; /* 15px */
+  --mina-text-lg: 1.0625rem;
+  --mina-text-xl: 1.25rem;
+  --mina-text-2xl: 1.5rem;
+  --mina-text-3xl: 1.875rem;
+  --mina-text-4xl: 2.25rem;
+
+  /* ── Line heights ─────────────────────────────────────────────────────────── */
+  --mina-leading-normal: 1.5;
+  --mina-leading-relaxed: 1.7;
+
+  /* ── Spacing — compact, Notion-like ─────────────────────────────────────── */
+  --mina-block-padding-x: 0.5rem;
+  --mina-block-padding-y: 0.25rem;
+  --mina-block-margin-bottom: 0.25rem;
+  --mina-indent-size: 1.5rem;
+
+  /* ── Colors — warm gray palette ──────────────────────────────────────────── */
+  --mina-color-text: #37352f;
+  --mina-color-heading: #37352f;
+  --mina-color-muted: #9b9a97;
+  --mina-color-border: #e9e5e0;
+  --mina-color-bg: #ffffff;
+  --mina-color-bg-hover: rgba(55, 53, 47, 0.04);
+  --mina-color-bg-active: rgba(55, 53, 47, 0.06);
+  --mina-color-bg-code: rgba(135, 131, 120, 0.15);
+  --mina-color-primary: #2383e2;
+
+  /* ── Blockquote — subtle warm left border ────────────────────────────────── */
+  --mina-blockquote-border-width: 3px;
+  --mina-blockquote-border-color: #e9e5e0;
+  --mina-blockquote-padding-left: 1rem;
+  --mina-blockquote-font-style: normal;
+
+  /* ── Code blocks ─────────────────────────────────────────────────────────── */
+  --mina-code-bg: rgba(135, 131, 120, 0.15);
+  --mina-code-padding: 0.875rem;
+  --mina-code-border-radius: 4px;
+
+  /* ── Inline code ─────────────────────────────────────────────────────────── */
+  --mina-inline-code-bg: rgba(135, 131, 120, 0.15);
+  --mina-inline-code-border-radius: 3px;
+
+  /* ── Toolbar — minimal, near-invisible ───────────────────────────────────── */
+  --mina-toolbar-bg: #ffffff;
+  --mina-toolbar-border-color: #e9e5e0;
+  --mina-toolbar-button-size: 1.625rem;
+  --mina-toolbar-icon-size: 0.9rem;
+
+  /* ── Drag handle ─────────────────────────────────────────────────────────── */
+  --mina-drag-handle-color: #c4c3c0;
+  --mina-drag-handle-color-hover: #9b9a97;
+
+  /* ── Border radius — softly rounded ─────────────────────────────────────── */
+  --mina-radius-sm: 3px;
+  --mina-radius-md: 6px;
+  --mina-radius-lg: 6px;
+}
+
+/* ============================================================================
+   Dark mode
+   ============================================================================ */
+
+.dark .mina-editor.theme-notion,
+[data-theme="dark"] .mina-editor.theme-notion {
+  --mina-color-text: #e3e2df;
+  --mina-color-heading: #e3e2df;
+  --mina-color-muted: #686562;
+  --mina-color-border: rgba(255, 255, 255, 0.09);
+  --mina-color-bg: #191919;
+  --mina-color-bg-hover: rgba(255, 255, 255, 0.04);
+  --mina-color-bg-active: rgba(255, 255, 255, 0.07);
+  --mina-color-bg-code: rgba(255, 255, 255, 0.07);
+  --mina-color-primary: #529cca;
+  --mina-blockquote-border-color: rgba(255, 255, 255, 0.12);
+  --mina-toolbar-bg: #1f1e1c;
+  --mina-toolbar-border-color: rgba(255, 255, 255, 0.09);
+  --mina-inline-code-bg: rgba(255, 255, 255, 0.07);
+  --mina-drag-handle-color: #4a4846;
+  --mina-drag-handle-color-hover: #686562;
+}

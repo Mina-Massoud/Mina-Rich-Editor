@@ -54,12 +54,23 @@
 //
 // Dark mode is handled automatically when a `.dark` class is on an ancestor
 // or when `data-theme="dark"` is set on the editor wrapper element.
+//
+// Theme presets (import one alongside the base styles):
+//   import '@mina-editor/core/themes/notion';
+//   import '@mina-editor/core/themes/minimal';
+//   import '@mina-editor/core/themes/github';
+//
+// Then add the theme class to your editor wrapper:
+//   <div className="mina-editor theme-notion">
+//   <div className="mina-editor theme-minimal">
+//   <div className="mina-editor theme-github">
 
 // ============================================================================
 // Types and Interfaces
 // ============================================================================
 export type {
   NodeType,
+  BuiltInNodeType,
   NodeAttributes,
   BaseNode,
   TextNode,
@@ -117,6 +128,7 @@ export {
   useSelectionManager,
   useSelection,
   useEditorStoreInstance,
+  useExtensionManager,
 } from './store/editor-store';
 
 export type { EditorProviderProps } from './store/editor-store';
@@ -140,6 +152,7 @@ export {
   cloneNode,
   traverseTree,
   validateTree,
+  buildNodeMap,
 } from './utils/tree-operations';
 
 export type { InsertPosition } from './utils/tree-operations';
@@ -267,3 +280,34 @@ export { CollaborationProvider, useCollaborationState } from '../components/Coll
 export type { CollaborationProviderProps } from '../components/CollaborationProvider';
 export { RemoteCursor } from '../components/RemoteCursor';
 export type { RemoteCursorProps } from '../components/RemoteCursor';
+
+// ============================================================================
+// Extension System
+// ============================================================================
+export {
+  Extension, Node, Mark, ExtensionManager, CommandManager, CommandChain, StarterKit,
+  // Built-in nodes
+  Paragraph, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
+  Blockquote, CodeBlock, BulletList, OrderedList,
+  HorizontalRule, Image as ImageExtension, Video as VideoExtension, Table as TableExtension, Divider,
+  // Built-in marks
+  Bold, Italic, Underline, Strikethrough, InlineCode, Link as LinkExtension,
+} from './extensions';
+export type {
+  ExtensionConfig,
+  NodeExtensionConfig,
+  MarkExtensionConfig,
+  ResolvedExtension,
+  ResolvedNodeExtension,
+  ResolvedMarkExtension,
+  AnyResolvedExtension,
+  ExtensionContext,
+  CommandContext,
+  CommandFunction,
+  ShortcutHandler,
+  InputRule,
+  SlashCommand,
+  ParseRule,
+  AttributeSpec,
+  BlockRenderProps,
+} from './extensions';
