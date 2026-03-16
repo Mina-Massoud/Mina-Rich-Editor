@@ -16,6 +16,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Features
 
+- **Extension system** — `Extension.create()`, `Node.create()`, `Mark.create()` — TipTap-inspired API without ProseMirror, letting you build and ship custom block types as plain objects.
+- **`ExtensionManager`** — central registry for nodes, marks, commands, keyboard shortcuts, input rules, and slash commands; resolved at provider mount time.
+- **`CommandManager`** with TipTap-style chaining: `editor.chain().toggleBold().toggleItalic().run()`.
+- **`StarterKit`** — 22 built-in extensions (16 nodes + 6 marks) ready out of the box; pass to `EditorProvider` via the new `extensions` prop.
+- **Input rules on all built-in extensions** — Markdown auto-conversion (`# ` → heading, `**text**` → bold, etc.) is now declared per-extension rather than in a monolithic handler.
+- **`EditorProvider` `extensions` prop** — accept a custom extension set to replace or augment the defaults.
+- **`useExtensionManager()` hook** — access the live extension registry from any component inside the provider tree.
+- **Extensible `NodeType`** — custom node types are now expressible via the `(string & {})` union; no core changes required.
+- **3 CSS theme presets** — Notion, Minimal, and GitHub themes importable from `@mina-editor/core/themes/notion` etc.
+- **Flat node map (`buildNodeMap`)** — O(1) node lookups in `useBlockNode`, replacing recursive tree searches.
+- **TypeDoc API reference generation** — run `pnpm docs:api` to emit a full HTML API reference.
 - **CompactEditor** — self-contained embeddable editor with an inline formatting toolbar. Designed as the primary drop-in component for CMS and app integrations.
 - **Markdown shortcuts** — type `# `, `## `, `### `, `> `, `-`, `1.`, ` ``` `, or `---` at the start of a block for instant type conversion.
 - **Markdown paste** — pasting Markdown text auto-converts it to rich block nodes.
@@ -39,10 +50,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fixed floating `SelectionToolbar` not appearing (changed `position: absolute` to `fixed`).
 - Replaced 20+ `setTimeout` hacks with `requestAnimationFrame` for deterministic DOM timing.
 - Batched Enter key dispatches to prevent intermediate re-renders between split and focus operations.
+- Fixed stale `history[historyIndex]` references — replaced with `state.current` reads throughout the store.
+- Removed bogus dependencies (`i`, `npm`, `@y/websocket-server`) that inflated the install footprint.
 
 ### Code Quality
 
-- 377 unit tests, 63 E2E tests (Playwright).
+- 969 tests: 759 unit tests + 210 E2E tests (Playwright).
 - All `console.log` statements removed from production code.
 - JSDoc added to every exported function and component.
 - Removed unused imports and dead code across handlers and utilities.

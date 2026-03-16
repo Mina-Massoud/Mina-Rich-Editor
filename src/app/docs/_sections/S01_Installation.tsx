@@ -12,20 +12,42 @@ export default function S01_Installation() {
         Get started in under a minute
       </SectionHeading>
 
-      <div className="space-y-8">
+      <div className="space-y-10">
+
+        {/* Method 1: npm */}
         <div>
-          <h3 className="mb-3 text-lg font-light text-foreground">
-            Step 1: Install the component
-          </h3>
-          <CodeBlock label="Terminal">{`npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json`}</CodeBlock>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground border border-border px-2 py-0.5">Method 1</span>
+            <span className="text-sm font-light text-foreground">npm — standalone projects</span>
+          </div>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Use this if you are setting up the editor as an npm package dependency in any React or Next.js project.
+          </p>
+          <CodeBlock label="Terminal">{`npm install @mina-editor/core`}</CodeBlock>
           <p className="mt-3 text-sm text-muted-foreground">
-            This automatically installs all required shadcn components, npm packages, and editor files into your project.
+            Then import styles and components directly from the package.
           </p>
         </div>
 
+        {/* Method 2: shadcn registry */}
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground border border-border px-2 py-0.5">Method 2</span>
+            <span className="text-sm font-light text-foreground">shadcn registry — shadcn/ui projects</span>
+          </div>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Use this if your project already uses <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">shadcn/ui</code>. The CLI will automatically install all required shadcn components, npm packages, and editor files.
+          </p>
+          <CodeBlock label="Terminal">{`npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json`}</CodeBlock>
+          <p className="mt-3 text-sm text-muted-foreground">
+            All dependencies are resolved automatically — no manual configuration needed.
+          </p>
+        </div>
+
+        {/* Step 2: Theme Provider */}
         <div>
           <h3 className="mb-3 text-lg font-light text-foreground">
-            Step 2: Configure the theme provider
+            Configure the theme provider
           </h3>
           <p className="mb-3 text-sm text-muted-foreground">
             The editor includes dark mode support. Wrap your app with the{" "}
@@ -49,7 +71,7 @@ export default function RootLayout({ children }) {
         </div>
 
         <NotesList items={[
-          <>Uses <strong className="text-foreground">shadcn CLI</strong> for zero-config installation -- all dependencies are handled automatically.</>,
+          <>Use <strong className="text-foreground">npm install</strong> for standalone projects; use the <strong className="text-foreground">shadcn CLI</strong> when your project already uses shadcn/ui.</>,
           <>Requires <strong className="text-foreground">React 18+</strong>, <strong className="text-foreground">Next.js 13+</strong>, and <strong className="text-foreground">Tailwind CSS</strong>.</>,
           <>Peer dependencies: <strong className="text-foreground">zustand</strong>, <strong className="text-foreground">framer-motion</strong>, <strong className="text-foreground">lucide-react</strong> are installed automatically.</>,
         ]} />

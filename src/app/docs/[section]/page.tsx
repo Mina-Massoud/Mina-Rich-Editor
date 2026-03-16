@@ -32,11 +32,13 @@ import S19_CompactEditor, { sectionMeta as s19 } from "../_sections/S19_CompactE
 import S20_HistorySystem, { sectionMeta as s20 } from "../_sections/S20_HistorySystem";
 import S21_APIReference, { sectionMeta as s21 } from "../_sections/S21_APIReference";
 import S22_Credits, { sectionMeta as s22 } from "../_sections/S22_Credits";
+import S23_Extensions, { sectionMeta as s23 } from "../_sections/S23_Extensions";
+import S24_Themes, { sectionMeta as s24 } from "../_sections/S24_Themes";
 
 const sections: SectionMeta[] = [
   s01, s02, s14, s15, s03, s19, s07, s05, s08, s04,
   s06, s09, s10, s11, s12, s13, s16, s18, s17, s20,
-  s21, s22,
+  s21, s23, s24, s22,
 ];
 
 const sectionComponents: Record<string, React.ComponentType> = {
@@ -61,6 +63,8 @@ const sectionComponents: Record<string, React.ComponentType> = {
   "compact-editor": S19_CompactEditor,
   "history-system": S20_HistorySystem,
   "api-reference": S21_APIReference,
+  "extensions": S23_Extensions,
+  "themes": S24_Themes,
   "credits": S22_Credits,
 };
 

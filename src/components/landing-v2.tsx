@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Github, Play, Terminal, Copy, Check } from "lucide-react";
+import { Github, Play, Terminal, Copy, Check, Palette } from "lucide-react";
 import { ModeToggle } from "./ui/mode-toggle";
+import Hero from "@/components/ui/neural-network-hero";
 
 function CopyNpm({ command }: { command: string }) {
   const [copied, setCopied] = useState(false);
@@ -35,8 +36,10 @@ const DX_ITEMS = [
   { tag: "a11y", title: "Accessibility", desc: "ARIA roles and labels on all interactive elements. Full keyboard navigation. Screen reader announcements for block operations." },
   { tag: "ts", title: "TypeScript-First", desc: "100% TypeScript. Every prop, callback, type, and hook is fully typed. The type system is the documentation." },
   { tag: "css", title: "Style Isolation", desc: "All editor styles are scoped. Your app's CSS won't break the editor. The editor's CSS won't break your app." },
-  { tag: "45k", title: "Lightweight", desc: "~45KB gzipped with zero ProseMirror dependency. Compare to TipTap at 120KB+ with mandatory ProseMirror core." },
-  { tag: "tst", title: "440+ Tests", desc: "Comprehensive test suite covering block operations, keyboard handling, serialization, and edge cases. Vitest + Playwright." },
+  { tag: "45k", title: "Lightweight", desc: "~45KB gzipped with zero ProseMirror dependency. TipTap ships 120KB+ with mandatory ProseMirror core. Mina's extension system adds zero overhead." },
+  { tag: "tst", title: "969 Tests", desc: "Comprehensive test suite: 759 unit tests (Vitest) and 210 E2E tests (Playwright) covering block operations, keyboard handling, serialization, and edge cases." },
+  { tag: "ext", title: "Extension System", desc: "Build custom blocks, marks, and commands with Extension.create(), Node.create(), and Mark.create(). TipTap-inspired API, zero ProseMirror dependency." },
+  { tag: "thm", title: "Theme Presets", desc: "3 built-in theme presets (Notion, Minimal, GitHub) — or create your own with CSS variables. Full dark mode support." },
 ];
 
 const PERF_FEATURES = [
@@ -72,7 +75,7 @@ const faqItems = [
   },
   {
     q: "How does Mina Rich Editor compare to TipTap?",
-    a: "Mina Rich Editor is ~45KB gzipped versus TipTap's 120KB+, requires no ProseMirror dependency, and includes built-in AI streaming and real-time collaboration at no cost. TipTap requires ProseMirror as a mandatory peer dependency and charges for collaboration and AI features. Mina Rich Editor is fully MIT-licensed with no commercial restrictions.",
+    a: "Mina Rich Editor is ~45KB gzipped versus TipTap's 120KB+, requires no ProseMirror dependency, and includes built-in AI streaming, real-time collaboration, an extension system with Node.create()/Mark.create()/Extension.create(), and 3 theme presets — all at no cost. TipTap requires ProseMirror as a mandatory peer dependency, charges for collaboration and AI features, and offers no built-in themes. Mina Rich Editor is fully MIT-licensed with no commercial restrictions.",
   },
   {
     q: "What block types does Mina Rich Editor support?",
@@ -105,19 +108,6 @@ const Cmt = ({ children }: { children: React.ReactNode }) => <span style={{ colo
 const Prop = ({ children }: { children: React.ReactNode }) => <span style={{ color: "var(--syntax-property)" }}>{children}</span>;
 const Ty = ({ children }: { children: React.ReactNode }) => <span style={{ color: "var(--syntax-type)" }}>{children}</span>;
 
-/* ─── Handwritten text with hand-drawn underline ──────────────────────────── */
-
-function Hw({ children, className = "", style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
-  return (
-    <span className={`relative inline-block font-handwritten italic ${className}`} style={style}>
-      {children}
-      <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 120 8" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style={{ height: '8px' }}>
-        <path d="M2 5.5C20 2 40 1.5 60 4C80 6.5 100 5 118 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    </span>
-  );
-}
-
 /* ─── Component ───────────────────────────────────────────────────────────── */
 
 export default function LandingPageV2() {
@@ -144,65 +134,17 @@ export default function LandingPageV2() {
       </nav>
 
       {/* === HERO ============================================================= */}
-      <section className="relative pt-32 pb-20 min-h-[90vh] md:pt-44 md:pb-28 overflow-hidden bg-background flex items-center">
-        <div className="relative z-10 max-w-[1200px] mx-auto px-6 w-full">
-          <div className="max-w-4xl mx-auto">
-            {/* Mono tag line */}
-            <div className="flex items-center gap-3 mb-8 justify-center md:justify-start">
-              <span
-                className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 font-medium"
-                style={{ fontFamily: "var(--font-geist-mono)" }}
-              >
-                React &middot; TypeScript &middot; MIT
-              </span>
-            </div>
-
-            <h1 className="text-foreground text-center md:text-left" style={{ lineHeight: 1.08 }}>
-              <span
-                className="block text-[clamp(2.6rem,5.8vw,4.8rem)] font-extrabold"
-                style={{ fontFamily: "var(--font-dm-sans)", letterSpacing: "-0.035em" }}
-              >
-                The rich text editor
-              </span>
-              <span
-                className="block text-[clamp(2.6rem,5.8vw,4.8rem)] font-extrabold"
-                style={{ fontFamily: "var(--font-dm-sans)", letterSpacing: "-0.035em" }}
-              >
-                with{" "}
-                <span className="text-muted-foreground/50">AI</span>
-                {","}{" "}
-                <span className="text-muted-foreground/50">live collab</span>
-                {","}
-              </span>
-              <span
-                className="block text-[clamp(2.6rem,5.8vw,4.8rem)] font-extrabold"
-                style={{ fontFamily: "var(--font-dm-sans)", letterSpacing: "-0.035em" }}
-              >
-                and{" "}
-                <span className="text-muted-foreground/50">no price tag</span>
-              </span>
-            </h1>
-
-            <p
-              className="mt-7 text-[15px] lg:text-base leading-relaxed max-w-md text-muted-foreground text-center md:text-left"
-              style={{ fontFamily: "var(--font-dm-sans)" }}
-            >
-              Notion-style blocks, streaming AI, and Y.js collaboration in ~45KB. No ProseMirror. No license fees. Just ship.
-            </p>
-
-            <div className="mt-9 flex flex-col sm:flex-row items-center md:items-start gap-3">
-              <Link
-                href="/demo"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold bg-foreground text-background rounded-md hover:opacity-90 transition-opacity"
-                style={{ fontFamily: "var(--font-dm-sans)" }}
-              >
-                <Play className="w-3.5 h-3.5" /> Try the Editor
-              </Link>
-              <CopyNpm command="npm i @mina-editor/core" />
-            </div>
-          </div>
-        </div>
-      </section>
+      <Hero
+        title="Rich text editor with AI & live collaboration"
+        description="Notion-style blocks, streaming AI, Y.js collaboration, and a TipTap-inspired extension system — in a single ~45KB package. No ProseMirror. No license fees. Just install and ship."
+        badgeText="AI, collaboration, everything — free forever"
+        badgeLabel="MIT Licensed"
+        ctaButtons={[
+          { text: "Try the editor", href: "/demo" },
+          { text: "Documentation", href: "/docs" },
+        ]}
+        microDetails={["AI generation", "Live collaboration", "Extension system", "969 tests"]}
+      />
 
       {/* === HOW IT WORKS -- 3-COLUMN GRID ==================================== */}
       <section className="relative overflow-hidden">
@@ -252,7 +194,7 @@ export default function LandingPageV2() {
             <div>
               <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">01 — Performance</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
-                Fast by architecture, not by <Hw>accident</Hw>
+                Fast by architecture, not by <em className="not-italic font-light text-muted-foreground">accident</em>
               </h2>
               <p className="mt-4 text-base leading-relaxed text-muted-foreground">
                 Engineered from the ground up for zero-lag editing at any scale.
@@ -356,7 +298,7 @@ export default function LandingPageV2() {
             <div className="order-1 lg:order-2">
               <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">02 — AI Integration</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
-                <Hw>Your</Hw> LLM, <Hw>your</Hw> editor
+                <em className="not-italic font-light text-muted-foreground">Your</em> LLM, <em className="not-italic font-light text-muted-foreground">your</em> editor
               </h2>
               <p className="mt-4 text-base leading-relaxed text-muted-foreground">
                 Provider-agnostic AI that streams content directly into blocks.
@@ -388,7 +330,7 @@ export default function LandingPageV2() {
             <div>
               <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">03 — Content Management</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
-                Programmatic control over <Hw>everything</Hw>
+                Programmatic control over <em className="not-italic font-light text-muted-foreground">everything</em>
               </h2>
               <p className="mt-4 text-base leading-relaxed text-muted-foreground">
                 Read content in any format. Set content programmatically. Full API access to every aspect of the editor.
@@ -479,7 +421,7 @@ export default function LandingPageV2() {
             <div className="order-1 lg:order-2">
               <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">04 — Collaboration</span>
               <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
-                Built for <Hw>multiplayer</Hw>
+                Built for <em className="not-italic font-light text-muted-foreground">multiplayer</em>
               </h2>
               <p className="mt-4 text-base leading-relaxed text-muted-foreground">
                 Same CRDT engine behind Figma and VS Code Live Share. No server-side resolution needed.
@@ -500,6 +442,83 @@ export default function LandingPageV2() {
         </div>
       </section>
 
+      {/* === EXTENSION SYSTEM ================================================= */}
+      <section className="relative overflow-hidden bg-background">
+        {/* Purple-indigo gradient blur */}
+        <div className="pointer-events-none absolute top-1/4 -right-20 w-[450px] h-[450px] rounded-full blur-[100px] opacity-[0.07]" style={{ background: "linear-gradient(135deg, #a855f7, #6366f1)" }} />
+
+        <div className="relative z-10 max-w-[1200px] mx-auto px-6 py-16 md:py-24">
+          <div className="int-divider mb-16" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+            <div>
+              <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">05 — Extension System</span>
+              <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
+                Extend the editor <em className="not-italic font-light text-muted-foreground">your way</em>
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+                TipTap-inspired API with zero ProseMirror dependency. Build custom blocks, marks, and commands in minutes — not days.
+              </p>
+
+              <div className="int-divider mt-10 mb-6" />
+
+              <div className="space-y-5">
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">Node.create() — Custom Blocks</h4>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Define new block types with styles, input rules, keyboard shortcuts, and slash-command registration. No schema language required.</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">Mark.create() — Inline Formatting</h4>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Add custom inline marks — highlights, annotations, comments — that integrate with the selection toolbar automatically.</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">Extension.create() — Behaviours</h4>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Register keyboard shortcuts, slash commands, and event hooks without defining new node types. Ship in one file.</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-muted-foreground" />
+                    3 Built-in Theme Presets
+                  </h4>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Notion, Minimal, and GitHub themes out of the box. Override any token with CSS variables — full dark mode support included.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: code card */}
+            <div className="int-code-block">
+              <div className="int-code-header">
+                <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Custom Extension</span>
+              </div>
+              <pre className="int-code-body">
+                <code>
+                  <Kw>import</Kw>{" { "}<Fn>Node</Fn>{", "}<Fn>StarterKit</Fn>{" } "}<Kw>from</Kw> <Str>{`'@mina-editor/core'`}</Str>{"\n"}
+                  {"\n"}
+                  <Cmt>{"// Define a custom callout block"}</Cmt>{"\n"}
+                  <Kw>const</Kw> <Prop>Callout</Prop>{" = "}<Fn>Node</Fn>{"."}<Fn>create</Fn>{"({\n"}
+                  {"  "}<Prop>name</Prop>{": "}<Str>{`'callout'`}</Str>{",\n"}
+                  {"  "}<Prop>nodeType</Prop>{": "}<Str>{`'callout'`}</Str>{",\n"}
+                  {"  "}<Prop>group</Prop>{": "}<Str>{`'block'`}</Str>{",\n"}
+                  {"  "}<Fn>addStyles</Fn>{": () =>\n"}
+                  {"    "}<Str>{`'bg-blue-50 border-l-4 border-blue-500 p-4 rounded'`}</Str>{",\n"}
+                  {"  "}<Fn>addInputRules</Fn>{": () => [{\n"}
+                  {"    "}<Prop>find</Prop>{": "}<Str>{`/^!!! (.+)$/`}</Str>{",\n"}
+                  {"    "}<Fn>handler</Fn>{": ("}<Prop>match</Prop>{", "}<Prop>ctx</Prop>{") => {\n"}
+                  {"      "}<Cmt>{"// Convert \"!!! text\" → callout block"}</Cmt>{"\n"}
+                  {"      "}<Kw>return</Kw>{" "}<Kw>true</Kw>{"\n"}
+                  {"    }\n"}
+                  {"  }],\n"}
+                  {"})\n"}
+                  {"\n"}
+                  {"<"}<Fn>CompactEditor</Fn>{"\n"}
+                  {"  "}<Prop>extensions</Prop>{"={["}<Fn>StarterKit</Fn>{", "}<Prop>Callout</Prop>{"]}\n"}
+                  {"/>"}
+                </code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* === DX FEATURE GRID ================================================== */}
       <section className="relative overflow-hidden bg-background">
         {/* Multi-color gradient blur */}
@@ -510,9 +529,9 @@ export default function LandingPageV2() {
         <div className="relative z-10 max-w-[1200px] mx-auto px-6 py-16 md:py-24">
           <div className="int-divider mb-12" />
           <div className="mb-12">
-            <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">05 — Developer Experience</span>
+            <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">06 — Developer Experience</span>
             <h2 className="mt-4 text-[28px] lg:text-4xl font-medium leading-tight text-foreground" style={{ letterSpacing: "-0.02em" }}>
-              Built by developers, <Hw>for developers</Hw>
+              Built by developers, <em className="not-italic font-light text-muted-foreground">for developers</em>
             </h2>
             <p className="mt-4 text-base leading-relaxed max-w-xl text-muted-foreground">
               Every feature is designed to save you time and reduce complexity.
@@ -542,7 +561,7 @@ export default function LandingPageV2() {
       <section className="relative bg-background py-24 md:py-32">
         <div className="max-w-[800px] mx-auto px-6">
           <div className="mb-14">
-            <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">06 — FAQ</span>
+            <span className="text-[11px] font-mono uppercase tracking-[0.15em] font-medium text-muted-foreground">07 — FAQ</span>
             <h2
               className="mt-4 text-3xl lg:text-[44px] font-medium leading-tight text-foreground"
               style={{ letterSpacing: "-0.03em" }}
@@ -593,10 +612,10 @@ export default function LandingPageV2() {
             className="text-4xl lg:text-[56px] font-medium leading-none text-foreground"
             style={{ letterSpacing: "-0.03em" }}
           >
-            Ready to <Hw>build</Hw>?
+            Ready to <em className="not-italic font-light text-muted-foreground">build</em>?
           </h2>
           <p className="mt-6 text-base leading-relaxed max-w-md mx-auto text-muted-foreground">
-            No ProseMirror. No plugins. No PhD in text editor internals.
+            No ProseMirror dependency. Simple, powerful extensions. No PhD required.
           </p>
 
           <div className="mt-10">

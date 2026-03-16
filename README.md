@@ -11,11 +11,14 @@
 - Markdown shortcuts — type `# ` for H1, `**bold**`, `> ` for blockquote, etc.
 - Smart paste — paste Markdown text and it auto-converts to rich blocks
 - Two editor variants: self-contained `CompactEditor` and full-featured `Editor`
+- Extension system — `Node.create()`, `Mark.create()`, `Extension.create()` with `StarterKit` included
+- 3 CSS theme presets — Notion, Minimal, GitHub
 - Export to JSON, semantic HTML, or Markdown
 - CMS-ready: `onChange`, `getHTML()`, `getJSON()`, `getMarkdown()`, `setContent()`
 - Zero re-renders on content changes for non-active blocks (`BlockWrapper` pattern)
 - TypeScript-first with full type exports
 - Works at any width — 300 px sidebar to full-width page layout
+- 969 tests (759 unit + 210 E2E)
 
 ## Quick Start
 
@@ -114,6 +117,58 @@ export function NotionPage() {
 }
 ```
 
+## Extension System
+
+Build custom block types and inline marks as plain objects — no ProseMirror schema required.
+
+```typescript
+import { Extension, Node, Mark, StarterKit, EditorProvider } from '@mina-editor/core';
+
+// Create a custom node extension
+const Callout = Node.create({
+  name: 'callout',
+  nodeType: 'callout',
+  group: 'block',
+  addStyles: () => 'bg-blue-50 border-l-4 border-blue-500 p-4 rounded',
+  addInputRules: () => [{
+    find: /^!!! (.+)$/,
+    handler: (match, ctx) => { /* auto-convert */ return true; },
+  }],
+});
+
+// Create a custom mark
+const Highlight = Mark.create({
+  name: 'highlight',
+  markName: 'highlight',
+  inlineProperty: 'className',
+  renderHTML: () => '<mark>',
+});
+
+// Use with EditorProvider
+<EditorProvider extensions={[...StarterKit, Callout, Highlight]}>
+  <MyEditor />
+</EditorProvider>
+```
+
+The `StarterKit` array contains all 22 built-in extensions (16 nodes + 6 marks). You can spread it and append your own, or replace it entirely for a minimal setup.
+
+## Themes
+
+```tsx
+// Import base styles (required)
+import '@mina-editor/core/styles';
+
+// Import a theme preset (optional)
+import '@mina-editor/core/themes/notion';   // Notion-inspired
+import '@mina-editor/core/themes/minimal';  // Ultra-clean
+import '@mina-editor/core/themes/github';   // GitHub-flavored
+
+// Apply theme via className
+<div className="mina-editor theme-notion">
+  <EditorProvider>...</EditorProvider>
+</div>
+```
+
 ## API Reference
 
 ### Components
@@ -152,6 +207,10 @@ Must be called inside an `<EditorProvider>` tree. Returns a **stable, non-reacti
 | `isDirty()` | `boolean` | True if unsaved edits exist |
 | `getBlockCount()` | `number` | Number of top-level blocks |
 
+#### `useExtensionManager(): ExtensionManager`
+
+Returns the live extension registry mounted by the nearest `EditorProvider`. Use this to inspect registered nodes, marks, commands, and input rules at runtime.
+
 #### Store hooks (low-level)
 
 | Hook | Description |
@@ -172,6 +231,17 @@ Must be called inside an `<EditorProvider>` tree. Returns a **stable, non-reacti
 | `parseMarkdownToNodes(markdown)` | Markdown → block model |
 | `parseHtmlToNodes(html)` | HTML → block model |
 | `parsePlainTextToNodes(text)` | Plain text → block model |
+
+### Extensions
+
+| Export | Description |
+|---|---|
+| `Extension.create(config)` | Create a generic extension (commands, keyboard shortcuts, input rules) |
+| `Node.create(config)` | Create a custom block node type |
+| `Mark.create(config)` | Create a custom inline mark |
+| `ExtensionManager` | Central registry class — instantiated by `EditorProvider` |
+| `CommandManager` | Chainable command executor: `editor.chain().toggleBold().run()` |
+| `StarterKit` | `Extension[]` — all 22 built-in extensions ready to pass to `EditorProvider` |
 
 ### Actions
 

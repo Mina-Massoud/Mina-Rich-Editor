@@ -9,17 +9,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # For npm provenance
+      id-token: write
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-          cache: npm
-      - run: npm ci
-      - run: npx vitest run
-      - run: npx tsup
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm test:ci
+      - run: pnpm build:lib
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
