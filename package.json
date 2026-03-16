@@ -1,6 +1,6 @@
 {
   "name": "@mina-editor/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A flexible, TypeScript-first rich text editor with JSON-based document model",
   "license": "MIT",
   "repository": {
@@ -19,7 +19,8 @@
     "./styles": "./src/styles/editor-variables.css",
     "./themes/notion": "./src/styles/themes/notion.css",
     "./themes/minimal": "./src/styles/themes/minimal.css",
-    "./themes/github": "./src/styles/themes/github.css"
+    "./themes/github": "./src/styles/themes/github.css",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",

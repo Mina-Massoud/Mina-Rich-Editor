@@ -223,6 +223,7 @@ export type { TailwindClassGroup } from './tailwind-classes';
 // ============================================================================
 // Editor Components
 // ============================================================================
+export { Editor } from '../components/Editor';
 export { CompactEditor } from '../components/CompactEditor';
 export type { CompactEditorProps } from '../components/CompactEditor';
 export { CompactToolbar } from '../components/CompactToolbar';
