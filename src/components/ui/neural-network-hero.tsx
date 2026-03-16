@@ -265,6 +265,7 @@ interface HeroProps {
   badgeLabel?: string;
   ctaButtons?: Array<{ text: string; href: string; primary?: boolean; onClick?: () => void; target?: string }>;
   microDetails?: Array<string>;
+  children?: React.ReactNode;
 }
 
 export default function Hero({
@@ -276,7 +277,8 @@ export default function Hero({
     { text: "Get started", href: "#get-started", primary: true },
     { text: "View showcase", href: "#showcase" }
   ],
-  microDetails = ["Low‑weight font", "Tight tracking", "Subtle motion"]
+  microDetails = ["Low‑weight font", "Tight tracking", "Subtle motion"],
+  children,
 }: HeroProps) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -399,6 +401,8 @@ export default function Hero({
             </a>
           ))}
         </div>
+
+        {children}
 
         <ul ref={microRef} className={`mt-8 flex flex-wrap gap-6 text-xs font-normal tracking-tight ${isDark ? 'text-white/60' : 'text-gray-800'}`}>
           {microDetails.map((detail, index) => {
