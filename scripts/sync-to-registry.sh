@@ -54,6 +54,11 @@ cp "$SRC/lib/ai/"*.ts "$DEST/ai/"
 mkdir -p "$DEST/collaboration"
 cp "$SRC/lib/collaboration/"*.ts "$DEST/collaboration/"
 
+# extensions (extension system — nodes, marks, starter-kit, managers)
+echo "==> Copying extensions..."
+mkdir -p "$DEST/extensions/nodes" "$DEST/extensions/marks"
+rsync -a --exclude='__tests__' "$SRC/lib/extensions/" "$DEST/extensions/"
+
 # ── Step 4: Copy components (excluding landing.tsx, ui/) ────────────────
 echo "==> Copying components..."
 COMPONENTS=(
@@ -97,8 +102,9 @@ cp "$SRC/components/ui/shadcn-io/color-picker/index.tsx" "$DEST/_color-picker/in
 
 # ── Step 7: Copy styles ─────────────────────────────────────────────────
 echo "==> Copying styles..."
-mkdir -p "$DEST/styles"
+mkdir -p "$DEST/styles/themes"
 cp "$SRC/styles/editor-variables.css" "$DEST/styles/editor-variables.css"
+cp "$SRC/styles/themes/"*.css "$DEST/styles/themes/" 2>/dev/null || true
 
 # ── Step 7: Rewrite import paths ────────────────────────────────────────
 echo "==> Rewriting import paths..."
