@@ -14,24 +14,24 @@ export default function S01_Installation() {
 
       <div className="space-y-8">
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">
+          <h3 className="mb-3 text-lg font-light text-foreground">
             Step 1: Install the component
           </h3>
           <CodeBlock label="Terminal">{`npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json`}</CodeBlock>
-          <p className="mt-3 text-sm text-warm-400">
+          <p className="mt-3 text-sm text-muted-foreground">
             This automatically installs all required shadcn components, npm packages, and editor files into your project.
           </p>
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">
+          <h3 className="mb-3 text-lg font-light text-foreground">
             Step 2: Configure the theme provider
           </h3>
-          <p className="mb-3 text-sm text-warm-400">
+          <p className="mb-3 text-sm text-muted-foreground">
             The editor includes dark mode support. Wrap your app with the{" "}
-            <code className="bg-surface-code text-warm-100 px-1.5 py-0.5 text-xs font-mono">ThemeProvider</code>{" "}
+            <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">ThemeProvider</code>{" "}
             from{" "}
-            <code className="bg-surface-code text-warm-100 px-1.5 py-0.5 text-xs font-mono">next-themes</code>.
+            <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">next-themes</code>.
           </p>
           <CodeBlock label="layout.tsx">{`import { ThemeProvider } from "next-themes"
 
@@ -49,9 +49,9 @@ export default function RootLayout({ children }) {
         </div>
 
         <NotesList items={[
-          <>Uses <strong className="text-warm-100">shadcn CLI</strong> for zero-config installation -- all dependencies are handled automatically.</>,
-          <>Requires <strong className="text-warm-100">React 18+</strong>, <strong className="text-warm-100">Next.js 13+</strong>, and <strong className="text-warm-100">Tailwind CSS</strong>.</>,
-          <>Peer dependencies: <strong className="text-warm-100">zustand</strong>, <strong className="text-warm-100">framer-motion</strong>, <strong className="text-warm-100">lucide-react</strong> are installed automatically.</>,
+          <>Uses <strong className="text-foreground">shadcn CLI</strong> for zero-config installation -- all dependencies are handled automatically.</>,
+          <>Requires <strong className="text-foreground">React 18+</strong>, <strong className="text-foreground">Next.js 13+</strong>, and <strong className="text-foreground">Tailwind CSS</strong>.</>,
+          <>Peer dependencies: <strong className="text-foreground">zustand</strong>, <strong className="text-foreground">framer-motion</strong>, <strong className="text-foreground">lucide-react</strong> are installed automatically.</>,
         ]} />
       </div>
     </section>

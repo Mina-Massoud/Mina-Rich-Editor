@@ -1,4 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
+import { openEditor, mod } from "./helpers";
 
 /**
  * AI Content E2E tests.
@@ -10,26 +11,9 @@ import { test, expect, Page } from "@playwright/test";
  * and uncomment the provider tests at the bottom.
  */
 
-const mod = process.platform === "darwin" ? "Meta" : "Control";
-
-async function openCompactEditor(page: Page) {
-  await page.goto("http://localhost:3099/compact");
-  await page.waitForLoadState("networkidle");
-  await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-  await page.waitForTimeout(1000);
-}
-
-async function openMainEditor(page: Page) {
-  await page.goto("http://localhost:3099");
-  await page.waitForLoadState("networkidle");
-  await page.getByText("Try the Editor").click({ timeout: 15000 });
-  await page.waitForSelector("[data-editor-content]", { timeout: 15000 });
-  await page.waitForTimeout(2000);
-}
-
 test.describe("AI Command Menu", () => {
   test.beforeEach(async ({ page }) => {
-    await openMainEditor(page);
+    await openEditor(page);
   });
 
   test("typing /ai in an empty block opens the AI prompt", async ({ page }) => {
@@ -97,7 +81,7 @@ test.describe("AI stream-to-blocks logic (unit-in-browser)", () => {
   test("streamToBlocks creates blocks from markdown-like text", async ({
     page,
   }) => {
-    await openMainEditor(page);
+    await openEditor(page);
 
     // Inject a test that uses the streamToBlocks function directly in the browser
     const result = await page.evaluate(async () => {
@@ -121,13 +105,13 @@ test.describe("AI abort behavior", () => {
   test("editor remains functional after any AI-related interaction", async ({
     page,
   }) => {
-    await openMainEditor(page);
+    await openEditor(page);
 
-    // Use the h1 block for reliability
-    const h1 = page
-      .locator('[data-node-type="h1"][contenteditable="true"]')
+    // Use a paragraph block (demo page starts with <p>, not <h1>)
+    const p = page
+      .locator('[data-node-type="p"][contenteditable="true"]')
       .first();
-    await h1.click();
+    await p.click();
     await page.keyboard.press("End");
 
     // Type /ai and immediately press Escape (simulating abort)
@@ -139,12 +123,12 @@ test.describe("AI abort behavior", () => {
     // Editor should still be visible and not crashed
     await expect(page.locator("[data-editor-content]")).toBeVisible();
 
-    // Click the h1 again and type — editor should still work
-    await h1.click();
-    await page.keyboard.press("End");
+    // Click the paragraph again and type — editor should still work
+    await p.click();
+    await page.keyboard.press(`${mod}+a`);
     await page.keyboard.type("OK", { delay: 30 });
     await page.waitForTimeout(300);
 
-    expect(await h1.textContent()).toContain("OK");
+    expect(await p.textContent()).toContain("OK");
   });
 });

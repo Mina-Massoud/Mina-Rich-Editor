@@ -94,7 +94,7 @@ export function buildHTML(textNode: TextNode, _readOnly: boolean): string {
                 child.italic ? "italic" : "",
                 child.underline ? "underline" : "",
                 child.strikethrough ? "line-through" : "",
-                child.code ? "font-mono bg-warm-800/10 dark:bg-warm-200/10 px-1 py-0.5 rounded" : "",
+                child.code ? "font-mono bg-foreground/10 px-1 py-0.5 rounded" : "",
                 className || "", // Include custom className (only if not hex color)
               ]
                 .filter(Boolean)
@@ -175,7 +175,7 @@ export function buildHTML(textNode: TextNode, _readOnly: boolean): string {
           child.italic ? "italic" : "",
           child.underline ? "underline" : "",
           child.strikethrough ? "line-through" : "",
-          child.code ? "font-mono bg-warm-800/10 dark:bg-warm-200/10 px-1 py-0.5 rounded" : "",
+          child.code ? "font-mono bg-foreground/10 px-1 py-0.5 rounded" : "",
           child.className || "",
         ]
           .filter(Boolean)

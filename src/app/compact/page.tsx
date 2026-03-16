@@ -45,20 +45,20 @@ export default function CompactDemoPage() {
   const initialContent = React.useMemo(() => makeSampleContent(), []);
 
   return (
-    <div className="min-h-screen bg-surface-base py-10 px-4">
+    <div className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-10">
         <header>
-          <h1 className="text-3xl font-extralight tracking-tight text-warm-50">
+          <h1 className="text-3xl font-extralight tracking-tight text-foreground">
             CompactEditor Demo
           </h1>
-          <p className="text-warm-400 mt-2 font-light">
+          <p className="text-muted-foreground mt-2 font-light">
             A lightweight embeddable rich-text editor with an inline toolbar.
           </p>
         </header>
 
         {/* ── 300 px min-height ─────────────────────────────────────────────── */}
         <section className="space-y-2">
-          <h2 className="text-base font-medium text-warm-100">Small (300px)</h2>
+          <h2 className="text-base font-medium text-foreground">Small (300px)</h2>
           <CompactEditor
             initialContent={initialContent}
             minHeight="300px"
@@ -68,13 +68,13 @@ export default function CompactDemoPage() {
 
         {/* ── 500 px min-height ─────────────────────────────────────────────── */}
         <section className="space-y-2">
-          <h2 className="text-base font-medium text-warm-100">Medium (500px)</h2>
+          <h2 className="text-base font-medium text-foreground">Medium (500px)</h2>
           <CompactEditor minHeight="500px" />
         </section>
 
         {/* ── Full-width, read-only ──────────────────────────────────────────── */}
         <section className="space-y-2">
-          <h2 className="text-base font-medium text-warm-100">Read-only</h2>
+          <h2 className="text-base font-medium text-foreground">Read-only</h2>
           <CompactEditor
             initialContent={initialContent}
             readOnly
@@ -85,10 +85,10 @@ export default function CompactDemoPage() {
         {/* ── onChange output ────────────────────────────────────────────────── */}
         {output && (
           <section className="space-y-2">
-            <h2 className="text-base font-medium text-warm-100">
+            <h2 className="text-base font-medium text-foreground">
               onChange HTML output (from first editor)
             </h2>
-            <pre className="text-xs bg-surface-code text-warm-100 rounded-md p-4 overflow-auto whitespace-pre-wrap border">
+            <pre className="text-xs bg-muted text-foreground rounded-md p-4 overflow-auto whitespace-pre-wrap border">
               {output}
             </pre>
           </section>

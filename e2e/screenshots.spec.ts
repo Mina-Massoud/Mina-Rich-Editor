@@ -1,4 +1,5 @@
 import { test, Page } from "@playwright/test";
+import { openEditor } from "./helpers";
 import path from "path";
 
 // ---------------------------------------------------------------------------
@@ -146,18 +147,7 @@ test.skip("screenshot: compact-toolbar-active", async ({ page }) => {
 // ---------------------------------------------------------------------------
 test.skip("screenshot: full-editor notion style", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto("/");
-  await page.waitForLoadState("networkidle");
-
-  // Click the "Try the Editor" button (it's a <button>, not a link)
-  const cta = page.getByRole("button", { name: /try the editor/i });
-  if (await cta.isVisible({ timeout: 8_000 }).catch(() => false)) {
-    await cta.click();
-    // Wait for exit animation (600 ms) + enter animation (800 ms) + mount
-    await page.waitForTimeout(1500);
-  }
-
-  await waitForEditor(page);
+  await openEditor(page);
   // Extra settle time so motion animations finish and content is painted
   await page.waitForTimeout(500);
 

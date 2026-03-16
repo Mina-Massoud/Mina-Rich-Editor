@@ -45,6 +45,9 @@ export interface CollabState {
 
   /** List of users currently in the room (includes the local user). */
   connectedUsers: CollabUser[];
+
+  /** The local Y.js client ID (as string), used to filter out own cursor. */
+  localClientId: string | null;
 }
 
 /**

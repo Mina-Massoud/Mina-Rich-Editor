@@ -83,8 +83,8 @@ function FeatureSection({
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-2xl font-extralight text-warm-50">{title}</h2>
-        <p className="mt-1 text-sm text-warm-400">{description}</p>
+        <h2 className="text-2xl font-extralight text-foreground">{title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
       {children}
     </section>
@@ -132,33 +132,20 @@ export default function FeaturesPage() {
           <CompactEditor initialContent={keyboardContent} minHeight="160px" />
 
           {/* Shortcut reference card */}
-          <div
-            className="mt-4 rounded-lg border p-4"
-            style={{
-              borderColor: "rgba(200,180,160,0.12)",
-              background: "rgba(200,180,160,0.03)",
-            }}
-          >
-            <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-warm-400">
+          <div className="mt-4 rounded-lg border border-border bg-muted p-4">
+            <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Shortcut Reference
             </h3>
             <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
               {shortcuts.map((s) => (
                 <div
                   key={s.keys}
-                  className="flex items-center justify-between gap-3 rounded px-2 py-1.5"
-                  style={{ background: "rgba(200,180,160,0.04)" }}
+                  className="flex items-center justify-between gap-3 rounded px-2 py-1.5 bg-foreground/[0.04]"
                 >
-                  <kbd
-                    className="rounded px-1.5 py-0.5 font-mono text-[11px] text-warm-200"
-                    style={{
-                      background: "rgba(200,180,160,0.08)",
-                      border: "1px solid rgba(200,180,160,0.12)",
-                    }}
-                  >
+                  <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/80">
                     {s.keys}
                   </kbd>
-                  <span className="text-xs text-warm-400">{s.action}</span>
+                  <span className="text-xs text-muted-foreground">{s.action}</span>
                 </div>
               ))}
             </div>

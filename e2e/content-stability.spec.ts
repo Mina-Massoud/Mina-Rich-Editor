@@ -1,12 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { openEditor, mod, waitForBlockType } from "./helpers";
 
 test.describe("Content stability & performance", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3099");
-    await page.waitForLoadState("networkidle");
-    await page.getByText("Try the Editor").click();
-    await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-    await page.waitForTimeout(2000);
+    await openEditor(page);
   });
 
   test("typing persists in paragraph", async ({ page }) => {
@@ -19,9 +16,24 @@ test.describe("Content stability & performance", () => {
   });
 
   test("typing persists in h1", async ({ page }) => {
-    const h1 = page.locator('[data-node-type="h1"][contenteditable="true"]').first();
+    // Demo page starts with only a <p> block — create an h1 via markdown shortcut first
+    const p = page.locator('[data-node-type="p"][contenteditable="true"]').first();
+    const nodeId = await p.getAttribute("data-node-id");
+    await p.click();
+    await page.keyboard.press(`${mod}+a`);
+    await page.keyboard.press("Backspace");
+    await page.waitForTimeout(300);
+
+    // Type "# " to trigger markdown rule conversion to h1
+    await page.keyboard.type("# ", { delay: 40 });
+    await page.waitForTimeout(800);
+
+    // Wait for block type conversion
+    await waitForBlockType(page, nodeId!, "h1");
+
+    const h1 = page.locator(`[data-node-id="${nodeId}"]`);
     await h1.click();
-    await page.keyboard.press("Meta+a");
+    await page.keyboard.press(`${mod}+a`);
     await page.keyboard.type("My Title", { delay: 40 });
     await page.waitForTimeout(500);
     expect(await h1.textContent()).toContain("My Title");
@@ -35,19 +47,26 @@ test.describe("Content stability & performance", () => {
     await page.keyboard.type("AAABBB", { delay: 40 });
     await page.waitForTimeout(500);
 
-    // Position cursor at offset 3 via JS
+    // Position cursor at offset 3 via TreeWalker (handles multi-node DOM)
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
-      const textNode = el.firstChild;
-      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-        const range = document.createRange();
-        range.setStart(textNode, 3);
-        range.collapse(true);
-        const sel = window.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let offset = 0;
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        const len = node.textContent?.length ?? 0;
+        if (offset + len >= 3) {
+          const range = document.createRange();
+          range.setStart(node, 3 - offset);
+          range.collapse(true);
+          const sel = window.getSelection();
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+          return;
+        }
+        offset += len;
       }
     }, nodeId);
 
@@ -69,8 +88,8 @@ test.describe("Content stability & performance", () => {
     await page.keyboard.type("STABLE", { delay: 40 });
     await page.waitForTimeout(500);
 
-    const h1 = page.locator('[data-node-type="h1"]').first();
-    await h1.click();
+    // Click somewhere outside the block (use body or editor container, not h1 which may not exist)
+    await page.locator('[data-editor-content]').click({ position: { x: 10, y: 10 } });
     await page.waitForTimeout(300);
     expect(await p.textContent()).toContain("STABLE");
   });
@@ -145,7 +164,7 @@ test.describe("Content stability & performance", () => {
     await page.waitForTimeout(1000);
 
     // Clear browser console and capture render logs
-    const rendersBefore = await page.evaluate(() => {
+    await page.evaluate(() => {
       // @ts-ignore
       window.__renderLog = [];
       const origLog = console.log;
@@ -159,7 +178,6 @@ test.describe("Content stability & performance", () => {
         }
         origLog.apply(console, args);
       };
-      return 0;
     });
 
     // Type 5 characters
@@ -184,10 +202,6 @@ test.describe("Content stability & performance", () => {
     console.log("PERF: Block re-renders during 5 chars:", renderLog.blockRenders);
     console.log("PERF: Total render logs:", renderLog.totalLogs);
 
-    // Key metric: most blocks should NOT re-render during typing.
-    // Only the actively-edited block should re-render (once per debounce flush).
-    // Editor re-renders are acceptable as long as Block memo prevents cascading.
-    // With 200+ blocks, we should see << 200 block re-renders for 5 chars.
     expect(renderLog.blockRenders).toBeLessThan(50);
   });
 });

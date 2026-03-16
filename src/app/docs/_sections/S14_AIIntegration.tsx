@@ -4,7 +4,7 @@ import { CodeBlock } from "../_components/CodeBlock";
 import { NotesList } from "../_components/NotesList";
 import { DxCard } from "../_components/DxCard";
 
-export const sectionMeta = { id: "ai-integration", num: "14", label: "AI Integration" };
+export const sectionMeta = { id: "ai-integration", num: "03", label: "AI Integration" };
 
 export default function S14_AIIntegration() {
   const presets = [
@@ -18,16 +18,16 @@ export default function S14_AIIntegration() {
 
   return (
     <section className="mb-20">
-      <SectionHeading num="14" label="AI Integration" id="ai-integration">
+      <SectionHeading num="03" label="AI Integration" id="ai-integration">
         Built-in AI text editing
       </SectionHeading>
-      <p className="mb-6 text-sm font-light text-warm-400">
+      <p className="mb-6 text-sm font-light text-muted-foreground">
         Bring your own API key (BYOK) -- no vendor lock-in, no paid proxy. Requests go directly to your provider.
       </p>
 
       <div className="space-y-8">
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">Provider setup</h3>
+          <h3 className="mb-3 text-lg font-light text-foreground">Provider setup</h3>
           <CodeBlock label="ai-provider.ts">{`import {
   createOpenAIProvider,
   createAnthropicProvider,
@@ -54,7 +54,7 @@ const gemini = createGeminiProvider({
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">useEditorAI hook</h3>
+          <h3 className="mb-3 text-lg font-light text-foreground">useEditorAI hook</h3>
           <CodeBlock label="MyEditor.tsx">{`import { useEditorAI } from "@/hooks/useEditorAI"
 
 function MyEditor() {
@@ -74,11 +74,11 @@ function MyEditor() {
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">AI selection presets</h3>
-          <p className="mb-4 text-sm font-light text-warm-400">
+          <h3 className="mb-3 text-lg font-light text-foreground">AI selection presets</h3>
+          <p className="mb-4 text-sm font-light text-muted-foreground">
             Select text and click the AI sparkles button in the selection toolbar. Six built-in presets plus custom prompts.
           </p>
-          <div className="grid gap-px sm:grid-cols-2 border-t border-l border-border-subtle">
+          <div className="grid gap-px sm:grid-cols-2 border-t border-l border-border">
             {presets.map((p, i) => (
               <DxCard key={i} tag={p.tag} title={p.title} desc={p.desc} idx={i + 1} />
             ))}
@@ -86,10 +86,10 @@ function MyEditor() {
         </div>
 
         <NotesList items={[
-          <><strong className="text-warm-100">BYOK</strong> -- you supply your own API key. Requests go directly to the provider with no intermediary.</>,
-          <><strong className="text-warm-100">No vendor lock-in</strong> -- swap providers by changing one line of code.</>,
-          <><strong className="text-warm-100">Streaming</strong> -- AI-generated content appears token-by-token in the editor for real-time feedback.</>,
-          <><strong className="text-warm-100">Custom prompts</strong> -- write any prompt for arbitrary AI text transformations beyond the six presets.</>,
+          <><strong className="text-foreground">BYOK</strong> -- you supply your own API key. Requests go directly to the provider with no intermediary.</>,
+          <><strong className="text-foreground">No vendor lock-in</strong> -- swap providers by changing one line of code.</>,
+          <><strong className="text-foreground">Streaming</strong> -- AI-generated content appears token-by-token in the editor for real-time feedback.</>,
+          <><strong className="text-foreground">Custom prompts</strong> -- write any prompt for arbitrary AI text transformations beyond the six presets.</>,
         ]} />
       </div>
     </section>

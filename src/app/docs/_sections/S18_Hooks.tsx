@@ -21,16 +21,16 @@ export default function S18_Hooks() {
       <SectionHeading num="18" label="Hooks" id="hooks">
         React hooks for editor state
       </SectionHeading>
-      <p className="mb-6 text-sm font-light text-warm-400">
-        All hooks must be used inside an <code className="bg-surface-code text-warm-100 px-1.5 py-0.5 text-xs font-mono">EditorProvider</code>. They use Zustand selectors for optimal re-render performance.
+      <p className="mb-6 text-sm font-light text-muted-foreground">
+        All hooks must be used inside an <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">EditorProvider</code>. They use Zustand selectors for optimal re-render performance.
       </p>
 
       <div className="space-y-3">
         {hooks.map((hook) => (
-          <div key={hook.name} className="border border-border-subtle bg-surface-raised p-4">
-            <h3 className="mb-1.5 text-base font-light text-warm-100">{hook.name}</h3>
-            <p className="mb-2 text-sm text-warm-400">{hook.desc}</p>
-            <div className="bg-surface-code p-2 text-sm font-mono text-warm-100 border border-border-subtle">
+          <div key={hook.name} className="border border-border bg-muted p-4">
+            <h3 className="mb-1.5 text-base font-light text-foreground">{hook.name}</h3>
+            <p className="mb-2 text-sm text-muted-foreground">{hook.desc}</p>
+            <div className="bg-muted p-2 text-sm font-mono text-foreground border border-border">
               {hook.code}
             </div>
           </div>

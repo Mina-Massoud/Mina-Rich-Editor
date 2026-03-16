@@ -178,13 +178,10 @@ export function LinkPopover() {
                 <LinkIcon className="size-4" />
               </button>
             </PopoverTrigger>
-            <PopoverContent 
-              className="w-80" 
+            <PopoverContent
+              className="w-80"
               align="start"
-              onOpenAutoFocus={(e) => {
-                // Prevent the popover from stealing focus and losing selection
-                e.preventDefault();
-              }}
+              {...{ onOpenAutoFocus: (e: any) => e.preventDefault() }}
             >
               <div className="space-y-3">
                 <div>

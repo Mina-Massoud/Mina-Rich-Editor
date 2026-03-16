@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import { EditorProvider, createInitialState } from "@/lib";
 import { createEmptyContent } from "@/lib/empty-content";
 import { ContainerNode, EditorState } from "@/lib/types";
@@ -218,20 +217,7 @@ export default function DemoPage() {
     <div className="flex flex-col flex-1 w-full relative min-h-screen">
       <div className="flex flex-grow">
         <div className="flex w-full flex-col flex-grow">
-          <motion.div
-            key="editor"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              transition: {
-                duration: 0.6,
-                ease: [0.76, 0, 0.24, 1],
-                delay: 0.2,
-              },
-            }}
-            className="w-full flex-1 min-h-screen flex flex-col"
-          >
+          <div className="w-full flex-1 min-h-screen flex flex-col">
             <EditorProvider initialState={initialState}>
               {/* Demo-only controls — not part of the library */}
               <DemoControls
@@ -276,7 +262,7 @@ export default function DemoPage() {
                 Collab Demo
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

@@ -326,10 +326,7 @@ export function CustomClassPopover() {
               <SheetContent
                 side="bottom"
                 className="h-[85vh] px-5 rounded-t-xl"
-                onOpenAutoFocus={(e) => {
-                  // Prevent auto-focus to avoid reopening keyboard
-                  e.preventDefault();
-                }}
+                {...{ onOpenAutoFocus: (e: any) => e.preventDefault() }}
               >
                 <SheetHeader>
                   <SheetTitle>Custom Classes</SheetTitle>
@@ -348,10 +345,7 @@ export function CustomClassPopover() {
               <PopoverContent
                 className="lg:w-[300px] max-h-[300px] overflow-y-auto"
                 align="start"
-                onOpenAutoFocus={(e) => {
-                  // Prevent the popover from stealing focus and losing selection
-                  e.preventDefault();
-                }}
+                {...{ onOpenAutoFocus: (e: any) => e.preventDefault() }}
               >
                 <ClassPickerContent />
               </PopoverContent>

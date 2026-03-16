@@ -20,27 +20,26 @@ export function CodeBlock({ children, label }: CodeBlockProps) {
   }, [children]);
 
   return (
-    <div className="relative border border-border-subtle overflow-hidden bg-surface-code">
+    <div className="relative border border-border overflow-hidden bg-muted">
       {label && (
         <div
-          className="px-6 py-2.5 border-b flex items-center justify-between"
-          style={{ borderColor: "rgba(200,180,160,0.06)" }}
+          className="px-6 py-2.5 border-b border-border flex items-center justify-between"
         >
-          <span className="text-xs font-mono uppercase tracking-widest text-warm-400">
+          <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
             {label}
           </span>
           <div className="flex items-center gap-3">
             <button
               onClick={handleCopy}
-              className="text-warm-500 hover:text-warm-200 transition-colors"
+              className="text-muted-foreground/70 hover:text-foreground/80 transition-colors"
               aria-label="Copy code"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
             <div className="flex gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-warm-700" />
-              <span className="w-2 h-2 rounded-full bg-warm-700" />
-              <span className="w-2 h-2 rounded-full bg-warm-700" />
+              <span className="w-2 h-2 rounded-full bg-muted" />
+              <span className="w-2 h-2 rounded-full bg-muted" />
+              <span className="w-2 h-2 rounded-full bg-muted" />
             </div>
           </div>
         </div>
@@ -49,14 +48,14 @@ export function CodeBlock({ children, label }: CodeBlockProps) {
         <div className="absolute top-2 right-3">
           <button
             onClick={handleCopy}
-            className="text-warm-500 hover:text-warm-200 transition-colors p-1"
+            className="text-muted-foreground/70 hover:text-foreground/80 transition-colors p-1"
             aria-label="Copy code"
           >
             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
         </div>
       )}
-      <pre className="px-6 py-5 overflow-x-auto text-sm leading-7 font-mono text-warm-100">
+      <pre className="px-6 py-5 overflow-x-auto text-sm leading-7 font-mono text-foreground">
         <code>{children}</code>
       </pre>
     </div>

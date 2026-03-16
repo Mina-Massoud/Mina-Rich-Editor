@@ -1,12 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { openEditor } from "./helpers";
 
 test.describe("Performance benchmarks", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3099");
-    await page.waitForLoadState("networkidle");
-    await page.getByText("Try the Editor").click();
-    await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-    await page.waitForTimeout(3000); // Let initial renders settle
+    await openEditor(page);
+    await page.waitForTimeout(2000); // Let initial renders settle
   });
 
   test("typing latency: 20 characters should complete under 2 seconds", async ({ page }) => {

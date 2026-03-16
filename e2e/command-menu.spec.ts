@@ -1,15 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-/**
- * Helper to open the editor page and wait for it to be ready.
- */
-async function openEditor(page: any) {
-  await page.goto("http://localhost:3099");
-  await page.waitForLoadState("networkidle");
-  await page.getByText("Try the Editor").click();
-  await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-  await page.waitForTimeout(2000);
-}
+import { openEditor } from "./helpers";
 
 /**
  * Helper to open the command menu on a paragraph block.

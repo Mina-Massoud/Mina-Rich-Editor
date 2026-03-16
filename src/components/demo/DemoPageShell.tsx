@@ -19,14 +19,14 @@ export function DemoPageShell({
   children,
 }: DemoPageShellProps) {
   return (
-    <div className="flex min-h-screen flex-col bg-surface-base text-warm-100">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b bg-surface-base/95 backdrop-blur supports-[backdrop-filter]:bg-surface-base/60" style={{ borderColor: "rgba(200,180,160,0.1)" }}>
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-sm text-warm-400 transition-colors hover:text-warm-100"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
                 <path d="m12 19-7-7 7-7" />
@@ -34,8 +34,8 @@ export function DemoPageShell({
               </svg>
               Home
             </Link>
-            <div className="h-4 w-px bg-warm-700" />
-            <h1 className="text-sm font-semibold text-warm-50">{title}</h1>
+            <div className="h-4 w-px bg-border" />
+            <h1 className="text-sm font-semibold text-foreground">{title}</h1>
           </div>
           {headerActions && (
             <div className="flex items-center gap-3">{headerActions}</div>
@@ -45,8 +45,8 @@ export function DemoPageShell({
 
       {/* Info banner */}
       <div className="mx-auto w-full max-w-6xl px-4 pt-4">
-        <div className="rounded-lg border px-4 py-3" style={{ borderColor: "rgba(200,180,160,0.1)", background: "rgba(200,180,160,0.03)" }}>
-          <p className="text-xs leading-relaxed text-warm-400">
+        <div className="rounded-lg border border-border bg-muted px-4 py-3">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             {description}
           </p>
         </div>
@@ -55,11 +55,11 @@ export function DemoPageShell({
       {/* Code example */}
       {codeExample && (
         <div className="mx-auto w-full max-w-6xl px-4 pt-3">
-          <details className="group rounded-lg border" style={{ borderColor: "rgba(200,180,160,0.1)", background: "rgba(200,180,160,0.02)" }}>
-            <summary className="cursor-pointer px-4 py-2 text-xs font-medium text-warm-400 transition-colors hover:text-warm-100">
+          <details className="group rounded-lg border border-border bg-muted">
+            <summary className="cursor-pointer px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
               View integration code
             </summary>
-            <pre className="overflow-x-auto border-t px-4 py-3 font-mono text-[11px] leading-relaxed text-warm-300" style={{ borderColor: "rgba(200,180,160,0.06)" }}>
+            <pre className="overflow-x-auto border-t border-border px-4 py-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
               {codeExample.code}
             </pre>
           </details>

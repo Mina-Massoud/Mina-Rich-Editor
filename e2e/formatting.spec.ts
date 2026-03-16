@@ -1,47 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-async function openEditor(page: any) {
-  await page.goto("http://localhost:3099");
-  await page.waitForLoadState("networkidle");
-  await page.getByText("Try the Editor").click();
-  await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-  await page.waitForTimeout(2000);
-}
-
-/**
- * Select the first N chars of the plain text inside a block element and
- * wait long enough for the editor's selectionchange handler to register it.
- */
-async function selectTextInBlock(
-  page: any,
-  nodeId: string,
-  start: number,
-  end: number
-) {
-  await page.evaluate(
-    ({ id, s, e }: { id: string; s: number; e: number }) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
-      if (!el) return;
-      el.focus();
-      // Walk into the first text node (works for both plain and inline-children)
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      const textNode = walker.nextNode();
-      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-        const range = document.createRange();
-        range.setStart(textNode, Math.min(s, (textNode.textContent?.length ?? 0)));
-        range.setEnd(textNode, Math.min(e, (textNode.textContent?.length ?? 0)));
-        const sel = window.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-        // Dispatch selectionchange so the editor's listener picks it up
-        document.dispatchEvent(new Event("selectionchange"));
-      }
-    },
-    { id: nodeId, s: start, e: end }
-  );
-  // Give the debounced selectionchange handler time to fire (it uses 150 ms)
-  await page.waitForTimeout(400);
-}
+import { openEditor, selectTextInBlock } from "./helpers";
 
 test.describe("Text formatting", () => {
   test.beforeEach(async ({ page }) => {
@@ -66,16 +24,24 @@ test.describe("Text formatting", () => {
 
     // Apply bold
     await page.keyboard.press("Meta+b");
-    await page.waitForTimeout(600);
+
+    // Wait for bold to appear in DOM
+    await page.waitForFunction(
+      (id) => {
+        const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+        return /font-bold/.test(html) || /data-bold="true"/.test(html) || /<strong[\s>]/i.test(html) || /<b[\s>]/i.test(html);
+      },
+      nodeId,
+      { timeout: 5000 }
+    );
 
     const innerHTML = await page.evaluate(
-      (id: string) =>
+      (id) =>
         document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
       nodeId
     );
     console.log("Bold innerHTML:", innerHTML);
 
-    // Editor renders bold as <span class="font-bold" data-bold="true">
     const hasBold =
       /font-bold/.test(innerHTML) ||
       /data-bold="true"/.test(innerHTML) ||
@@ -99,10 +65,18 @@ test.describe("Text formatting", () => {
 
     await selectTextInBlock(page, nodeId!, 0, 5);
     await page.keyboard.press("Meta+i");
-    await page.waitForTimeout(600);
+
+    await page.waitForFunction(
+      (id) => {
+        const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+        return /\bitalic\b/.test(html) || /data-italic="true"/.test(html) || /<em[\s>]/i.test(html) || /<i[\s>]/i.test(html);
+      },
+      nodeId,
+      { timeout: 5000 }
+    );
 
     const innerHTML = await page.evaluate(
-      (id: string) =>
+      (id) =>
         document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
       nodeId
     );
@@ -132,15 +106,30 @@ test.describe("Text formatting", () => {
     // Apply bold
     await selectTextInBlock(page, nodeId!, 0, 5);
     await page.keyboard.press("Meta+b");
-    await page.waitForTimeout(600);
+    await page.waitForFunction(
+      (id) => {
+        const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+        return /font-bold/.test(html) || /data-bold="true"/.test(html);
+      },
+      nodeId,
+      { timeout: 5000 }
+    );
 
-    // Re-select and apply italic
+    // Re-select and apply italic (multi-node walker handles bold spans)
     await selectTextInBlock(page, nodeId!, 0, 5);
     await page.keyboard.press("Meta+i");
-    await page.waitForTimeout(600);
+    await page.waitForFunction(
+      (id) => {
+        const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+        return (/font-bold/.test(html) || /data-bold="true"/.test(html)) &&
+               (/\bitalic\b/.test(html) || /data-italic="true"/.test(html));
+      },
+      nodeId,
+      { timeout: 5000 }
+    );
 
     const innerHTML = await page.evaluate(
-      (id: string) =>
+      (id) =>
         document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
       nodeId
     );
@@ -172,26 +161,24 @@ test.describe("Text formatting", () => {
 
     await selectTextInBlock(page, nodeId!, 0, 5);
     await page.keyboard.press("Meta+b");
-    await page.waitForTimeout(600);
 
-    // Verify bold was applied
-    const innerHTMLBefore = await page.evaluate(
-      (id: string) =>
-        document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
-      nodeId
+    // Wait for bold to apply
+    await page.waitForFunction(
+      (id) => {
+        const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+        return /font-bold/.test(html) || /data-bold="true"/.test(html);
+      },
+      nodeId,
+      { timeout: 5000 }
     );
-    const hadBold =
-      /font-bold/.test(innerHTMLBefore) ||
-      /data-bold="true"/.test(innerHTMLBefore);
-    expect(hadBold).toBe(true);
 
     // Click the block to focus, then undo
     await p.click();
     await page.keyboard.press("Meta+z");
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(800);
 
     const innerHTMLAfter = await page.evaluate(
-      (id: string) =>
+      (id) =>
         document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
       nodeId
     );
@@ -219,25 +206,24 @@ test.describe("Text formatting", () => {
     // Apply bold
     await selectTextInBlock(page, nodeId!, 0, 5);
     await page.keyboard.press("Meta+b");
-    await page.waitForTimeout(600);
 
-    // Verify bold applied
-    const innerHTMLBold = await page.evaluate(
-      (id: string) =>
-        document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
-      nodeId
+    // Wait for bold to apply
+    await page.waitForFunction(
+      (id) => {
+        const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+        return /font-bold/.test(html) || /data-bold="true"/.test(html);
+      },
+      nodeId,
+      { timeout: 5000 }
     );
-    const hadBold =
-      /font-bold/.test(innerHTMLBold) || /data-bold="true"/.test(innerHTMLBold);
-    expect(hadBold).toBe(true);
 
-    // Re-select same text and toggle bold off
+    // Re-select same text and toggle bold off (multi-node walker handles bold spans)
     await selectTextInBlock(page, nodeId!, 0, 5);
     await page.keyboard.press("Meta+b");
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(800);
 
     const innerHTMLAfter = await page.evaluate(
-      (id: string) =>
+      (id) =>
         document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
       nodeId
     );

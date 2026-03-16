@@ -1,12 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { openEditor } from "./helpers";
 
 test.describe("Clipboard operations", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3099");
-    await page.waitForLoadState("networkidle");
-    await page.getByText("Try the Editor").click();
-    await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-    await page.waitForTimeout(2000);
+    await openEditor(page);
   });
 
   test("copy-paste within same block inserts text inline, not a new block", async ({ page }) => {
@@ -19,10 +16,11 @@ test.describe("Clipboard operations", () => {
 
     // Select "Hello" (first 5 chars)
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
-      const textNode = el.firstChild;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const textNode = walker.nextNode();
       if (textNode && textNode.nodeType === Node.TEXT_NODE) {
         const range = document.createRange();
         range.setStart(textNode, 0);
@@ -32,15 +30,15 @@ test.describe("Clipboard operations", () => {
         sel?.addRange(range);
       }
     }, nodeId);
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(200);
 
     // Copy
     await page.keyboard.press("Meta+c");
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(300);
 
     // Move cursor to end
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
       const sel = window.getSelection();
@@ -50,11 +48,11 @@ test.describe("Clipboard operations", () => {
       sel?.removeAllRanges();
       sel?.addRange(range);
     }, nodeId);
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(200);
 
     // Paste
     await page.keyboard.press("Meta+v");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800);
 
     // Check: text should be "HelloWorldHello" in the SAME block
     const text = await page.evaluate((id) => {
@@ -62,12 +60,6 @@ test.describe("Clipboard operations", () => {
       return el?.textContent || "";
     }, nodeId);
     console.log("After paste in same block:", JSON.stringify(text));
-
-    // Count total blocks - should not have increased
-    const blockCountAfter = await page.evaluate(() => {
-      return document.querySelectorAll('[contenteditable="true"]').length;
-    });
-    console.log("Block count after paste:", blockCountAfter);
 
     expect(text).toContain("Hello");
     expect(text).toContain("World");
@@ -85,10 +77,11 @@ test.describe("Clipboard operations", () => {
 
     // Select "ABC"
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
-      const textNode = el.firstChild;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const textNode = walker.nextNode();
       if (textNode && textNode.nodeType === Node.TEXT_NODE) {
         const range = document.createRange();
         range.setStart(textNode, 0);
@@ -101,11 +94,11 @@ test.describe("Clipboard operations", () => {
 
     // Copy
     await page.keyboard.press("Meta+c");
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(300);
 
-    // Move cursor to end via JS (macOS End key doesn't work reliably in contenteditable)
+    // Move cursor to end via JS
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
       const range = document.createRange();
@@ -115,11 +108,11 @@ test.describe("Clipboard operations", () => {
       sel?.removeAllRanges();
       sel?.addRange(range);
     }, nodeId);
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(200);
 
     // Paste
     await page.keyboard.press("Meta+v");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800);
 
     const text = await page.evaluate((id) => {
       const el = document.querySelector(`[data-node-id="${id}"]`);
@@ -141,10 +134,11 @@ test.describe("Clipboard operations", () => {
 
     // Select "XYZ"
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
-      const textNode = el.firstChild;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const textNode = walker.nextNode();
       if (textNode && textNode.nodeType === Node.TEXT_NODE) {
         const range = document.createRange();
         range.setStart(textNode, 0);
@@ -157,11 +151,11 @@ test.describe("Clipboard operations", () => {
 
     // Cut
     await page.keyboard.press("Meta+x");
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
 
     // Move cursor to end via JS
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
       const range = document.createRange();
@@ -171,11 +165,11 @@ test.describe("Clipboard operations", () => {
       sel?.removeAllRanges();
       sel?.addRange(range);
     }, nodeId);
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(200);
 
     // Paste
     await page.keyboard.press("Meta+v");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800);
 
     const text = await page.evaluate((id) => {
       const el = document.querySelector(`[data-node-id="${id}"]`);
@@ -223,7 +217,7 @@ test.describe("Clipboard operations", () => {
       });
       document.activeElement?.dispatchEvent(pasteEvent);
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     const blockCountAfter = await page.evaluate(() => {
       return document.querySelectorAll('[contenteditable="true"]').length;

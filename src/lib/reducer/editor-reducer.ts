@@ -201,15 +201,13 @@ export function createInitialState(
   // If container is provided, use it; otherwise create with at least one empty block
   let defaultChildren = container?.children;
 
-  // If no children provided or empty array, create a default empty heading
+  // If no children provided or empty array, create a default empty paragraph
   if (!defaultChildren || defaultChildren.length === 0) {
     const defaultNode: TextNode = {
-      id: generateId('h1'),
-      type: "h1",
+      id: generateId('p'),
+      type: "p",
       content: "",
-      attributes: {
-        placeholder: "New page",
-      },
+      attributes: {},
     };
     defaultChildren = [defaultNode];
   }

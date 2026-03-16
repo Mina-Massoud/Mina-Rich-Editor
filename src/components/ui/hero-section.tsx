@@ -97,15 +97,15 @@ export function HeroSection() {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-br from-warm-900 via-black to-warm-800 text-warm-100 font-primary overflow-hidden relative w-full"
+      className="min-h-screen bg-gradient-to-br from-[#1a1d18] via-black to-[#2a2e26] text-foreground font-primary overflow-hidden relative w-full"
     >
-   
+
 
       <div className="relative z-10 min-h-screen flex flex-col justify-between items-center px-8 py-12 md:px-16 md:py-20">
         {/* Top tagline */}
         <div className="text-center">
           <h2
-            className="text-xs md:text-sm font-mono font-light uppercase tracking-[0.2em] opacity-80 text-warm-200"
+            className="text-xs md:text-sm font-mono font-light uppercase tracking-[0.2em] opacity-80 text-foreground/80"
           >
             <span className="hero-word" data-delay="0">
               Welcome
@@ -133,17 +133,14 @@ export function HeroSection() {
             </span>
           </h2>
           <div
-            className="mt-4 w-16 h-px opacity-30 mx-auto"
-            style={{
-              background: `linear-gradient(to right, transparent, var(--warm-200), transparent)`,
-            }}
+            className="mt-4 w-16 h-px opacity-30 mx-auto bg-foreground/80"
           ></div>
         </div>
 
         {/* Main headline */}
         <div className="text-center max-w-5xl mx-auto">
           <h1
-            className="text-3xl md:text-5xl lg:text-6xl font-extralight leading-tight tracking-tight text-warm-50"
+            className="text-3xl md:text-5xl lg:text-6xl font-extralight leading-tight tracking-tight text-foreground"
           >
             <div className="mb-4 md:mb-6">
               <span className="hero-word" data-delay="1600">
@@ -157,7 +154,7 @@ export function HeroSection() {
               </span>
             </div>
             <div
-              className="text-2xl md:text-3xl lg:text-4xl font-thin leading-relaxed text-warm-200"
+              className="text-2xl md:text-3xl lg:text-4xl font-thin leading-relaxed text-foreground/80"
             >
               <span className="hero-word" data-delay="2050">
                 Rich
@@ -176,7 +173,7 @@ export function HeroSection() {
 
           {/* Subtitle */}
           <p
-            className="mt-6 text-sm md:text-base font-light leading-relaxed max-w-2xl mx-auto text-warm-100"
+            className="mt-6 text-sm md:text-base font-light leading-relaxed max-w-2xl mx-auto text-foreground"
             style={{
               opacity: 0,
               animation: "word-appear 0.8s ease-out forwards",
@@ -189,16 +186,16 @@ export function HeroSection() {
           {/* CTA Buttons */}
           <div
             className="flex flex-col sm:flex-row gap-4 mt-8 justify-center items-stretch"
-            
+
           >
             <Link
               href="/demo"
-              className="px-10 py-4 text-lg font-semibold transition-all hover:scale-[1.03] hover:brightness-110 active:scale-[0.98] shadow-md bg-warm-200 text-warm-900 inline-block"
+              className="px-10 py-4 text-lg font-semibold transition-all hover:scale-[1.03] hover:brightness-110 active:scale-[0.98] shadow-md bg-foreground text-background inline-block"
             >
               Try Mina Rich Editor →
             </Link>
             <div
-              className="px-6 py-4 border font-mono text-sm flex items-center gap-2 select-all border-warm-700 text-warm-200"
+              className="px-6 py-4 border font-mono text-sm flex items-center gap-2 select-all border-border text-foreground/80"
             >
               npm i @mina-editor/core
             </div>
@@ -208,13 +205,10 @@ export function HeroSection() {
         {/* Bottom tagline */}
         <div className="text-center">
           <div
-            className="mb-4 w-16 h-px opacity-30 mx-auto"
-            style={{
-              background: `linear-gradient(to right, transparent, var(--warm-200), transparent)`,
-            }}
+            className="mb-4 w-16 h-px opacity-30 mx-auto bg-foreground/80"
           ></div>
           <h2
-            className="text-xs md:text-sm font-mono font-light uppercase tracking-[0.2em] opacity-80 text-warm-200"
+            className="text-xs md:text-sm font-mono font-light uppercase tracking-[0.2em] opacity-80 text-foreground/80"
           >
             <span className="hero-word" data-delay="3600">
               AI-Powered,
@@ -250,13 +244,13 @@ export function HeroSection() {
             }}
           >
             <div
-              className="w-1 h-1 rounded-full opacity-40 bg-warm-200"
+              className="w-1 h-1 rounded-full opacity-40 bg-foreground/80"
             ></div>
             <div
-              className="w-1 h-1 rounded-full opacity-60 bg-warm-200"
+              className="w-1 h-1 rounded-full opacity-60 bg-foreground/80"
             ></div>
             <div
-              className="w-1 h-1 rounded-full opacity-40 bg-warm-200"
+              className="w-1 h-1 rounded-full opacity-40 bg-foreground/80"
             ></div>
           </div>
         </div>

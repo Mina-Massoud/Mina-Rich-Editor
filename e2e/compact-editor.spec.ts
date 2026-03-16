@@ -1,42 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Select a range of plain text inside a contenteditable block identified by
- * its data-node-id, then wait for the editor's selectionchange handler.
- */
-async function selectTextInBlock(
-  page: any,
-  nodeId: string,
-  start: number,
-  end: number
-) {
-  await page.evaluate(
-    ({ id, s, e }: { id: string; s: number; e: number }) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
-      if (!el) return;
-      el.focus();
-      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-      const textNode = walker.nextNode();
-      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-        const len = textNode.textContent?.length ?? 0;
-        const range = document.createRange();
-        range.setStart(textNode, Math.min(s, len));
-        range.setEnd(textNode, Math.min(e, len));
-        const sel = window.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-        document.dispatchEvent(new Event("selectionchange"));
-      }
-    },
-    { id: nodeId, s: start, e: end }
-  );
-  // Allow the debounced selectionchange handler (150 ms) to fire
-  await page.waitForTimeout(400);
-}
+import { selectTextInBlock } from "./helpers";
 
 // ---------------------------------------------------------------------------
 // Test suite
@@ -44,7 +7,7 @@ async function selectTextInBlock(
 
 test.describe("Compact Editor", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3099/compact");
+    await page.goto("/compact");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
   });
@@ -166,7 +129,7 @@ test.describe("Compact Editor", () => {
     await page.waitForTimeout(600);
 
     const innerHTML = await page.evaluate(
-      (id: string) =>
+      (id) =>
         document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
       nodeId
     );
@@ -203,7 +166,7 @@ test.describe("Compact Editor", () => {
     await page.waitForTimeout(600);
 
     const innerHTML = await page.evaluate(
-      (id: string) =>
+      (id) =>
         document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "",
       nodeId
     );

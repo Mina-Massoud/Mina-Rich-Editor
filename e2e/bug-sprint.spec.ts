@@ -1,14 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { openEditor } from "./helpers";
 
 // ─── Bug 1: Markdown paste ──────────────────────────────────────────────────
 
 test.describe("Bug 1: Markdown paste conversion", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3099");
-    await page.waitForLoadState("networkidle");
-    await page.getByText("Try the Editor").click();
-    await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-    await page.waitForTimeout(2000);
+    await openEditor(page);
   });
 
   test("pasting Markdown creates correct block types", async ({ page }) => {
@@ -29,7 +26,7 @@ test.describe("Bug 1: Markdown paste conversion", () => {
       });
       el.dispatchEvent(evt);
     }, markdown);
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     // Check what was created
     const blocks = await page.evaluate(() => {
@@ -51,11 +48,7 @@ test.describe("Bug 1: Markdown paste conversion", () => {
 
 test.describe("Bug 2: Delete after paste", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3099");
-    await page.waitForLoadState("networkidle");
-    await page.getByText("Try the Editor").click();
-    await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-    await page.waitForTimeout(2000);
+    await openEditor(page);
   });
 
   test("type then delete all text in a block, block survives", async ({ page }) => {
@@ -89,7 +82,7 @@ test.describe("Bug 2: Delete after paste", () => {
 
 test.describe("Bug 3 & 4: CompactEditor selection and toolbar", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("http://localhost:3099/compact");
+    await page.goto("/compact");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(3000);
   });
@@ -103,16 +96,17 @@ test.describe("Bug 3 & 4: CompactEditor selection and toolbar", () => {
     await page.keyboard.type("Select me please", { delay: 30 });
     await page.waitForTimeout(500);
 
-    // Select the text
+    // Select the text using TreeWalker for robustness
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
-      const textNode = el.firstChild;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const textNode = walker.nextNode();
       if (textNode && textNode.nodeType === Node.TEXT_NODE) {
         const range = document.createRange();
         range.setStart(textNode, 0);
-        range.setEnd(textNode, 6); // select "Select"
+        range.setEnd(textNode, Math.min(6, textNode.textContent?.length ?? 0)); // select "Select"
         const sel = window.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
@@ -120,7 +114,7 @@ test.describe("Bug 3 & 4: CompactEditor selection and toolbar", () => {
       // Trigger selectionchange
       document.dispatchEvent(new Event("selectionchange"));
     }, nodeId);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(600);
 
     // Check if Bold button is enabled
     const boldBtn = page.locator('button[aria-label="Bold"]').first();
@@ -138,16 +132,17 @@ test.describe("Bug 3 & 4: CompactEditor selection and toolbar", () => {
     await page.keyboard.type("Hover toolbar test", { delay: 30 });
     await page.waitForTimeout(500);
 
-    // Select text
+    // Select text using TreeWalker
     await page.evaluate((id) => {
-      const el = document.querySelector(`[data-node-id="${id}"]`);
+      const el = document.querySelector(`[data-node-id="${id}"]`) as HTMLElement | null;
       if (!el) return;
       el.focus();
-      const textNode = el.firstChild;
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const textNode = walker.nextNode();
       if (textNode && textNode.nodeType === Node.TEXT_NODE) {
         const range = document.createRange();
         range.setStart(textNode, 0);
-        range.setEnd(textNode, 5);
+        range.setEnd(textNode, Math.min(5, textNode.textContent?.length ?? 0));
         const sel = window.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
@@ -157,16 +152,13 @@ test.describe("Bug 3 & 4: CompactEditor selection and toolbar", () => {
     await page.waitForTimeout(1000);
 
     // The floating SelectionToolbar should be visible with formatting buttons.
-    // It renders as a motion.div with fixed positioning and z-[200].
     const hasFloatingToolbar = await page.evaluate(() => {
-      // Check for any fixed-position element with z-index that has format buttons
       const fixedEls = document.querySelectorAll(".fixed");
       for (const el of fixedEls) {
         const zIndex = window.getComputedStyle(el).zIndex;
         if (parseInt(zIndex) >= 100) {
-          // Has buttons inside?
           const buttons = el.querySelectorAll("button");
-          if (buttons.length >= 3) return true; // Has formatting buttons
+          if (buttons.length >= 3) return true;
         }
       }
       return false;

@@ -2,7 +2,7 @@ import React from "react";
 import { SectionHeading } from "../_components/SectionHeading";
 import { ShortcutRow } from "../_components/ShortcutRow";
 
-export const sectionMeta = { id: "keyboard-shortcuts", num: "04", label: "Keyboard Shortcuts" };
+export const sectionMeta = { id: "keyboard-shortcuts", num: "10", label: "Keyboard Shortcuts" };
 
 export default function S04_KeyboardShortcuts() {
   const formatting = [
@@ -37,35 +37,35 @@ export default function S04_KeyboardShortcuts() {
 
   return (
     <section className="mb-20">
-      <SectionHeading num="04" label="Keyboard Shortcuts" id="keyboard-shortcuts">
+      <SectionHeading num="10" label="Keyboard Shortcuts" id="keyboard-shortcuts">
         Full keyboard control
       </SectionHeading>
 
       <div className="space-y-6">
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">Formatting</h3>
-          <div className="border border-border-subtle bg-surface-raised overflow-hidden divide-y divide-border-subtle">
+          <h3 className="mb-3 text-lg font-light text-foreground">Formatting</h3>
+          <div className="border border-border bg-muted overflow-hidden divide-y divide-border">
             {formatting.map((s, i) => <ShortcutRow key={i} {...s} />)}
           </div>
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">Editing</h3>
-          <div className="border border-border-subtle bg-surface-raised overflow-hidden divide-y divide-border-subtle">
+          <h3 className="mb-3 text-lg font-light text-foreground">Editing</h3>
+          <div className="border border-border bg-muted overflow-hidden divide-y divide-border">
             {editing.map((s, i) => <ShortcutRow key={i} {...s} />)}
           </div>
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">Navigation</h3>
-          <div className="border border-border-subtle bg-surface-raised overflow-hidden divide-y divide-border-subtle">
+          <h3 className="mb-3 text-lg font-light text-foreground">Navigation</h3>
+          <div className="border border-border bg-muted overflow-hidden divide-y divide-border">
             {navigation.map((s, i) => <ShortcutRow key={i} {...s} />)}
           </div>
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">Selection</h3>
-          <div className="border border-border-subtle bg-surface-raised overflow-hidden divide-y divide-border-subtle">
+          <h3 className="mb-3 text-lg font-light text-foreground">Selection</h3>
+          <div className="border border-border bg-muted overflow-hidden divide-y divide-border">
             {selection.map((s, i) => <ShortcutRow key={i} {...s} />)}
           </div>
         </div>

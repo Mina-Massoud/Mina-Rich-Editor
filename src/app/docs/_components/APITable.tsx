@@ -8,18 +8,18 @@ interface APITableProps {
 
 export function APITable({ headers, rows, className = "" }: APITableProps) {
   return (
-    <div className={`border border-border-subtle bg-surface-raised overflow-x-auto ${className}`}>
+    <div className={`border border-border bg-muted overflow-x-auto ${className}`}>
       <table className="w-full min-w-[500px]">
-        <thead className="border-b border-border-subtle bg-white/[0.02]">
+        <thead className="border-b border-border bg-muted">
           <tr>
             {headers.map((h) => (
-              <th key={h} className="p-3 text-left text-sm font-medium text-warm-200">
+              <th key={h} className="p-3 text-left text-sm font-medium text-foreground/80">
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border-subtle">
+        <tbody className="divide-y divide-border">
           {rows.map((row, i) => (
             <tr key={i}>
               {row.map((cell, j) => (
@@ -27,12 +27,12 @@ export function APITable({ headers, rows, className = "" }: APITableProps) {
                   key={j}
                   className={`p-3 text-sm ${
                     j === 0
-                      ? "font-mono text-warm-100"
+                      ? "font-mono text-foreground"
                       : j === 1
-                        ? "font-mono text-warm-400"
+                        ? "font-mono text-muted-foreground"
                         : j === 2 && headers.length === 4
-                          ? "font-mono text-warm-400"
-                          : "text-warm-300"
+                          ? "font-mono text-muted-foreground"
+                          : "text-muted-foreground"
                   }`}
                 >
                   {cell}

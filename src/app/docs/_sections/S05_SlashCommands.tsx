@@ -2,7 +2,7 @@ import React from "react";
 import { SectionHeading } from "../_components/SectionHeading";
 import { DxCard } from "../_components/DxCard";
 
-export const sectionMeta = { id: "slash-commands", num: "05", label: "Slash Commands" };
+export const sectionMeta = { id: "slash-commands", num: "08", label: "Slash Commands" };
 
 export default function S05_SlashCommands() {
   const commands = [
@@ -24,13 +24,13 @@ export default function S05_SlashCommands() {
 
   return (
     <section className="mb-20">
-      <SectionHeading num="05" label="Slash Commands" id="slash-commands">
+      <SectionHeading num="08" label="Slash Commands" id="slash-commands">
         Notion-style command menu
       </SectionHeading>
-      <p className="mb-6 text-sm font-light text-warm-400">
-        Type <code className="bg-surface-code text-warm-100 px-1.5 py-0.5 text-xs font-mono">/</code> in an empty block to open the command palette. Start typing to filter commands.
+      <p className="mb-6 text-sm font-light text-muted-foreground">
+        Type <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">/</code> in an empty block to open the command palette. Start typing to filter commands.
       </p>
-      <div className="grid gap-px sm:grid-cols-2 border-t border-l border-border-subtle">
+      <div className="grid gap-px sm:grid-cols-2 border-t border-l border-border">
         {commands.map((c, i) => (
           <DxCard key={i} tag={c.tag} title={c.title} desc={c.desc} idx={i + 1} />
         ))}

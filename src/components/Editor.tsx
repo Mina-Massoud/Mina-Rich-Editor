@@ -304,6 +304,7 @@ export function Editor({
   const { toast } = useToast();
   const lastEnterTime = useRef<number>(0);
   const nodeRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const pendingFocusId = useRef<string | null>(null);
   const contentUpdateTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const activeNodeIdRef = useRef(activeNodeId);
   activeNodeIdRef.current = activeNodeId;
@@ -594,29 +595,23 @@ export function Editor({
     };
   }, [handleSelectionChange]);
 
-  // Focus on current node when it changes
+  // Focus on current node when it changes.
+  // If the element is already mounted, focus immediately.
+  // Otherwise, store the ID so registerNodeRef can focus it when it mounts.
   useEffect(() => {
     if (!activeNodeId) return;
 
-    const activeId = activeNodeId;
+    const element = nodeRefs.current.get(activeNodeId);
+    if (element && document.activeElement !== element) {
+      element.focus();
+      pendingFocusId.current = null;
+    } else if (!element) {
+      pendingFocusId.current = activeNodeId;
+    }
 
-    const attemptFocus = (retries = 0) => {
-      const element = nodeRefs.current.get(activeId);
-
-      if (element && document.activeElement !== element) {
-        element.focus();
-      } else if (!element && retries < 10) {
-        // Retry: element may not be mounted yet after state update
-        setTimeout(() => attemptFocus(retries + 1), 50);
-      } else if (!element) {
-        console.error(
-          "❌ [Focus Failed] Element not found after 10 retries:",
-          activeId
-        );
-      }
+    return () => {
+      pendingFocusId.current = null;
     };
-
-    attemptFocus();
   }, [activeNodeId]);
 
   // Cleanup timers on unmount
@@ -639,16 +634,21 @@ export function Editor({
     handleFormat,
   });
 
-  // Stable registerNodeRef callback (nodeRefs ref never changes identity)
+  // Stable registerNodeRef callback (nodeRefs ref never changes identity).
+  // When a newly mounted element matches the pending focus ID, focus it immediately.
   const registerNodeRef = useCallback(
     (nodeId: string, el: HTMLElement | null) => {
       if (el) {
         nodeRefs.current.set(nodeId, el);
+        if (pendingFocusId.current === nodeId) {
+          pendingFocusId.current = null;
+          el.focus();
+        }
       } else {
         nodeRefs.current.delete(nodeId);
       }
     },
-    [] // nodeRefs.current is a stable Map — the ref itself never changes
+    [] // nodeRefs.current and pendingFocusId.current are stable refs
   );
 
   // Build the editor context value.

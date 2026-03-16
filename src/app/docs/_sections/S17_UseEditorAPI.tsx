@@ -3,15 +3,15 @@ import { SectionHeading } from "../_components/SectionHeading";
 import { CodeBlock } from "../_components/CodeBlock";
 import { APITable } from "../_components/APITable";
 
-export const sectionMeta = { id: "editor-api", num: "17", label: "useEditorAPI" };
+export const sectionMeta = { id: "editor-api", num: "19", label: "useEditorAPI" };
 
 export default function S17_UseEditorAPI() {
   return (
     <section className="mb-20">
-      <SectionHeading num="17" label="useEditorAPI" id="editor-api">
+      <SectionHeading num="19" label="useEditorAPI" id="editor-api">
         High-level programmatic control
       </SectionHeading>
-      <p className="mb-6 text-sm font-light text-warm-400">
+      <p className="mb-6 text-sm font-light text-muted-foreground">
         A hook that provides non-reactive getter functions for reading and writing editor content without dispatching low-level actions.
       </p>
 

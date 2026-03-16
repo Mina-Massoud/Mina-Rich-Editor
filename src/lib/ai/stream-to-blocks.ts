@@ -10,7 +10,7 @@
  */
 
 import type { EditorAction } from '../reducer/actions';
-import type { TextNode, NodeType, InlineText } from '../types';
+import type { TextNode, NodeType, InlineText, NodeAttributes } from '../types';
 import { generateId } from '../utils/id-generator';
 
 // ─── Inline Markdown Parsing ─────────────────────────────────────────────────
@@ -55,7 +55,7 @@ function hasInlineFormatting(text: string): boolean {
 
 // ─── Block Helpers ───────────────────────────────────────────────────────────
 
-function parseLineType(raw: string): { type: NodeType; content: string } {
+function parseLineType(raw: string): { type: NodeType; content: string; attributes?: NodeAttributes } {
   if (raw.startsWith('### ')) return { type: 'h3', content: raw.slice(4) };
   if (raw.startsWith('## ')) return { type: 'h2', content: raw.slice(3) };
   if (raw.startsWith('# ')) return { type: 'h1', content: raw.slice(2) };
@@ -63,14 +63,19 @@ function parseLineType(raw: string): { type: NodeType; content: string } {
   if (/^\d+\.\s/.test(raw)) return { type: 'li', content: raw.replace(/^\d+\.\s/, '') };
   if (raw.startsWith('> ')) return { type: 'blockquote', content: raw.slice(2) };
   if (/^---+$/.test(raw.trim()) || /^\*\*\*+$/.test(raw.trim())) return { type: 'hr', content: '' };
+
+  const imgMatch = raw.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+  if (imgMatch) return { type: 'img', content: '', attributes: { src: imgMatch[2], alt: imgMatch[1] } };
+
   return { type: 'p', content: raw };
 }
 
-function createBlock(type: NodeType, content: string): TextNode {
+function createBlock(type: NodeType, content: string, attributes?: NodeAttributes): TextNode {
   return {
     id: generateId(type),
     type: type as TextNode['type'],
     content,
+    ...(attributes && { attributes }),
   };
 }
 
@@ -96,6 +101,9 @@ export async function streamToBlocks(
   // Code fence state
   let inCodeBlock = false;
   let codeBlockContent = '';
+  // Content from finalized complete lines only — prevents partial preview
+  // from being double-counted when the partial line becomes complete.
+  let committedContent = '';
 
   function lastInsertedId(): string {
     return insertedBlockIds.length > 0
@@ -108,7 +116,7 @@ export async function streamToBlocks(
     if (!s.block) return;
 
     // Apply inline formatting on finalization
-    if (s.block.type !== 'pre' && hasInlineFormatting(s.block.content ?? '')) {
+    if (s.block.type !== 'pre' && s.block.type !== 'img' && hasInlineFormatting(s.block.content ?? '')) {
       dispatch({
         type: 'UPDATE_NODE',
         payload: {
@@ -119,15 +127,17 @@ export async function streamToBlocks(
     }
 
     insertedBlockIds.push(s.block.id);
+    committedContent = '';
     s.block = null;
   }
 
   /** Insert a brand-new block after the last inserted one. */
-  function insertBlock(type: NodeType, content: string): void {
+  function insertBlock(type: NodeType, content: string, attributes?: NodeAttributes): void {
     finalizeBlock();
 
-    const block = createBlock(type, content);
+    const block = createBlock(type, content, attributes);
     s.block = block;
+    committedContent = content;
 
     dispatch({
       type: 'INSERT_NODE',
@@ -207,17 +217,18 @@ export async function streamToBlocks(
       }
 
       // Regular content line
-      const { type, content } = parseLineType(line);
+      const { type, content, attributes } = parseLineType(line);
 
       if (!s.block) {
-        insertBlock(type, content);
+        insertBlock(type, content, attributes);
       } else if (s.block.type === type && type === 'p') {
-        // Continue same paragraph — append
-        const joined = (s.block.content ?? '') + ' ' + content;
-        updateContent(joined);
+        // Continue same paragraph — append using committed content
+        // (not s.block.content which may include partial preview text)
+        committedContent = committedContent + ' ' + content;
+        updateContent(committedContent);
       } else {
         // Different type — new block
-        insertBlock(type, content);
+        insertBlock(type, content, attributes);
       }
     }
 
@@ -237,16 +248,19 @@ export async function streamToBlocks(
       continue;
     }
 
-    const { type, content } = parseLineType(partialLine);
+    const { type, content, attributes } = parseLineType(partialLine);
 
     if (!s.block) {
       // No block yet — create one for the partial line
-      insertBlock(type, content);
+      insertBlock(type, content, attributes);
     } else {
       // Update existing block with partial content.
       // If the type changed (e.g. `#` paragraph → `## ` heading), update in-place.
       if (type !== s.block.type) {
         updateType(type, content);
+      } else if (type === 'p' && committedContent) {
+        // Paragraph continuation preview — use committed base to avoid duplication
+        updateContent(committedContent + ' ' + content);
       } else {
         updateContent(content);
       }

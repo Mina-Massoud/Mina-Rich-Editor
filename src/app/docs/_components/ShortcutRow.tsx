@@ -8,10 +8,10 @@ interface ShortcutRowProps {
 export function ShortcutRow({ shortcut, action }: ShortcutRowProps) {
   return (
     <div className="flex items-center justify-between p-3">
-      <code className="bg-surface-code text-warm-100 px-2 py-1 text-sm font-mono border border-border-subtle">
+      <code className="bg-muted text-foreground px-2 py-1 text-sm font-mono border border-border">
         {shortcut}
       </code>
-      <span className="text-sm text-warm-400">{action}</span>
+      <span className="text-sm text-muted-foreground">{action}</span>
     </div>
   );
 }

@@ -24,10 +24,10 @@ export default function S07_TextFormatting() {
       <SectionHeading num="07" label="Text Formatting" id="text-formatting">
         Rich formatting without the complexity
       </SectionHeading>
-      <p className="mb-6 text-sm font-light text-warm-400">
+      <p className="mb-6 text-sm font-light text-muted-foreground">
         Select text to reveal the floating toolbar with all formatting options. Apply formats via keyboard shortcuts or toolbar buttons.
       </p>
-      <div className="grid gap-px sm:grid-cols-2 border-t border-l border-border-subtle">
+      <div className="grid gap-px sm:grid-cols-2 border-t border-l border-border">
         {formats.map((f, i) => (
           <DxCard key={i} tag={f.tag} title={f.title} desc={f.desc} idx={i + 1} />
         ))}
@@ -35,9 +35,9 @@ export default function S07_TextFormatting() {
 
       <div className="mt-6">
         <NotesList items={[
-          <>All formatting is applied via the <strong className="text-warm-100">Selection Toolbar</strong> that appears when text is selected.</>,
+          <>All formatting is applied via the <strong className="text-foreground">Selection Toolbar</strong> that appears when text is selected.</>,
           <>Format detection is automatic -- active formats are highlighted in the toolbar.</>,
-          <>Custom classes support <strong className="text-warm-100">Tailwind CSS</strong> utilities with a built-in class picker and live preview.</>,
+          <>Custom classes support <strong className="text-foreground">Tailwind CSS</strong> utilities with a built-in class picker and live preview.</>,
         ]} />
       </div>
     </section>

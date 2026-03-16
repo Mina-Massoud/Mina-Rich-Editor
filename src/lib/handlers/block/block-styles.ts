@@ -46,7 +46,7 @@ export function buildBlockClassName({
     getBlockSpacing(textNode.type, isListItem),
     
     // Notion-style first block spacing
-    notionBased && isFirstBlock && textNode.type === 'h1' ? "mt-8 pb-12" : "",
+    notionBased && isFirstBlock ? "mt-8 pb-12" : "",
     
     // Transitions
     "transition-all",

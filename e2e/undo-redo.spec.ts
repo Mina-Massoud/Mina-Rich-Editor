@@ -1,18 +1,9 @@
 import { test, expect, Page } from "@playwright/test";
+import { openEditor, mod } from "./helpers";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-async function openEditor(page: Page) {
-  await page.goto("http://localhost:3099");
-  await page.waitForLoadState("networkidle");
-  await page.getByText("Try the Editor").click();
-  await page.waitForSelector("[data-editor-content]", { timeout: 15000 });
-  await page.waitForTimeout(2000);
-}
-
-const mod = process.platform === "darwin" ? "Meta" : "Control";
 
 /** Focus the h1 block, clear it, and type new text */
 async function typeInH1(page: Page, text: string) {
@@ -215,7 +206,7 @@ test.describe("Undo / Redo (operation-based history)", () => {
   });
 
   test("undo/redo works in compact editor", async ({ page }) => {
-    await page.goto("http://localhost:3099/compact");
+    await page.goto("/compact");
     await page.waitForLoadState("networkidle");
     await page.waitForSelector("[data-editor-content]", { timeout: 15000 });
     await page.waitForTimeout(1500);

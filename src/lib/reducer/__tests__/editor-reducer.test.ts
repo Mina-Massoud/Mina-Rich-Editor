@@ -60,7 +60,7 @@ function stateWithSelection(
 // ---------------------------------------------------------------------------
 
 describe('createInitialState', () => {
-  it('creates valid state with a default h1 when no container is provided', () => {
+  it('creates valid state with a default paragraph when no container is provided', () => {
     const state = createInitialState();
 
     expect(state.version).toBe('1.0.0');
@@ -76,19 +76,18 @@ describe('createInitialState', () => {
     expect(container.type).toBe('container');
     expect(container.children).toHaveLength(1);
 
-    const h1 = firstChild(state);
-    expect(h1.type).toBe('h1');
-    expect(h1.content).toBe('');
-    expect(h1.attributes?.placeholder).toBe('New page');
-    expect(state.activeNodeId).toBe(h1.id);
+    const defaultNode = firstChild(state);
+    expect(defaultNode.type).toBe('p');
+    expect(defaultNode.content).toBe('');
+    expect(state.activeNodeId).toBe(defaultNode.id);
   });
 
-  it('creates valid state with a default h1 when no children are passed (undefined)', () => {
-    // Passing a partial container without a children key falls back to a default h1.
+  it('creates valid state with a default paragraph when no children are passed (undefined)', () => {
+    // Passing a partial container without a children key falls back to a default paragraph.
     const state = createInitialState({ id: 'my-doc', type: 'container' });
-    const h1 = firstChild(state);
-    expect(h1.type).toBe('h1');
-    expect(h1.content).toBe('');
+    const defaultNode = firstChild(state);
+    expect(defaultNode.type).toBe('p');
+    expect(defaultNode.content).toBe('');
     expect(currentContainer(state).id).toBe('my-doc');
   });
 
@@ -246,7 +245,7 @@ describe('DELETE_NODE', () => {
     expect(currentContainer(next).children[0].id).toBe('h1-1');
   });
 
-  it('creates a default h1 when the last remaining node is deleted', () => {
+  it('creates a default empty paragraph when the last remaining node is deleted', () => {
     const state = createInitialState({
       id: 'root',
       type: 'container',
@@ -263,11 +262,12 @@ describe('DELETE_NODE', () => {
 
     const container = currentContainer(s2);
     expect(container.children).toHaveLength(1);
-    expect((container.children[0] as TextNode).type).toBe('h1');
+    expect((container.children[0] as TextNode).type).toBe('p');
+    expect((container.children[0] as TextNode).content).toBe('');
     expect(s2.activeNodeId).toBe(container.children[0].id);
   });
 
-  it('clears content instead of deleting when target is the only h1 at root level', () => {
+  it('creates empty paragraph when deleting the only node at root level', () => {
     const state = createInitialState({
       id: 'root',
       type: 'container',
@@ -278,12 +278,45 @@ describe('DELETE_NODE', () => {
 
     const next = editorReducer(state, EditorActions.deleteNode('h1-1'));
     const container = currentContainer(next);
-    // Should still have exactly one child
+    // Should still have exactly one child (fallback empty paragraph)
     expect(container.children).toHaveLength(1);
-    // Content should be cleared
+    expect((container.children[0] as TextNode).type).toBe('p');
     expect((container.children[0] as TextNode).content).toBe('');
-    // The id should be preserved
-    expect(container.children[0].id).toBe('h1-1');
+  });
+
+  it('updates activeNodeId when deleting the currently active node', () => {
+    const state = createInitialState({
+      id: 'root',
+      type: 'container',
+      children: [
+        { id: 'p-first', type: 'p', content: 'First' },
+        { id: 'p-second', type: 'p', content: 'Second' },
+        { id: 'p-third', type: 'p', content: 'Third' },
+      ],
+    });
+
+    const withActive = { ...state, activeNodeId: 'p-first' };
+    const next = editorReducer(withActive, EditorActions.deleteNode('p-first'));
+
+    const container = currentContainer(next);
+    expect(container.children).toHaveLength(2);
+    expect(next.activeNodeId).toBe('p-second');
+  });
+
+  it('preserves activeNodeId when deleting a non-active node', () => {
+    const state = createInitialState({
+      id: 'root',
+      type: 'container',
+      children: [
+        { id: 'p-first', type: 'p', content: 'First' },
+        { id: 'p-second', type: 'p', content: 'Second' },
+      ],
+    });
+
+    const withActive = { ...state, activeNodeId: 'p-second' };
+    const next = editorReducer(withActive, EditorActions.deleteNode('p-first'));
+
+    expect(next.activeNodeId).toBe('p-second');
   });
 
   it('adds a history entry', () => {
@@ -546,7 +579,7 @@ describe('RESET', () => {
     expect(reset.undoStack).toHaveLength(0);
     expect(reset.redoStack).toHaveLength(0);
     expect(currentContainer(reset).children).toHaveLength(1);
-    expect(firstChild(reset).type).toBe('h1');
+    expect(firstChild(reset).type).toBe('p');
   });
 });
 

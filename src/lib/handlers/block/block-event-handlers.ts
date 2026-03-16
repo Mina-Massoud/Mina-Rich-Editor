@@ -66,11 +66,8 @@ export function createHandleInput(params: Pick<BlockEventHandlerParams, 'textNod
     const element = e.currentTarget;
     const text = element.textContent || "";
 
-    // Check if this is a header block (h1) - headers don't show command menu
-    const isHeaderBlock = textNode.type === 'h1';
-
-    // Check if the block is empty and user typed "/" (but not for header blocks)
-    if (text === "/" && !readOnly && onChangeBlockType && !isHeaderBlock) {
+    // Check if the block is empty and user typed "/"
+    if (text === "/" && !readOnly && onChangeBlockType) {
       setShowCommandMenu(true);
       setCommandMenuAnchor(element);
     } else if (showCommandMenu && text !== "/") {

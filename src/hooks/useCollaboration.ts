@@ -10,34 +10,14 @@
  * 4. Applying remote Y.js changes back into the Zustand store (remote -> local).
  * 5. Cursor / presence tracking via the Awareness protocol.
  *
- * All `yjs` / `y-websocket` imports are **dynamic** so the base editor
- * works without them installed.
- *
- * ## Usage
- *
- * ```tsx
- * import { EditorProvider } from '@mina-editor/core';
- * import { CollaborationProvider } from '../components/CollaborationProvider';
- * import { CompactEditor } from '@mina-editor/core';
- *
- * <EditorProvider initialContent={content}>
- *   <CollaborationProvider
- *     roomId="doc-123"
- *     serverUrl="wss://collab.example.com"
- *     user={{ name: "Alice", color: "#e66" }}
- *   >
- *     <CompactEditor />
- *   </CollaborationProvider>
- * </EditorProvider>
- * ```
- *
  * @packageDocumentation
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import type { CollabOptions, CollabState, CollabUser } from '../lib/collaboration/types';
+import { useEffect, useRef, useState } from 'react';
+import type { CollabOptions, CollabState } from '../lib/collaboration/types';
 import { REMOTE_ORIGIN } from '../lib/collaboration/types';
 import {
+  getY,
   applyOperationToYDoc,
   syncYDocToStore,
   initYDocFromContainer,
@@ -45,26 +25,11 @@ import {
 import { createAwarenessManager, type AwarenessManager } from '../lib/collaboration/awareness';
 import { useEditorStoreInstance } from '../lib/store/editor-store';
 
-// ─── Dynamic imports ──────────────────────────────────────────────────────────
-
-async function loadYjs(): Promise<any> {
-  try {
-    // Dynamic import — yjs is an optional peer dependency.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return await (Function('return import("yjs")')() as Promise<any>);
-  } catch {
-    throw new Error(
-      '[mina-editor] Collaboration requires "yjs" as a peer dependency. ' +
-        'Install it with: npm install yjs y-websocket'
-    );
-  }
-}
+// ─── Dynamic import for y-websocket ──────────────────────────────────────────
 
 async function loadYWebsocket(): Promise<any> {
   try {
-    // Dynamic import — y-websocket is an optional peer dependency.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return await (Function('return import("y-websocket")')() as Promise<any>);
+    return await import('y-websocket');
   } catch {
     throw new Error(
       '[mina-editor] Collaboration requires "y-websocket" as a peer dependency. ' +
@@ -75,39 +40,28 @@ async function loadYWebsocket(): Promise<any> {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-/**
- * React hook that sets up real-time collaboration for the nearest
- * `<EditorProvider>`.
- *
- * Returns live `CollabState` (connection status + user list). The hook
- * takes care of all Y.js lifecycle management — consumers do not need to
- * interact with `Y.Doc` or `WebsocketProvider` directly.
- *
- * @param options - Room, server, and user configuration.
- * @returns       Live collaboration state.
- */
 export function useCollaboration(options: CollabOptions): CollabState {
   const { roomId, serverUrl, user } = options;
   const store = useEditorStoreInstance();
 
   const [isConnected, setIsConnected] = useState(false);
-  const [connectedUsers, setConnectedUsers] = useState<CollabUser[]>([]);
+  const [connectedUsers, setConnectedUsers] = useState<import('../lib/collaboration/types').CollabUser[]>([]);
+  const [localClientId, setLocalClientId] = useState<string | null>(null);
 
-  // Refs to hold Y.js objects across renders without triggering re-renders.
   const yDocRef = useRef<any>(null);
   const providerRef = useRef<any>(null);
   const awarenessRef = useRef<AwarenessManager | null>(null);
   const unsubStoreRef = useRef<(() => void) | null>(null);
   const isRemoteUpdate = useRef(false);
 
-  // ── Bootstrap ──────────────────────────────────────────────────────────────
-
   useEffect(() => {
     let cancelled = false;
     let cleanupProvider: (() => void) | null = null;
+    let cleanupCursor: (() => void) | null = null;
 
     (async () => {
-      const Y = await loadYjs();
+      // Use the SAME getY() as y-binding to guarantee a single yjs instance
+      const Y = await getY();
       const { WebsocketProvider } = await loadYWebsocket();
 
       if (cancelled) return;
@@ -115,68 +69,135 @@ export function useCollaboration(options: CollabOptions): CollabState {
       // 1. Create Y.Doc
       const yDoc = new Y.Doc();
       yDocRef.current = yDoc;
+      setLocalClientId(String(yDoc.clientID));
+      console.log('[yjs] Created Y.Doc, clientID:', yDoc.clientID);
 
-      // 2. Connect to server
-      const provider = new WebsocketProvider(serverUrl, roomId, yDoc);
-      providerRef.current = provider;
-
-      // 3. Connection state
-      provider.on('status', ({ status }: { status: string }) => {
-        if (!cancelled) setIsConnected(status === 'connected');
-      });
-
-      // 4. Awareness / presence
-      const awareness = createAwarenessManager(provider.awareness, user);
-      awarenessRef.current = awareness;
-      awareness.onUsersChange((users) => {
-        if (!cancelled) setConnectedUsers(users);
-      });
-
-      // 5. Initialise Y.Doc from the current editor state if we are the first
-      //    client (Y.Doc root is empty).
-      const currentContainer = store.getState().current;
-      await initYDocFromContainer(yDoc, currentContainer);
-
-      // 6. Observe remote Y.Doc changes -> push into Mina store.
-      //    We listen on the root map for deep changes.
+      // 2. Set up Y.Doc observer BEFORE connecting so we catch the initial sync
       const yRoot = yDoc.getMap('root');
-      const handleYChange = (events: any[], transaction: any) => {
-        // Skip changes that originated from *our* local operations (step 7).
+      const handleYChange = (_events: any[], transaction: any) => {
+        console.log('[yjs] observeDeep fired, origin:', transaction.origin, 'REMOTE_ORIGIN:', REMOTE_ORIGIN, 'match:', transaction.origin === REMOTE_ORIGIN);
         if (transaction.origin === REMOTE_ORIGIN) return;
 
+        console.log('[yjs] Syncing Y.Doc → store');
         isRemoteUpdate.current = true;
         syncYDocToStore((action: any) => store.getState().dispatch(action), yDoc);
         isRemoteUpdate.current = false;
       };
       yRoot.observeDeep(handleYChange);
 
-      // 7. Observe local Mina store changes -> push into Y.Doc.
-      //    We subscribe to the Zustand store and diff `current` references.
+      // 3. Connect to server
+      console.log('[yjs] Connecting to', serverUrl, 'room:', roomId);
+      const provider = new WebsocketProvider(serverUrl, roomId, yDoc);
+      providerRef.current = provider;
+
+      // 4. Connection state
+      provider.on('status', ({ status }: { status: string }) => {
+        console.log('[yjs] Connection status:', status);
+        if (!cancelled) setIsConnected(status === 'connected');
+      });
+
+      // 5. Awareness / presence
+      const awareness = createAwarenessManager(provider.awareness, user);
+      awarenessRef.current = awareness;
+      awareness.onUsersChange((users: import('../lib/collaboration/types').CollabUser[]) => {
+        if (!cancelled) setConnectedUsers(users);
+      });
+
+      // 6. Init Y.Doc — wait for sync event from y-websocket.
+      //    y-websocket emits 'sync' (not 'synced') with (isSynced: boolean).
+      let initDone = false;
+      const tryInit = async (source: string) => {
+        if (initDone || cancelled) return;
+        initDone = true;
+        const yr = yDoc.getMap('root');
+        const hasId = yr.get('id');
+        console.log('[yjs] tryInit from:', source, 'yRoot has id:', hasId);
+        if (!hasId) {
+          const currentContainer = store.getState().current;
+          console.log('[yjs] Initializing Y.Doc from editor state, container id:', currentContainer.id);
+          await initYDocFromContainer(yDoc, currentContainer);
+          console.log('[yjs] Y.Doc initialized, yRoot id now:', yr.get('id'));
+        } else {
+          console.log('[yjs] Y.Doc already has content from server, syncing to store');
+          isRemoteUpdate.current = true;
+          syncYDocToStore((action: any) => store.getState().dispatch(action), yDoc);
+          isRemoteUpdate.current = false;
+        }
+      };
+
+      // Listen for the sync event (fires when initial server state is received)
+      provider.on('sync', (isSynced: boolean) => {
+        console.log('[yjs] sync event, isSynced:', isSynced);
+        if (isSynced) tryInit('sync-event');
+      });
+
+      // If already synced by the time we get here
+      if (provider.synced) {
+        console.log('[yjs] Provider already synced on setup');
+        tryInit('already-synced');
+      }
+
+      // Safety fallback
+      const initTimeout = setTimeout(() => {
+        console.log('[yjs] Init timeout fallback fired');
+        tryInit('timeout');
+      }, 1000);
+
+      // 7. Observe local store changes -> push into Y.Doc
       let prevContainer = store.getState().current;
-      const unsubStore = store.subscribe((state) => {
-        // Skip if this state change was caused by a remote Y.js update.
+      const unsubStore = store.subscribe((state: any) => {
         if (isRemoteUpdate.current) {
           prevContainer = state.current;
           return;
         }
 
         if (state.current !== prevContainer) {
-          // Instead of diffing, we do a full replace_container on the Y.Doc.
-          // This is safe because Y.js handles conflict resolution and
-          // deduplication, and it keeps the binding simple and correct.
+          console.log('[yjs] Store changed, pushing to Y.Doc. Container id:', state.current.id, 'children:', state.current.children?.length);
           const op = {
             type: 'replace_container' as const,
             container: state.current,
           };
-          applyOperationToYDoc(yDoc, op).catch((err) => {
-            console.error('[mina-editor] Failed to sync to Y.Doc:', err);
+          applyOperationToYDoc(yDoc, op).then(() => {
+            console.log('[yjs] Y.Doc updated successfully. yRoot id:', yRoot.get('id'), 'children:', yRoot.get('children')?.length);
+          }).catch((err: any) => {
+            console.error('[yjs] Failed to sync to Y.Doc:', err);
           });
           prevContainer = state.current;
         }
       });
       unsubStoreRef.current = unsubStore;
 
+      // 8. Track cursor position via selectionchange
+      const getCursorPosition = (): { nodeId: string; offset: number } | null => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return null;
+        const range = sel.getRangeAt(0);
+        let node: Node | null = range.startContainer;
+        while (node && !(node instanceof HTMLElement && node.dataset.nodeId)) {
+          node = node.parentElement;
+        }
+        if (!node || !(node instanceof HTMLElement)) return null;
+        return { nodeId: node.dataset.nodeId!, offset: range.startOffset };
+      };
+
+      let cursorThrottle: ReturnType<typeof setTimeout> | null = null;
+      const handleSelectionChange = () => {
+        if (cursorThrottle) return;
+        cursorThrottle = setTimeout(() => {
+          cursorThrottle = null;
+          const cursor = getCursorPosition();
+          awareness.updateCursor(cursor);
+        }, 50);
+      };
+      document.addEventListener('selectionchange', handleSelectionChange);
+
+      cleanupCursor = () => {
+        document.removeEventListener('selectionchange', handleSelectionChange);
+        if (cursorThrottle) clearTimeout(cursorThrottle);
+      };
+
       cleanupProvider = () => {
+        clearTimeout(initTimeout);
         yRoot.unobserveDeep(handleYChange);
         awareness.destroy();
         provider.destroy();
@@ -188,37 +209,14 @@ export function useCollaboration(options: CollabOptions): CollabState {
       cancelled = true;
       unsubStoreRef.current?.();
       unsubStoreRef.current = null;
+      cleanupCursor?.();
       cleanupProvider?.();
       yDocRef.current = null;
       providerRef.current = null;
       awarenessRef.current = null;
     };
-    // We intentionally exclude `user` from deps — changing the display name
-    // at runtime is handled by awareness, not by recreating the connection.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, serverUrl, store]);
 
-  // ── Update awareness when user info changes ────────────────────────────────
-
-  useEffect(() => {
-    if (!awarenessRef.current) return;
-    // The awareness manager was created with the initial user info.
-    // If user.name / user.color change, push updated state.
-    // We re-create the awareness manager only on full reconnect (roomId change).
-  }, [user.name, user.color]);
-
-  // ── Public cursor update helper ────────────────────────────────────────────
-
-  /**
-   * Consumers can call this to update the local cursor.
-   * Typically wired to `onSelect` / `onBlur` in the editor.
-   */
-  const updateCursor = useCallback(
-    (cursor: { nodeId: string; offset: number } | null) => {
-      awarenessRef.current?.updateCursor(cursor);
-    },
-    []
-  );
-
-  return { isConnected, connectedUsers };
+  return { isConnected, connectedUsers, localClientId };
 }

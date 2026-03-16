@@ -19,7 +19,7 @@ import {
 import {
   Popover,
   PopoverContent,
-  PopoverAnchor,
+  PopoverTrigger,
 } from './ui/popover';
 import {
   Heading1,
@@ -465,30 +465,22 @@ export function CommandMenu({
         }
       }}
     >
-      <PopoverAnchor virtualRef={{ current: anchorElement }} />
+      <PopoverTrigger asChild>
+        <span style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} />
+      </PopoverTrigger>
       <PopoverContent
         side="bottom"
         align="start"
         className="w-[320px] p-0"
-        onOpenAutoFocus={(e) => {
-          // Prevent stealing focus from the editor
-          e.preventDefault();
-        }}
-        onEscapeKeyDown={(e) => {
-          // Let Block component handle Escape
-          e.preventDefault();
-        }}
-        onFocusOutside={(e) => {
-          // Prevent closing when focus moves
-          e.preventDefault();
-        }}
-        onPointerDownOutside={(e) => {
-          // Prevent closing when clicking on the editor block
+        {...{ onOpenAutoFocus: (e: any) => e.preventDefault() }}
+        {...{ onEscapeKeyDown: (e: any) => e.preventDefault() }}
+        {...{ onFocusOutside: (e: any) => e.preventDefault() }}
+        {...{ onPointerDownOutside: (e: any) => {
           const target = e.target as HTMLElement;
           if (target.closest('[contenteditable="true"]') || target === anchorElement) {
             e.preventDefault();
           }
-        }}
+        }}}
       >
         <Command ref={commandRef} shouldFilter={false}>
           <CommandInput 

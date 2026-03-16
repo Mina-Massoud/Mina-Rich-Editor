@@ -1,12 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-async function openEditor(page: any) {
-  await page.goto("http://localhost:3099");
-  await page.waitForLoadState("networkidle");
-  await page.getByText("Try the Editor").click();
-  await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-  await page.waitForTimeout(2000);
-}
+import { openEditor } from "./helpers";
 
 test.describe("Drag and drop", () => {
   test.beforeEach(async ({ page }) => {

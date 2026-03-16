@@ -13,8 +13,8 @@ export default function S21_APIReference() {
 
       <div className="space-y-8">
         <div>
-          <h3 className="mb-3 text-xl font-light text-warm-100">EditorProvider</h3>
-          <p className="mb-3 text-sm text-warm-400">
+          <h3 className="mb-3 text-xl font-light text-foreground">EditorProvider</h3>
+          <p className="mb-3 text-sm text-muted-foreground">
             Wraps your editor and provides the Zustand store context for all editor operations.
           </p>
           <APITable
@@ -30,8 +30,8 @@ export default function S21_APIReference() {
         </div>
 
         <div>
-          <h3 className="mb-3 text-xl font-light text-warm-100">Editor</h3>
-          <p className="mb-3 text-sm text-warm-400">
+          <h3 className="mb-3 text-xl font-light text-foreground">Editor</h3>
+          <p className="mb-3 text-sm text-muted-foreground">
             The main editor component that renders the editing interface.
           </p>
           <APITable
@@ -46,8 +46,8 @@ export default function S21_APIReference() {
         </div>
 
         <div>
-          <h3 className="mb-3 text-xl font-light text-warm-100">CompactEditor</h3>
-          <p className="mb-3 text-sm text-warm-400">
+          <h3 className="mb-3 text-xl font-light text-foreground">CompactEditor</h3>
+          <p className="mb-3 text-sm text-muted-foreground">
             Self-contained editor with built-in provider and inline toolbar.
           </p>
           <APITable

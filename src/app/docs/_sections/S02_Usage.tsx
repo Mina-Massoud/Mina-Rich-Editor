@@ -33,7 +33,7 @@ export default function MyEditor() {
 
       <div className="mt-8 space-y-6">
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">With custom image upload</h3>
+          <h3 className="mb-3 text-lg font-light text-foreground">With custom image upload</h3>
           <CodeBlock label="App.tsx">{`<EditorProvider initialState={initialState}>
   <Editor
     onUploadImage={async (file) => {
@@ -48,7 +48,7 @@ export default function MyEditor() {
         </div>
 
         <div>
-          <h3 className="mb-3 text-lg font-light text-warm-100">Read-only mode</h3>
+          <h3 className="mb-3 text-lg font-light text-foreground">Read-only mode</h3>
           <CodeBlock label="Viewer.tsx">{`<EditorProvider initialState={savedState}>
   <Editor readOnly />
 </EditorProvider>`}</CodeBlock>

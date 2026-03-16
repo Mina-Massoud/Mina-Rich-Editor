@@ -49,8 +49,7 @@ let _Y: YModule | null = null;
 async function getY(): Promise<YModule> {
   if (_Y) return _Y;
   try {
-    // Use Function() to avoid static analysis / bundler inlining the import.
-    _Y = await (Function('return import("yjs")')() as Promise<any>);
+    _Y = await import('yjs');
     return _Y;
   } catch {
     throw new Error(
@@ -104,48 +103,46 @@ function blockLineToPlain(line: BlockLine): Record<string, unknown> {
 }
 
 /**
- * Convert a Mina `EditorNode` into a new `Y.Map` that can be inserted
- * into the Y.Doc tree. Requires the Y module reference.
+ * Populate a Y.Map (that is already integrated into a Y.Doc) with node data.
+ * Y.js requires types to be part of a document before reading — so we must
+ * first insert child Y.Map/Y.Array into the parent, THEN set their values.
  */
-function nodeToYMap(Y: YModule, node: EditorNode): InstanceType<YModule['Map']> {
-  const yMap = new Y.Map() as YMap;
+function populateYMap(Y: YModule, yMap: YMap, node: EditorNode): void {
   yMap.set('id', node.id);
   yMap.set('type', node.type);
 
   if (node.attributes) {
     const yAttrs = new Y.Map() as YMap;
+    yMap.set('attributes', yAttrs); // integrate first
     for (const [k, v] of Object.entries(node.attributes)) {
       if (v !== undefined) yAttrs.set(k, v);
     }
-    yMap.set('attributes', yAttrs);
   }
 
+  const isStructural = ['container', 'table', 'thead', 'tbody', 'tr'].includes(node.type as string);
+
   // Container / structural nodes have children
-  if ('children' in node && Array.isArray((node as ContainerNode).children)) {
+  if (isStructural && 'children' in node && Array.isArray((node as ContainerNode).children)) {
     const yChildren = new Y.Array() as YArray;
+    yMap.set('children', yChildren); // integrate first
     for (const child of (node as ContainerNode).children) {
-      yChildren.push([nodeToYMap(Y, child)]);
+      const yChild = new Y.Map() as YMap;
+      yChildren.push([yChild]); // integrate child into array
+      populateYMap(Y, yChild, child); // now populate it
     }
-    yMap.set('children', yChildren);
   }
 
   // TextNode fields
   if ('content' in node && (node as any).content !== undefined) {
     yMap.set('content', (node as any).content);
   }
-  if ('children' in node && Array.isArray((node as any).children)) {
-    // Inline children for text nodes (not container children).
-    // Container / structural types are already handled above.
-    const t = node.type as string;
-    if (t !== 'container' && t !== 'table' && t !== 'thead' && t !== 'tbody' && t !== 'tr') {
-      yMap.set('inlineChildren', (node as any).children.map(inlineTextToPlain));
-    }
+  if (!isStructural && 'children' in node && Array.isArray((node as any).children)) {
+    // Inline children for text nodes
+    yMap.set('inlineChildren', (node as any).children.map(inlineTextToPlain));
   }
   if ('lines' in node && (node as any).lines) {
     yMap.set('lines', (node as any).lines.map(blockLineToPlain));
   }
-
-  return yMap;
 }
 
 /**
@@ -243,10 +240,12 @@ function applyOpRecursive(
           const nodeType = target.get('type') as string;
           if (nodeType === 'container' || nodeType === 'table' || nodeType === 'thead' || nodeType === 'tbody' || nodeType === 'tr') {
             const yChildren = new Y.Array() as YArray;
+            target.set('children', yChildren); // integrate first
             for (const child of value) {
-              yChildren.push([nodeToYMap(Y, child as EditorNode)]);
+              const yChild = new Y.Map() as YMap;
+              yChildren.push([yChild]); // integrate child
+              populateYMap(Y, yChild, child as EditorNode); // then populate
             }
-            target.set('children', yChildren);
           } else {
             // Inline children
             target.set('inlineChildren', value.map((c: InlineText) => inlineTextToPlain(c)));
@@ -273,21 +272,19 @@ function applyOpRecursive(
         yChildren = new Y.Array() as YArray;
         parent.set('children', yChildren);
       }
-      const yNode = nodeToYMap(Y, op.node);
-      yChildren.insert(op.index, [yNode]);
+      const yNode = new Y.Map() as YMap;
+      yChildren.insert(op.index, [yNode]); // integrate first
+      populateYMap(Y, yNode, op.node);      // then populate
       break;
     }
 
     case 'replace_container': {
-      // Full replace: rebuild the root map
-      const newYRoot = nodeToYMap(Y, op.container);
-      // Copy all keys from newYRoot into yRoot
+      // Clear existing keys from yRoot
       const keysToDelete: string[] = [];
       yRoot.forEach((_: unknown, key: string) => keysToDelete.push(key));
       for (const k of keysToDelete) yRoot.delete(k);
-      newYRoot.forEach((value: unknown, key: string) => {
-        yRoot.set(key, value);
-      });
+      // Populate yRoot directly from the container (yRoot is integrated)
+      populateYMap(Y, yRoot, op.container);
       break;
     }
 
@@ -344,10 +341,8 @@ export async function initYDocFromContainer(
   if (yRoot.get('id')) return;
 
   yDoc.transact(() => {
-    const yNode = nodeToYMap(Y, container);
-    yNode.forEach((value: unknown, key: string) => {
-      yRoot.set(key, value);
-    });
+    // Populate yRoot directly (it's already integrated in the doc)
+    populateYMap(Y, yRoot, container);
   });
 }
 

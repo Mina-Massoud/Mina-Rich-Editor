@@ -342,14 +342,13 @@ export function SelectionToolbar({
               <PopoverContent
                 className="w-80"
                 align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-                onInteractOutside={(e) => {
-                  // Prevent closing when clicking on the toolbar
+                {...{ onOpenAutoFocus: (e: any) => e.preventDefault() }}
+                {...{ onInteractOutside: (e: any) => {
                   const target = e.target as HTMLElement;
                   if (toolbarRef.current?.contains(target)) {
                     e.preventDefault();
                   }
-                }}
+                }}}
               >
                 <LinkPopoverContent
                   hrefInput={hrefInput}
@@ -388,14 +387,13 @@ export function SelectionToolbar({
               <PopoverContent
                 className="w-96"
                 align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-                onInteractOutside={(e) => {
-                  // Prevent closing when clicking on the toolbar
+                {...{ onOpenAutoFocus: (e: any) => e.preventDefault() }}
+                {...{ onInteractOutside: (e: any) => {
                   const target = e.target as HTMLElement;
                   if (toolbarRef.current?.contains(target)) {
                     e.preventDefault();
                   }
-                }}
+                }}}
               >
                 <CustomClassPopoverContent
                   searchQuery={searchQuery}
@@ -437,13 +435,13 @@ export function SelectionToolbar({
                   align="end"
                   side="bottom"
                   sideOffset={8}
-                  onOpenAutoFocus={(e) => e.preventDefault()}
-                  onInteractOutside={(e) => {
+                  {...{ onOpenAutoFocus: (e: any) => e.preventDefault() }}
+                  {...{ onInteractOutside: (e: any) => {
                     const target = e.target as HTMLElement;
                     if (toolbarRef.current?.contains(target)) {
                       e.preventDefault();
                     }
-                  }}
+                  }}}
                 >
                   <AISelectionMenu
                     selection={activeSelection}

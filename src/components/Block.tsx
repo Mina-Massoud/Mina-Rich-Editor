@@ -278,11 +278,8 @@ export const Block = React.memo(function Block({
   // Get placeholder from attributes
   const placeholder = textNode.attributes?.placeholder as string | undefined;
 
-  // Determine if this is a header block (h1) - headers don't show command menu
-  const isHeaderBlock = textNode.type === 'h1';
-
-  // Show command menu placeholder only if no custom placeholder is set and not a header block
-  const showCommandPlaceholder = isEmpty && isActive && !readOnly && !placeholder && !isHeaderBlock;
+  // Show command menu placeholder only if no custom placeholder is set
+  const showCommandPlaceholder = isEmpty && isActive && !readOnly && !placeholder;
 
   // Determine which HTML element to render based on type
   const ElementType =

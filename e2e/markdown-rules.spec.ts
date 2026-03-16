@@ -1,17 +1,9 @@
 import { test, expect } from "@playwright/test";
-
-async function openEditor(page: any) {
-  await page.goto("http://localhost:3099");
-  await page.waitForLoadState("networkidle");
-  await page.getByText("Try the Editor").click();
-  await page.waitForSelector("[data-editor-content]", { timeout: 10000 });
-  await page.waitForTimeout(2000);
-}
+import { openEditor, mod, waitForBlockType } from "./helpers";
 
 /**
  * Returns the first paragraph block, clears its content, and returns the
- * block's Playwright locator. The locator is re-queried after clearing so
- * it still points to the same DOM node (identified by data-node-id).
+ * block's nodeId.
  */
 async function getFreshParagraph(page: any) {
   const p = page
@@ -19,9 +11,8 @@ async function getFreshParagraph(page: any) {
     .first();
   const nodeId = await p.getAttribute("data-node-id");
 
-  // Click and clear existing content
   await p.click();
-  await page.keyboard.press("Meta+a");
+  await page.keyboard.press(`${mod}+a`);
   await page.keyboard.press("Backspace");
   await page.waitForTimeout(300);
 
@@ -41,24 +32,11 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("# Hello", { delay: 40 });
-      await page.waitForTimeout(500);
+      await waitForBlockType(page, nodeId, "h1");
 
-      // The node should now carry data-node-type="h1"
-      const type = await page.evaluate(
-        (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.getAttribute(
-            "data-node-type"
-          ) ?? null,
-        nodeId
-      );
-      console.log("H1 node type:", type);
-      expect(type).toBe("h1");
-
-      // Content should be "Hello" (prefix stripped)
       const text = await page.evaluate(
         (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ??
-          "",
+          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ?? "",
         nodeId
       );
       expect(text).toBe("Hello");
@@ -68,22 +46,11 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("## World", { delay: 40 });
-      await page.waitForTimeout(500);
-
-      const type = await page.evaluate(
-        (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.getAttribute(
-            "data-node-type"
-          ) ?? null,
-        nodeId
-      );
-      console.log("H2 node type:", type);
-      expect(type).toBe("h2");
+      await waitForBlockType(page, nodeId, "h2");
 
       const text = await page.evaluate(
         (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ??
-          "",
+          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ?? "",
         nodeId
       );
       expect(text).toBe("World");
@@ -93,22 +60,11 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("### Sub", { delay: 40 });
-      await page.waitForTimeout(500);
-
-      const type = await page.evaluate(
-        (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.getAttribute(
-            "data-node-type"
-          ) ?? null,
-        nodeId
-      );
-      console.log("H3 node type:", type);
-      expect(type).toBe("h3");
+      await waitForBlockType(page, nodeId, "h3");
 
       const text = await page.evaluate(
         (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ??
-          "",
+          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ?? "",
         nodeId
       );
       expect(text).toBe("Sub");
@@ -120,22 +76,11 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("> Quote text", { delay: 40 });
-      await page.waitForTimeout(500);
-
-      const type = await page.evaluate(
-        (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.getAttribute(
-            "data-node-type"
-          ) ?? null,
-        nodeId
-      );
-      console.log("Blockquote node type:", type);
-      expect(type).toBe("blockquote");
+      await waitForBlockType(page, nodeId, "blockquote");
 
       const text = await page.evaluate(
         (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ??
-          "",
+          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ?? "",
         nodeId
       );
       expect(text).toBe("Quote text");
@@ -146,20 +91,8 @@ test.describe("Markdown input rules", () => {
     }) => {
       const { nodeId } = await getFreshParagraph(page);
 
-      // "---" must be the entire content — no trailing text
       await page.keyboard.type("---", { delay: 40 });
-      await page.waitForTimeout(500);
-
-      // hr blocks are not contenteditable; query by data-node-id regardless
-      const type = await page.evaluate(
-        (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.getAttribute(
-            "data-node-type"
-          ) ?? null,
-        nodeId
-      );
-      console.log("HR node type:", type);
-      expect(type).toBe("hr");
+      await waitForBlockType(page, nodeId, "hr");
     });
 
     test("Code block: '```' converts paragraph to code/pre", async ({
@@ -167,19 +100,8 @@ test.describe("Markdown input rules", () => {
     }) => {
       const { nodeId } = await getFreshParagraph(page);
 
-      // Backtick characters — type them individually to avoid clipboard paste
       await page.keyboard.type("```", { delay: 40 });
-      await page.waitForTimeout(500);
-
-      const type = await page.evaluate(
-        (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.getAttribute(
-            "data-node-type"
-          ) ?? null,
-        nodeId
-      );
-      console.log("Code block node type:", type);
-      expect(type).toBe("code");
+      await waitForBlockType(page, nodeId, "code");
     });
 
     test("Ordered list: '1. First item' converts paragraph to ol", async ({
@@ -188,22 +110,11 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("1. First item", { delay: 40 });
-      await page.waitForTimeout(500);
-
-      const type = await page.evaluate(
-        (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.getAttribute(
-            "data-node-type"
-          ) ?? null,
-        nodeId
-      );
-      console.log("OL node type:", type);
-      expect(type).toBe("ol");
+      await waitForBlockType(page, nodeId, "ol");
 
       const text = await page.evaluate(
         (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ??
-          "",
+          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ?? "",
         nodeId
       );
       expect(text).toBe("First item");
@@ -215,22 +126,11 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("- Bullet point", { delay: 40 });
-      await page.waitForTimeout(500);
-
-      const type = await page.evaluate(
-        (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.getAttribute(
-            "data-node-type"
-          ) ?? null,
-        nodeId
-      );
-      console.log("LI node type:", type);
-      expect(type).toBe("li");
+      await waitForBlockType(page, nodeId, "li");
 
       const text = await page.evaluate(
         (id: string) =>
-          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ??
-          "",
+          document.querySelector(`[data-node-id="${id}"]`)?.textContent?.trim() ?? "",
         nodeId
       );
       expect(text).toBe("Bullet point");
@@ -239,15 +139,20 @@ test.describe("Markdown input rules", () => {
 
   // ─────────────────────────────────────────────────────────────────────────
   // Inline formatting rules
-  // These tests assert EXPECTED behavior. They may fail if the inline
-  // Markdown auto-formatting feature is not yet implemented.
   // ─────────────────────────────────────────────────────────────────────────
   test.describe("Inline formatting rules", () => {
     test("Bold: '**hello**' formats 'hello' as bold", async ({ page }) => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("**hello**", { delay: 40 });
-      await page.waitForTimeout(500);
+      await page.waitForFunction(
+        (id: string) => {
+          const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+          return /data-bold="true"/.test(html) || /font-bold/.test(html) || /<strong[\s>]/i.test(html) || /<b[\s>]/i.test(html);
+        },
+        nodeId,
+        { timeout: 5000 }
+      );
 
       const innerHTML = await page.evaluate(
         (id: string) =>
@@ -256,16 +161,13 @@ test.describe("Markdown input rules", () => {
       );
       console.log("Bold inline innerHTML:", innerHTML);
 
-      // Accept any of the known bold representations the editor may use
       const hasBold =
         /data-bold="true"/.test(innerHTML) ||
         /font-bold/.test(innerHTML) ||
         /<strong[\s>]/i.test(innerHTML) ||
         /<b[\s>]/i.test(innerHTML);
-
       expect(hasBold).toBe(true);
 
-      // The visible text should contain "hello" without the asterisks
       const text = await page.evaluate(
         (id: string) =>
           document.querySelector(`[data-node-id="${id}"]`)?.textContent ?? "",
@@ -279,7 +181,14 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("*world*", { delay: 40 });
-      await page.waitForTimeout(500);
+      await page.waitForFunction(
+        (id: string) => {
+          const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+          return /data-italic="true"/.test(html) || /\bitalic\b/.test(html) || /<em[\s>]/i.test(html) || /<i[\s>]/i.test(html);
+        },
+        nodeId,
+        { timeout: 5000 }
+      );
 
       const innerHTML = await page.evaluate(
         (id: string) =>
@@ -293,7 +202,6 @@ test.describe("Markdown input rules", () => {
         /\bitalic\b/.test(innerHTML) ||
         /<em[\s>]/i.test(innerHTML) ||
         /<i[\s>]/i.test(innerHTML);
-
       expect(hasItalic).toBe(true);
 
       const text = await page.evaluate(
@@ -311,7 +219,14 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("`code`", { delay: 40 });
-      await page.waitForTimeout(500);
+      await page.waitForFunction(
+        (id: string) => {
+          const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+          return /data-code="true"/.test(html) || /font-mono/.test(html) || /<code[\s>]/i.test(html);
+        },
+        nodeId,
+        { timeout: 5000 }
+      );
 
       const innerHTML = await page.evaluate(
         (id: string) =>
@@ -324,7 +239,6 @@ test.describe("Markdown input rules", () => {
         /data-code="true"/.test(innerHTML) ||
         /font-mono/.test(innerHTML) ||
         /<code[\s>]/i.test(innerHTML);
-
       expect(hasCode).toBe(true);
 
       const text = await page.evaluate(
@@ -342,7 +256,14 @@ test.describe("Markdown input rules", () => {
       const { nodeId } = await getFreshParagraph(page);
 
       await page.keyboard.type("~~deleted~~", { delay: 40 });
-      await page.waitForTimeout(500);
+      await page.waitForFunction(
+        (id: string) => {
+          const html = document.querySelector(`[data-node-id="${id}"]`)?.innerHTML ?? "";
+          return /data-strikethrough="true"/.test(html) || /line-through/.test(html) || /<del[\s>]/i.test(html) || /<s[\s>]/i.test(html);
+        },
+        nodeId,
+        { timeout: 5000 }
+      );
 
       const innerHTML = await page.evaluate(
         (id: string) =>
@@ -356,7 +277,6 @@ test.describe("Markdown input rules", () => {
         /line-through/.test(innerHTML) ||
         /<del[\s>]/i.test(innerHTML) ||
         /<s[\s>]/i.test(innerHTML);
-
       expect(hasStrikethrough).toBe(true);
 
       const text = await page.evaluate(

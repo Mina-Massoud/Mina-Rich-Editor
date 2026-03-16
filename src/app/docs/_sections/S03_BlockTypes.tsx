@@ -2,7 +2,7 @@ import React from "react";
 import { SectionHeading } from "../_components/SectionHeading";
 import { DxCard } from "../_components/DxCard";
 
-export const sectionMeta = { id: "block-types", num: "03", label: "Block Types" };
+export const sectionMeta = { id: "block-types", num: "05", label: "Block Types" };
 
 export default function S03_BlockTypes() {
   const blocks = [
@@ -24,13 +24,13 @@ export default function S03_BlockTypes() {
 
   return (
     <section className="mb-20">
-      <SectionHeading num="03" label="Block Types" id="block-types">
+      <SectionHeading num="05" label="Block Types" id="block-types">
         15 built-in block types
       </SectionHeading>
-      <p className="mb-6 text-sm font-light text-warm-400">
+      <p className="mb-6 text-sm font-light text-muted-foreground">
         Every block is a typed node in the editor tree. Add blocks via the slash command menu, toolbar, or keyboard shortcuts.
       </p>
-      <div className="grid gap-px sm:grid-cols-2 border-t border-l border-border-subtle">
+      <div className="grid gap-px sm:grid-cols-2 border-t border-l border-border">
         {blocks.map((b, i) => (
           <DxCard key={i} tag={b.tag} title={b.title} desc={b.desc} idx={i + 1} />
         ))}

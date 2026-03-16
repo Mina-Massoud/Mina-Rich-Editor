@@ -168,40 +168,6 @@ export function handleDeleteNode(
   const oldNode = findNodeById(currentContainer, id);
   const posInfo = findParentAndIndex(currentContainer, id);
 
-  // Check if this is the only h1 header block in the root container
-  const isH1Block = currentContainer.children.find((child) => {
-    if (isTextNode(child)) {
-      const textChild = child as TextNode;
-      return textChild.id === id && textChild.type === 'h1';
-    }
-    return false;
-  });
-
-  // If it's an h1 and it's the only child, don't delete - just clear content
-  if (isH1Block && currentContainer.children.length === 1) {
-    const newContainer = updateNodeById(currentContainer, id, () => ({
-      content: '',
-      children: undefined,
-    })) as ContainerNode;
-
-    // Capture old content/children for backward
-    const oldTextNode = oldNode as TextNode;
-    return addToHistory(
-      {
-        ...state,
-        metadata: {
-          ...state.metadata,
-          updatedAt: new Date().toISOString(),
-        },
-      },
-      newContainer,
-      {
-        forward: { type: 'update_node', id, changes: { content: '', children: undefined } as Partial<EditorNode> },
-        backward: { type: 'update_node', id, changes: { content: oldTextNode?.content, children: oldTextNode?.children } as Partial<EditorNode> },
-      }
-    );
-  }
-
   const result = deleteNodeById(currentContainer, id);
 
   // If the root container was deleted, prevent it
@@ -209,16 +175,14 @@ export function handleDeleteNode(
     return state;
   }
 
-  // If after deletion there are no children left, create a default h1 header
+  // If after deletion there are no children left, create a default empty paragraph
   const resultContainer = result as ContainerNode;
   if (resultContainer.children.length === 0) {
     const defaultNode: TextNode = {
-      id: generateId('h1'),
-      type: 'h1',
+      id: generateId('p'),
+      type: 'p',
       content: '',
-      attributes: {
-        placeholder: 'New page',
-      },
+      attributes: {},
     };
     resultContainer.children = [defaultNode];
 
@@ -240,9 +204,19 @@ export function handleDeleteNode(
     );
   }
 
+  // If the deleted node was the active one, move focus to the nearest sibling
+  let newActiveNodeId = state.activeNodeId;
+  if (state.activeNodeId === id) {
+    const deletedIndex = posInfo?.index ?? 0;
+    const children = resultContainer.children;
+    const targetIndex = Math.min(deletedIndex, children.length - 1);
+    newActiveNodeId = children[targetIndex].id;
+  }
+
   return addToHistory(
     {
       ...state,
+      activeNodeId: newActiveNodeId,
       metadata: {
         ...state.metadata,
         updatedAt: new Date().toISOString(),

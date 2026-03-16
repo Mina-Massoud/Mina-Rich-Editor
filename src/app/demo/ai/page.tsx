@@ -88,15 +88,9 @@ function APIKeyPanel({
   onUseDemoMode: () => void;
 }) {
   return (
-    <div
-      className="rounded-lg border p-4 mb-4"
-      style={{
-        borderColor: "rgba(200,180,160,0.12)",
-        background: "rgba(200,180,160,0.03)",
-      }}
-    >
+    <div className="rounded-lg border border-border bg-muted p-4 mb-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-warm-100">
+        <h3 className="text-sm font-semibold text-foreground">
           AI Provider Configuration
         </h3>
         {isConfigured && (
@@ -108,26 +102,20 @@ function APIKeyPanel({
       </div>
 
       {/* Provider tabs */}
-      <div
-        className="flex gap-0 mb-3 border-b"
-        style={{ borderColor: "rgba(200,180,160,0.1)" }}
-      >
+      <div className="flex gap-0 mb-3 border-b border-border">
         {PROVIDERS.map((p) => (
           <button
             key={p.id}
             onClick={() => onProviderChange(p.id)}
             className={`px-4 py-2 text-xs font-medium transition-colors relative ${
               provider === p.id
-                ? "text-warm-50"
-                : "text-warm-500 hover:text-warm-300"
+                ? "text-foreground"
+                : "text-muted-foreground/70 hover:text-muted-foreground"
             }`}
           >
             {p.label}
             {provider === p.id && (
-              <span
-                className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t"
-                style={{ background: "rgba(200,180,160,0.5)" }}
-              />
+              <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t bg-foreground/50" />
             )}
           </button>
         ))}
@@ -135,7 +123,7 @@ function APIKeyPanel({
 
       {/* API key input */}
       {usingEnvKey ? (
-        <p className="text-xs text-warm-400">
+        <p className="text-xs text-muted-foreground">
           Using API key from environment variable.
         </p>
       ) : (
@@ -145,13 +133,11 @@ function APIKeyPanel({
             value={apiKey}
             onChange={(e) => onApiKeyChange(e.target.value)}
             placeholder="Paste your API key here..."
-            className="flex-1 rounded-md border bg-transparent px-3 py-2 text-xs text-warm-100 placeholder:text-warm-600 focus:outline-none focus:ring-1 focus:ring-warm-500/30"
-            style={{ borderColor: "rgba(200,180,160,0.12)" }}
+            className="flex-1 rounded-md border border-border bg-transparent px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <button
             onClick={onUseDemoMode}
-            className="rounded-md border px-3 py-2 text-xs font-medium text-warm-300 transition-colors hover:bg-surface-raised hover:text-warm-100"
-            style={{ borderColor: "rgba(200,180,160,0.12)" }}
+            className="rounded-md border border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Use Demo Mode
           </button>
@@ -160,7 +146,7 @@ function APIKeyPanel({
 
       {/* Security note */}
       {!usingEnvKey && (
-        <p className="mt-2 text-[11px] text-warm-600">
+        <p className="mt-2 text-[11px] text-muted-foreground/50">
           Your key stays in this browser session only.
         </p>
       )}

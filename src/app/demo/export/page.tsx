@@ -97,17 +97,17 @@ function OutputPanel() {
   }, [outputs, activeTab]);
 
   return (
-    <div className="flex h-full flex-col rounded-lg border" style={{ borderColor: "rgba(200,180,160,0.15)" }}>
+    <div className="flex h-full flex-col rounded-lg border border-border">
       {/* Tabs */}
-      <div className="flex items-center border-b" style={{ borderColor: "rgba(200,180,160,0.1)" }}>
+      <div className="flex items-center border-b border-border">
         {TAB_LABELS.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
             className={`px-3 py-2 text-xs font-medium transition-colors ${
               activeTab === key
-                ? "text-warm-100 border-b-2"
-                : "text-warm-500 hover:text-warm-300"
+                ? "text-foreground border-b-2"
+                : "text-muted-foreground/70 hover:text-muted-foreground"
             }`}
             style={activeTab === key ? { borderBottomColor: "#c4956a" } : undefined}
           >
@@ -117,7 +117,7 @@ function OutputPanel() {
         <div className="ml-auto pr-2">
           <button
             onClick={handleCopy}
-            className="rounded px-2 py-1 text-[10px] font-medium text-warm-400 transition-colors hover:bg-surface-raised hover:text-warm-200"
+            className="rounded px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground/80"
           >
             {copied ? "Copied!" : "Copy"}
           </button>
@@ -126,7 +126,7 @@ function OutputPanel() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-3">
-        <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-warm-300">
+        <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-muted-foreground">
           {outputs[activeTab]}
         </pre>
       </div>
