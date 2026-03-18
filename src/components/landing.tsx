@@ -78,7 +78,7 @@ export default function LandingPage() {
           </p>
           <CodeBlock
             label="App.tsx"
-            code={`import { CompactEditor } from '@mina-editor/core'
+            code={`import { CompactEditor } from "@/components/ui/rich-editor"
 
 function App() {
   return (
@@ -170,8 +170,8 @@ const myProvider: AIProvider = {
 
           <CodeBlock
             label="Collaboration Setup"
-            code={`import { CompactEditor } from '@mina-editor/core'
-import { CollaborationProvider } from '@mina-editor/collaboration'
+            code={`import { CompactEditor } from "@/components/ui/rich-editor"
+import { CollaborationProvider } from "@/components/ui/rich-editor"
 
 function CollabEditor() {
   return (

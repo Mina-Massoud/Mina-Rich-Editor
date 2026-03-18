@@ -32,8 +32,7 @@ const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
 const CODE_EXAMPLE = {
   label: "AI Integration",
-  code: `import { CompactEditor } from '@mina-editor/core'
-import { createGeminiProvider } from '@mina-editor/ai'
+  code: `import { CompactEditor, createGeminiProvider } from "@/components/ui/rich-editor"
 
 const ai = createGeminiProvider({
   apiKey: 'your-api-key',

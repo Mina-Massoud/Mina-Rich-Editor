@@ -66,9 +66,34 @@ Try it now — no installation required:
 - [Collaboration](https://mina-rich-editor.vercel.app/collab) — real-time multi-user editing
 - [Documentation](https://mina-rich-editor.vercel.app/docs) — full API reference
 
-## Status
+## Installation
 
-Installation packages (npm + shadcn CLI) are being finalized. Star the repo to get notified when they're ready.
+```bash
+npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json
+```
+
+## Quick Start
+
+```tsx
+"use client"
+
+import { createEmptyContent, createInitialState, Editor, EditorProvider } from "@/components/ui/rich-editor"
+
+export default function MyEditor() {
+  const initialState = createInitialState({
+    id: "root",
+    type: "container",
+    children: createEmptyContent(),
+    attributes: {}
+  })
+
+  return (
+    <EditorProvider initialState={initialState}>
+      <Editor />
+    </EditorProvider>
+  )
+}
+```
 
 ## License
 

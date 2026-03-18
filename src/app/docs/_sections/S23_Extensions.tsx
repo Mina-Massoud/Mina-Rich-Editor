@@ -49,7 +49,7 @@ export default function S23_Extensions() {
           <p className="mb-3 text-sm text-muted-foreground">
             Use <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">Extension.create()</code> for functional extensions that add behavior without introducing a new node type — keyboard shortcuts, input rules, or global commands.
           </p>
-          <CodeBlock label="my-extension.ts">{`import { Extension } from "@mina-editor/core"
+          <CodeBlock label="my-extension.ts">{`import { Extension } from "@/components/ui/rich-editor"
 
 const MyExtension = Extension.create({
   name: "myExtension",
@@ -80,7 +80,7 @@ const MyExtension = Extension.create({
           <p className="mb-3 text-sm text-muted-foreground">
             Use <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">Node.create()</code> to define a new block type with its own rendering, schema, and commands.
           </p>
-          <CodeBlock label="callout-node.ts">{`import { Node } from "@mina-editor/core"
+          <CodeBlock label="callout-node.ts">{`import { Node } from "@/components/ui/rich-editor"
 
 const CalloutNode = Node.create({
   name: "callout",
@@ -112,7 +112,7 @@ const CalloutNode = Node.create({
           <p className="mb-3 text-sm text-muted-foreground">
             Use <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">Mark.create()</code> to define inline formatting that wraps a range of text — like bold, a color, or a custom highlight.
           </p>
-          <CodeBlock label="highlight-mark.ts">{`import { Mark } from "@mina-editor/core"
+          <CodeBlock label="highlight-mark.ts">{`import { Mark } from "@/components/ui/rich-editor"
 
 const Highlight = Mark.create({
   name: "highlight",
@@ -152,7 +152,7 @@ const Highlight = Mark.create({
           <p className="mb-3 text-sm text-muted-foreground">
             Commands can be chained together using <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">editor.chain()</code>. The chain runs all commands in sequence and commits only when <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">.run()</code> is called.
           </p>
-          <CodeBlock label="usage.tsx">{`import { useEditor } from "@mina-editor/core"
+          <CodeBlock label="usage.tsx">{`import { useEditor } from "@/components/ui/rich-editor"
 
 function FormatButton() {
   const editor = useEditor()
@@ -217,7 +217,7 @@ function FormatButton() {
           <p className="mb-3 text-sm text-muted-foreground">
             A complete custom block extension with attributes, rendering, commands, and a keyboard shortcut.
           </p>
-          <CodeBlock label="callout.ts">{`import { Node, mergeAttributes } from "@mina-editor/core"
+          <CodeBlock label="callout.ts">{`import { Node, mergeAttributes } from "@/components/ui/rich-editor"
 
 export const Callout = Node.create({
   name: "callout",
@@ -278,7 +278,7 @@ export const Callout = Node.create({
           <p className="mb-3 text-sm text-muted-foreground">
             A complete custom inline mark extension with color attribute, toggle command, and keyboard shortcut.
           </p>
-          <CodeBlock label="highlight.ts">{`import { Mark, mergeAttributes } from "@mina-editor/core"
+          <CodeBlock label="highlight.ts">{`import { Mark, mergeAttributes } from "@/components/ui/rich-editor"
 
 export const Highlight = Mark.create({
   name: "highlight",
@@ -349,7 +349,7 @@ export const Highlight = Mark.create({
               <DxCard key={i} tag={ext.tag} title={ext.title} desc={ext.desc} idx={i + 1} />
             ))}
           </div>
-          <CodeBlock label="usage.tsx">{`import { EditorProvider, StarterKit } from "@mina-editor/core"
+          <CodeBlock label="usage.tsx">{`import { EditorProvider, StarterKit } from "@/components/ui/rich-editor"
 import { Callout } from "./callout"
 import { Highlight } from "./highlight"
 

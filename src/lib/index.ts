@@ -38,13 +38,11 @@
 // ============================================================================
 // CSS Theming Layer
 // ============================================================================
-// Import the default CSS variable definitions once in your app to enable
-// the full theming API. Every variable can then be overridden per-scope
+// Base styles and theme presets are auto-imported when using the Editor
+// component installed via the shadcn registry. No manual CSS import needed.
+//
+// Every visual token is a CSS variable that can be overridden per-scope
 // without touching Tailwind or forking the library:
-//
-//   import '@mina-editor/core/styles';
-//
-// Example override in your own CSS:
 //
 //   .mina-editor {
 //     --mina-font-body: 'Inter', sans-serif;
@@ -55,12 +53,7 @@
 // Dark mode is handled automatically when a `.dark` class is on an ancestor
 // or when `data-theme="dark"` is set on the editor wrapper element.
 //
-// Theme presets (import one alongside the base styles):
-//   import '@mina-editor/core/themes/notion';
-//   import '@mina-editor/core/themes/minimal';
-//   import '@mina-editor/core/themes/github';
-//
-// Then add the theme class to your editor wrapper:
+// Theme presets — add the theme class to your editor wrapper:
 //   <div className="mina-editor theme-notion">
 //   <div className="mina-editor theme-minimal">
 //   <div className="mina-editor theme-github">

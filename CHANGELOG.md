@@ -24,7 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **`EditorProvider` `extensions` prop** — accept a custom extension set to replace or augment the defaults.
 - **`useExtensionManager()` hook** — access the live extension registry from any component inside the provider tree.
 - **Extensible `NodeType`** — custom node types are now expressible via the `(string & {})` union; no core changes required.
-- **3 CSS theme presets** — Notion, Minimal, and GitHub themes importable from `@mina-editor/core/themes/notion` etc.
+- **3 CSS theme presets** — Notion, Minimal, and GitHub themes included in the shadcn registry install.
 - **Flat node map (`buildNodeMap`)** — O(1) node lookups in `useBlockNode`, replacing recursive tree searches.
 - **TypeDoc API reference generation** — run `pnpm docs:api` to emit a full HTML API reference.
 - **CompactEditor** — self-contained embeddable editor with an inline formatting toolbar. Designed as the primary drop-in component for CMS and app integrations.

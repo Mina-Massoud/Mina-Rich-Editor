@@ -6,9 +6,8 @@
  *
  * USAGE
  * -----
- * Import this file once in your app:
- *
- *   import '@mina-editor/core/styles';
+ * Styles are auto-imported by the Editor and CompactEditor components.
+ * No manual import needed after installing via shadcn registry:
  *
  * Then override any variable in your own CSS:
  *
@@ -28,6 +27,55 @@
  * have Tailwind configured see both systems working in harmony; those without
  * Tailwind can rely on these variables for their own CSS overrides.
  */
+
+/* ============================================================================
+   shadcn CSS variable fallbacks (zero specificity via :where)
+   Provides sensible defaults when the editor is used outside a shadcn project.
+   In a standard shadcn app, the host's :root / globals.css takes precedence.
+   ============================================================================ */
+
+:where(.mina-editor) {
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #1a1a1a;
+  --primary-foreground: #ffffff;
+  --secondary: #f8f8f6;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f8f8f6;
+  --muted-foreground: #3a3a3a;
+  --accent: #f8f8f6;
+  --accent-foreground: #1a1a1a;
+  --destructive: #dc2626;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.08);
+  --ring: rgba(0, 0, 0, 0.12);
+  --radius: 0.625rem;
+}
+
+:where(.dark .mina-editor, .mina-editor[data-theme='dark']) {
+  --background: #0a0a0a;
+  --foreground: #e5e5e5;
+  --card: #141414;
+  --card-foreground: #e5e5e5;
+  --popover: #141414;
+  --popover-foreground: #e5e5e5;
+  --primary: #e5e5e5;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #e5e5e5;
+  --muted: #1a1a1a;
+  --muted-foreground: #999999;
+  --accent: #1a1a1a;
+  --accent-foreground: #e5e5e5;
+  --destructive: #dc2626;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: rgba(255, 255, 255, 0.12);
+}
 
 /* ============================================================================
    Light mode defaults (scoped to .mina-editor)

@@ -444,8 +444,8 @@ Let's build real extensions, step by step.
 A callout is a colored box with an icon and text, like the tip/warning/info blocks in documentation sites.
 
 ```typescript
-import { Node } from '@mina-editor/core';
-import type { BlockRenderProps } from '@mina-editor/core';
+import { Node } from "@/components/ui/rich-editor";
+import type { BlockRenderProps } from "@/components/ui/rich-editor";
 
 const Callout = Node.create({
   name: 'callout',
@@ -560,7 +560,7 @@ That is it. The callout block type is now available in the slash command menu, s
 A highlight mark applies a background color to selected text, mapping to the `className` property on `InlineText`:
 
 ```typescript
-import { Mark } from '@mina-editor/core';
+import { Mark } from "@/components/ui/rich-editor";
 
 const Highlight = Mark.create({
   name: 'highlight',
@@ -727,7 +727,7 @@ The goal is for Mina's built-in types to be defined as extensions themselves. Th
 ```typescript
 // This is the target architecture (in progress)
 
-import { Extension, Node, Mark, ExtensionManager } from '@mina-editor/core';
+import { Extension, Node, Mark, ExtensionManager } from "@/components/ui/rich-editor";
 
 // ─── Built-in Node Extensions ────────────────────────────────────────────
 
@@ -925,7 +925,7 @@ export const Bold = Mark.create({
 
 **Mina:**
 ```typescript
-import { Mark } from '@mina-editor/core';
+import { Mark } from "@/components/ui/rich-editor";
 
 export const Bold = Mark.create({
   name: 'bold',
@@ -1023,7 +1023,7 @@ export const Heading = Node.create({
 
 **Mina:**
 ```typescript
-import { Node } from '@mina-editor/core';
+import { Node } from "@/components/ui/rich-editor";
 
 export const Heading = Node.create({
   name: 'heading',
@@ -1075,8 +1075,8 @@ export const Heading = Node.create({
 With a public extension API, the Mina ecosystem can grow beyond the core team:
 
 ```typescript
-// Published as @mina-editor/extension-math
-import { Node } from '@mina-editor/core';
+// Custom math extension example
+import { Node } from "@/components/ui/rich-editor";
 import { MathRenderer } from './MathRenderer';
 
 export const MathBlock = Node.create({

@@ -8,11 +8,8 @@
  *
  * USAGE
  * -----
- * 1. Import alongside the base styles:
- *      import '@mina-editor/core/styles';
- *      import '@mina-editor/core/themes/notion';
- *
- * 2. Add the class to your editor wrapper:
+ * Styles are auto-imported when using the Editor component via the shadcn registry.
+ * Add the theme class to your editor wrapper:
  *      <div className="mina-editor theme-notion">…</div>
  */
 

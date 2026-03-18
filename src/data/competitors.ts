@@ -46,7 +46,7 @@ const minaStats = {
   framework: "React",
 };
 
-const minaCode = `import { Editor } from '@mina-editor/core'
+const minaCode = `import { Editor } from "@/components/ui/rich-editor"
 
 function App() {
   return (

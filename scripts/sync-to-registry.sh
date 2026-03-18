@@ -88,7 +88,7 @@ HOOKS=(
   useBlockHandlers.ts useCollaboration.ts useEditorAI.ts useEditorAPI.ts
   useEditorClipboard.ts useEditorContext.tsx useEditorDragDrop.ts
   useEditorFileUpload.ts useEditorKeyboardShortcuts.ts useEditorSelection.ts
-  useImageSelection.ts useMediaPaste.ts useTableOperations.ts
+  useImageResize.ts useImageSelection.ts useMediaPaste.ts useTableOperations.ts
   use-toast.ts use-mobile.ts
 )
 for hook in "${HOOKS[@]}"; do
@@ -120,7 +120,7 @@ sed -i '' \
 
 # --- Root-level components (*.tsx) ---
 # ../lib/ → ./, ../lib → ., ../hooks/ → ./hooks/, ../components/ → ./
-# ./ui/ → @/components/ui/ (shadcn sibling components)
+# ./ui/ → @/registry/new-york-v4/ui/ (shadcn sibling components)
 # Also handle dynamic import("../lib/...") patterns
 for f in "$DEST/"*.tsx; do
   [ -f "$f" ] || continue
@@ -135,10 +135,10 @@ for f in "$DEST/"*.tsx; do
     -e "s|from \"../hooks/|from \"./hooks/|g" \
     -e "s|from '../components/|from './|g" \
     -e "s|from \"../components/|from \"./|g" \
-    -e "s|from './ui/|from '@/components/ui/|g" \
-    -e "s|from \"./ui/|from \"@/components/ui/|g" \
-    -e "s|from '@/components/ui/shadcn-io/color-picker'|from './_color-picker'|g" \
-    -e "s|from \"@/components/ui/shadcn-io/color-picker\"|from \"./_color-picker\"|g" \
+    -e "s|from './ui/|from '@/registry/new-york-v4/ui/|g" \
+    -e "s|from \"./ui/|from \"@/registry/new-york-v4/ui/|g" \
+    -e "s|from '@/registry/new-york-v4/ui/shadcn-io/color-picker'|from './_color-picker'|g" \
+    -e "s|from \"@/registry/new-york-v4/ui/shadcn-io/color-picker\"|from \"./_color-picker\"|g" \
     -e "s|from '@/lib'|from '.'|g" \
     -e "s|from \"@/lib\"|from \".\"|g" \
     -e "s|from '@/hooks/use-toast'|from './hooks/use-toast'|g" \
@@ -149,12 +149,12 @@ for f in "$DEST/"*.tsx; do
 done
 
 # --- _toolbar-components ---
-# ../ui/ → @/components/ui/
+# ../ui/ → @/registry/new-york-v4/ui/
 for f in "$DEST/_toolbar-components/"*.ts "$DEST/_toolbar-components/"*.tsx; do
   [ -f "$f" ] || continue
   sed -i '' \
-    -e "s|from '../ui/|from '@/components/ui/|g" \
-    -e "s|from \"../ui/|from \"@/components/ui/|g" \
+    -e "s|from '../ui/|from '@/registry/new-york-v4/ui/|g" \
+    -e "s|from \"../ui/|from \"@/registry/new-york-v4/ui/|g" \
     "$f"
 done
 
@@ -170,23 +170,119 @@ for f in "$DEST/hooks/"*.ts "$DEST/hooks/"*.tsx; do
     -e "s|from \"../lib\"|from \"..\"|g" \
     -e "s|import(\"../lib/|import(\"../|g" \
     -e "s|import('../lib/|import('../|g" \
+    -e "s|require(\"../lib/|require(\"../|g" \
+    -e "s|require('../lib/|require('../|g" \
     -e "s|from '../components/|from '../|g" \
     -e "s|from \"../components/|from \"../|g" \
     "$f"
 done
 
-# --- Collaboration optional deps (yjs, y-websocket) ---
-# Use variable indirection so TS can't statically check the module specifier.
-sed -i '' "s|await import('yjs')|await import('yjs' as string)|g" "$DEST/collaboration/y-binding.ts"
-sed -i '' "s|await import('y-websocket')|await import('y-websocket' as string)|g" "$DEST/hooks/useCollaboration.ts"
+# --- Final sweep: rewrite remaining @/components/ui/ and @/lib/ paths ---
+echo "==> Fixing remaining @ import paths..."
+find "$DEST" -type f \( -name "*.ts" -o -name "*.tsx" \) -print0 | xargs -0 sed -i '' \
+  -e "s|from '@/components/ui/shadcn-io/color-picker'|from './_color-picker'|g" \
+  -e "s|from \"@/components/ui/shadcn-io/color-picker\"|from \"./_color-picker\"|g" \
+  -e "s|from '@/components/ui/|from '@/registry/new-york-v4/ui/|g" \
+  -e "s|from \"@/components/ui/|from \"@/registry/new-york-v4/ui/|g" \
+  -e "s|from '@/lib/utils'|from '__KEEP_LIB_UTILS__'|g" \
+  -e "s|from \"@/lib/utils\"|from \"__KEEP_LIB_UTILS__\"|g" \
+  -e "s|from '@/lib/|from './|g" \
+  -e "s|from \"@/lib/|from \"./|g" \
+  -e "s|from '__KEEP_LIB_UTILS__'|from '@/lib/utils'|g" \
+  -e "s|from \"__KEEP_LIB_UTILS__\"|from \"@/lib/utils\"|g"
 
-# ── Step 9: Build registry ───────────────────────────────────────────────
+# --- Fix color-picker: radix-ui → @radix-ui/react-slider ---
+sed -i '' "s|from 'radix-ui'|from '@radix-ui/react-slider'|g" "$DEST/_color-picker/index.tsx"
+sed -i '' "s|from \"radix-ui\"|from \"@radix-ui/react-slider\"|g" "$DEST/_color-picker/index.tsx"
+
+# --- Collaboration optional deps (yjs, y-websocket) ---
+# Use variable indirection to prevent webpack from statically resolving these optional deps.
+# The "as string" trick doesn't fool webpack on Vercel — use a runtime variable instead.
+sed -i '' "s|await import('yjs')|await import(/* webpackIgnore: true */ 'yjs')|g" "$DEST/collaboration/y-binding.ts"
+sed -i '' "s|await import('yjs' as string)|await import(/* webpackIgnore: true */ 'yjs')|g" "$DEST/collaboration/y-binding.ts"
+sed -i '' "s|await import('y-websocket')|await import(/* webpackIgnore: true */ 'y-websocket')|g" "$DEST/hooks/useCollaboration.ts"
+sed -i '' "s|await import('y-websocket' as string)|await import(/* webpackIgnore: true */ 'y-websocket')|g" "$DEST/hooks/useCollaboration.ts"
+
+# ── Step 8: Inject CSS import into Editor components ─────────────────────
+# "use client" must be the FIRST statement in the file for Next.js/SWC.
+# Strategy: strip any JSDoc/comments before "use client", then prepend
+# "use client" + CSS import at the very top.
+echo "==> Injecting CSS imports..."
+for f in "$DEST/Editor.tsx" "$DEST/CompactEditor.tsx"; do
+  [ -f "$f" ] || continue
+  if ! grep -q 'editor-variables.css' "$f"; then
+    # Remove everything before (and including) the "use client" line, then
+    # re-add "use client" + CSS import at the top
+    if grep -q '"use client"' "$f"; then
+      # Get line number of "use client"
+      UC_LINE=$(grep -n '"use client"' "$f" | head -1 | cut -d: -f1)
+      # Remove lines 1 through UC_LINE (the comment block + "use client")
+      sed -i '' "1,${UC_LINE}d" "$f"
+      # Prepend "use client" + CSS import
+      sed -i '' '1i\
+"use client"\
+\
+import "./styles/editor-variables.css"\
+' "$f"
+    else
+      sed -i '' '1i\
+import "./styles/editor-variables.css"\
+' "$f"
+    fi
+  fi
+done
+
+# ── Step 9: Auto-generate registry-ui.ts file entries ────────────────────
+echo "==> Auto-generating registry-ui.ts entries..."
+
+UI_REPO="/Users/mina/Documents/Mina/ui"
+REGISTRY_FILE="$UI_REPO/apps/v4/registry/registry-ui.ts"
+REGISTRY_BASE="$UI_REPO/apps/v4/registry/new-york-v4"
+
+# Collect all synced files, convert to registry-relative paths, and sort
+FILE_ENTRIES=""
+while IFS= read -r filepath; do
+  rel="${filepath#"$REGISTRY_BASE/"}"
+  FILE_ENTRIES+="      { path: \"${rel}\", type: \"registry:ui\" },\n"
+done < <(find "$DEST" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.css" \) | sort)
+
+# Use awk to splice the new files array into registry-ui.ts
+# Strategy: find the rich-editor entry, replace its files: [...] block
+awk -v entries="$FILE_ENTRIES" '
+  /name: "rich-editor"/ { in_rich_editor = 1 }
+  in_rich_editor && /files: \[/ {
+    print "    files: ["
+    printf "%s", entries
+    print "    ],"
+    # Skip old file entries until we hit the closing ]
+    in_files = 1
+    next
+  }
+  in_files {
+    if (/^    \],/) {
+      in_files = 0
+      in_rich_editor = 0
+      next
+    }
+    next
+  }
+  { print }
+' "$REGISTRY_FILE" > "${REGISTRY_FILE}.tmp" && mv "${REGISTRY_FILE}.tmp" "$REGISTRY_FILE"
+
+# ── Step 10: Build registry ──────────────────────────────────────────────
 FILE_COUNT=$(find "$DEST" -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.css" \) | wc -l | tr -d ' ')
 echo ""
 echo "==> Synced $FILE_COUNT files. Building registry..."
 
-UI_REPO="/Users/mina/Documents/Mina/ui"
 cd "$UI_REPO/apps/v4" && pnpm registry:build
 
+# ── Step 11: Commit and push to UI repo ──────────────────────────────────
 echo ""
-echo "==> All done! Registry is ready."
+echo "==> Committing and pushing to UI repo..."
+cd "$UI_REPO"
+git add -A
+git commit -m "sync: rich-editor registry update ($(date +%Y-%m-%d))" || echo "Nothing to commit"
+git push
+
+echo ""
+echo "==> All done! Registry is synced and pushed."

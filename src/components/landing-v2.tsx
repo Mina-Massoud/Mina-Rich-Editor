@@ -240,7 +240,7 @@ export default function LandingPageV2() {
               </div>
               <pre className="int-code-body">
                 <code>
-                  <Kw>import</Kw>{" { "}<Fn>CompactEditor</Fn>{" } "}<Kw>from</Kw> <Str>{`'@mina-editor/core'`}</Str>{"\n"}
+                  <Kw>import</Kw>{" { "}<Fn>CompactEditor</Fn>{" } "}<Kw>from</Kw> <Str>{`"@/components/ui/rich-editor"`}</Str>{"\n"}
                   {"\n"}
                   <Kw>function</Kw> <Fn>App</Fn>{"() {\n"}
                   {"  "}<Kw>return</Kw>{" (\n"}
@@ -400,9 +400,8 @@ export default function LandingPageV2() {
               </div>
               <pre className="int-code-body">
                 <code>
-                  <Kw>import</Kw>{" { "}<Fn>CompactEditor</Fn>{" } "}<Kw>from</Kw> <Str>{`'@mina-editor/core'`}</Str>{"\n"}
-                  <Kw>import</Kw>{" { "}<Fn>CollaborationProvider</Fn>{" }\n"}
-                  {"  "}<Kw>from</Kw> <Str>{`'@mina-editor/collaboration'`}</Str>{"\n"}
+                  <Kw>import</Kw>{" { "}<Fn>CompactEditor</Fn>{", "}<Fn>CollaborationProvider</Fn>{" }\n"}
+                  {"  "}<Kw>from</Kw> <Str>{`"@/components/ui/rich-editor"`}</Str>{"\n"}
                   {"\n"}
                   <Kw>function</Kw> <Fn>CollabEditor</Fn>{"() {\n"}
                   {"  "}<Kw>return</Kw>{" (\n"}
@@ -495,7 +494,7 @@ export default function LandingPageV2() {
               </div>
               <pre className="int-code-body">
                 <code>
-                  <Kw>import</Kw>{" { "}<Fn>Node</Fn>{", "}<Fn>StarterKit</Fn>{" } "}<Kw>from</Kw> <Str>{`'@mina-editor/core'`}</Str>{"\n"}
+                  <Kw>import</Kw>{" { "}<Fn>Node</Fn>{", "}<Fn>StarterKit</Fn>{" } "}<Kw>from</Kw> <Str>{`"@/components/ui/rich-editor"`}</Str>{"\n"}
                   {"\n"}
                   <Cmt>{"// Define a custom callout block"}</Cmt>{"\n"}
                   <Kw>const</Kw> <Prop>Callout</Prop>{" = "}<Fn>Node</Fn>{"."}<Fn>create</Fn>{"({\n"}

@@ -197,7 +197,7 @@ export function HeroSection() {
             <div
               className="px-6 py-4 border font-mono text-sm flex items-center gap-2 select-all border-border text-foreground/80"
             >
-              npm i @mina-editor/core
+              npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json
             </div>
           </div>
         </div>

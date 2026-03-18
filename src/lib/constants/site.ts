@@ -7,4 +7,4 @@ export const GITHUB_URL =
   "https://github.com/Mina-Massoud/Mina-Rich-Editor";
 
 export const NPM_URL =
-  "https://www.npmjs.com/package/@mina-editor/core";
+  "https://github.com/Mina-Massoud/Mina-Rich-Editor";

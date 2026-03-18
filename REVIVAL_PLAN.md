@@ -17,8 +17,8 @@
 - **580 unit tests** (22 test files: reducer, tree-ops, node-map, selection-range, themes, smoke)
 - **210 Playwright E2E tests** (21 test files: typing, Enter, undo, formatting, clipboard, blocks, lists, drag, performance)
 - tsup build config outputting ESM/CJS with correct `.mjs`/`.cjs` extensions
-- npm package name: `@mina-editor/core`
-- **3 CSS theme presets**: notion, minimal, github (`@mina-editor/core/themes/*`)
+- Distributed via shadcn registry: `npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json`
+- **3 CSS theme presets**: notion, minimal, github (included in registry install)
 - **TypeDoc API reference**: auto-generated via `pnpm docs:api`
 - **Clean dependencies**: only `class-variance-authority`, `clsx`, `tailwind-merge`
 
@@ -51,10 +51,10 @@
 ### Inspired by TipTap, differentiated by simplicity
 
 ```
-@mina-editor/core      → Headless engine: document model, commands, extensions, state
-@mina-editor/react      → React bindings: useEditor hook, EditorContent, NodeView renderer
-@mina-editor/starter-kit → Sensible defaults: paragraph, heading, list, bold, italic, etc.
-@mina-editor/ui         → Optional pre-built UI: toolbar, bubble menu, slash commands (Tailwind)
+Distributed as a single shadcn registry component:
+  npx shadcn@latest add https://ui-v4-livid.vercel.app/r/styles/new-york-v4/rich-editor.json
+
+Includes: document model, commands, extensions, state, React bindings, starter-kit, and pre-built UI
 ```
 
 **Key differentiators vs TipTap:**
@@ -254,10 +254,10 @@ All of the above (inline formatting, block types, options, existing serializer) 
 - [x] CHANGELOG.md — v0.3.0 with all features, fixes, breaking changes
 - [x] CSS variable system — `src/styles/editor-variables.css` with `.mina-editor` scope, dark mode
 - [x] `mina-editor` class added to Editor and CompactEditor wrappers
-- [x] CSS export path: `@mina-editor/core/styles`
+- [x] CSS styles auto-imported by Editor/CompactEditor components
 - [x] package.json v0.3.0, files includes LICENSE, CHANGELOG, styles
 - [x] Theme presets: `notion`, `minimal`, `github` — CSS-only via `.mina-editor.theme-{name}`, light + dark mode, 18 tests
-- [x] Theme export paths: `@mina-editor/core/themes/notion`, `/minimal`, `/github`
+- [x] Themes included in shadcn registry install
 - [x] Cleaned bogus dependencies (`i`, `npm`, `@y/websocket-server` removed)
 
 **Remaining:**

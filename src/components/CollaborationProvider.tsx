@@ -8,8 +8,7 @@
  * ## Usage
  *
  * ```tsx
- * import { EditorProvider, CompactEditor } from '@mina-editor/core';
- * import { CollaborationProvider } from '@mina-editor/core';
+ * import { EditorProvider, CompactEditor, CollaborationProvider } from "@/components/ui/rich-editor";
  *
  * function App() {
  *   return (

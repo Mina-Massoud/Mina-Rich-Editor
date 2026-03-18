@@ -41,11 +41,7 @@ export default function S24_Themes() {
         <div>
           <h3 className="mb-3 text-lg font-light text-foreground">Base styles</h3>
           <p className="mb-3 text-sm text-muted-foreground">
-            Import the base stylesheet once at the root of your app. This sets up typography resets, block spacing, and selection highlight styles used by all themes.
-          </p>
-          <CodeBlock label="layout.tsx">{`import "@mina-editor/core/styles"`}</CodeBlock>
-          <p className="mt-3 text-sm text-muted-foreground">
-            If you installed via the shadcn registry, the styles are already included in your project under <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">src/components/editor/editor.css</code>.
+            Base styles are automatically imported when you use the <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">Editor</code> or <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">CompactEditor</code> components — no manual CSS import needed.
           </p>
         </div>
 
@@ -158,7 +154,7 @@ export default function S24_Themes() {
         </div>
 
         <NotesList items={[
-          <>Import <strong className="text-foreground">@mina-editor/core/styles</strong> once at the app root before any theme class is applied.</>,
+          <>Base styles are <strong className="text-foreground">auto-imported</strong> when using the Editor component — no manual CSS import needed.</>,
           <>All three presets include both <strong className="text-foreground">light and dark mode</strong> definitions — no manual dark override needed.</>,
           <>CSS variable overrides are isolated to <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">.mina-editor</code> — they do not leak into the rest of your app.</>,
           <>You can mix a preset with partial overrides: apply <code className="bg-muted text-foreground px-1.5 py-0.5 text-xs font-mono">theme-notion</code> and then override a handful of variables for fine-tuning.</>,

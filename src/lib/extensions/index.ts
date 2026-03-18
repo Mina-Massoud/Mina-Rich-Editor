@@ -5,7 +5,7 @@
  *
  * @example
  * ```typescript
- * import { Extension, Node, Mark, ExtensionManager } from '@mina-editor/core';
+ * import { Extension, Node, Mark, ExtensionManager } from "@/components/ui/rich-editor";
  *
  * const MyMark = Mark.create({
  *   name: 'highlight',
