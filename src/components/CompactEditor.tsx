@@ -80,7 +80,6 @@ import {
   createHandleCreateNested,
   createHandleChangeBlockType,
   createHandleInsertImageFromCommand,
-  createHandleCreateList,
   createHandleCreateListFromCommand,
 } from "../lib/handlers/node-operation-handlers";
 import { useImageSelection } from "../hooks/useImageSelection";
@@ -490,11 +489,6 @@ function CompactEditorInner({
     editorContentRef,
   };
 
-  const handleCreateList = useCallback(
-    createHandleCreateList(nodeOperationParams),
-    [dispatch, toast]
-  );
-
   const handleCreateListFromCommand = useCallback(
     createHandleCreateListFromCommand({ dispatch, toast, nodeRefs }),
     [dispatch, toast, nodeRefs]
@@ -645,7 +639,12 @@ function CompactEditorInner({
         <CompactToolbar
           onFormat={handleFormat}
           onTypeChange={(type) => handleTypeChange(type as TextNode["type"])}
-          onCreateList={handleCreateList}
+          onCreateList={(listType) => {
+            const nodeId = activeNodeIdRef.current;
+            if (nodeId) {
+              handleCreateListFromCommand(nodeId, listType === "ul" ? "li" : "ol");
+            }
+          }}
         />
       )}
 

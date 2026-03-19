@@ -53,7 +53,6 @@ import {
   createHandleCreateNested,
   createHandleChangeBlockType,
   createHandleInsertImageFromCommand,
-  createHandleCreateList,
   createHandleCreateListFromCommand,
 } from "../lib/handlers/node-operation-handlers";
 
@@ -553,11 +552,6 @@ export function Editor({
     [dispatch, fileInputRef]
   );
 
-  const handleCreateList = useCallback(
-    createHandleCreateList(nodeOperationParams),
-    [dispatch, toast]
-  );
-
   const handleCreateListFromCommand = useCallback(
     createHandleCreateListFromCommand({ dispatch, toast, nodeRefs }),
     [dispatch, toast, nodeRefs]
@@ -734,7 +728,12 @@ export function Editor({
           onMultipleImagesUploadClick={handleMultipleImagesUploadClick}
           onVideoUploadClick={handleVideoUploadClick}
           onInsertComponentClick={handleInsertComponentClick}
-          onCreateList={handleCreateList}
+          onCreateList={(listType) => {
+            const nodeId = activeNodeIdRef.current;
+            if (nodeId) {
+              handleCreateListFromCommand(nodeId, listType === "ul" ? "li" : "ol");
+            }
+          }}
           onCreateTable={() => setTableDialogOpen(true)}
         />
       )}

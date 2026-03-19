@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { Canvas, useFrame, extend } from '@react-three/fiber';
 import { shaderMaterial } from '@react-three/drei';
 import * as THREE from 'three';
@@ -177,7 +177,7 @@ const fragmentShader = `
 `;
 
 const CPPNShaderMaterial = shaderMaterial(
-  { iTime: 0, iResolution: new THREE.Vector2(1, 1), uDark: 0.0 },
+  { iTime: 0, iResolution: new THREE.Vector2(1, 1), uDark: 1.0 },
   vertexShader,
   fragmentShader
 );
@@ -281,7 +281,9 @@ export default function Hero({
   children,
 }: HeroProps) {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted ? resolvedTheme === 'dark' : true;
   const sectionRef = useRef<HTMLElement | null>(null);
   const headerRef = useRef<HTMLHeadingElement | null>(null);
   const paraRef = useRef<HTMLParagraphElement | null>(null);

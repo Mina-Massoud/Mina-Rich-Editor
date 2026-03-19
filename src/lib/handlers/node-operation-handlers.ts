@@ -300,62 +300,7 @@ export function createHandleInsertImageFromCommand(
   };
 }
 
-/** Creates a handler that appends a new list item of the specified type to the end of the editor container. */
-export function createHandleCreateList(params: NodeOperationHandlerParams) {
-  return (listType: "ul" | "ol" | "li") => {
-    const { container: containerOrGetter, dispatch, toast, editorContentRef } = params;
-    const container = typeof containerOrGetter === 'function' ? containerOrGetter() : containerOrGetter;
 
-    // For 'ul' and 'ol', we create 'ol' type items (numbered)
-    // For 'li', we create 'li' type items (bulleted)
-    const itemType = listType === "ul" ? "li" : listType === "ol" ? "ol" : "li";
-
-    // Create a simple list item
-    const listItem: TextNode = {
-      id: generateId(itemType),
-      type: itemType as any,
-      content: "",
-      attributes: {},
-    };
-
-    // Insert the list item at the end
-    const lastNode = container.children[container.children.length - 1];
-    if (lastNode) {
-      dispatch(EditorActions.insertNode(listItem, lastNode.id, "after"));
-    } else {
-      // If no nodes exist, replace the container
-      dispatch(
-        EditorActions.replaceContainer({
-          ...container,
-          children: [listItem],
-        })
-      );
-    }
-
-    const listTypeLabel = listType === "ol" ? "numbered" : "bulleted";
-    toast({
-      title: "List Item Added",
-      description: `Added a new ${listTypeLabel} list item`,
-    });
-
-    // Smooth scroll to the newly created list item
-    setTimeout(() => {
-      const editorContent = editorContentRef.current;
-      if (editorContent) {
-        const lastChild = editorContent.querySelector(
-          "[data-editor-content]"
-        )?.lastElementChild;
-        if (lastChild) {
-          lastChild.scrollIntoView({
-            behavior: "smooth",
-            block: "end",
-            inline: "nearest",
-          });
-        }
-      }
-    }, 150);
-  };
-}
 
 /** Creates a handler that converts the current block into a list item of the given type when triggered from the command menu. */
 export function createHandleCreateListFromCommand(
